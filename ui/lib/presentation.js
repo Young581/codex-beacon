@@ -30,6 +30,7 @@ function historyGroups(entries, windowId) {
 }
 
 function notificationOptions(config, focused, type) {
+  if (type === 'task') return {desktop: false, sound: false};
   const enabled = config.get('notificationsEnabled', true);
   const filter = {done: 'notifyOnDone', approval: 'notifyOnApproval', question: 'notifyOnQuestion'}[type];
   const active = enabled && (!filter || config.get(filter, true)) && (!config.get('onlyWhenUnfocused', false) || !focused);
@@ -43,7 +44,7 @@ function validEnvelope(payload) {
   if (payload.kind === 'status') return payload.status && typeof payload.status.state === 'string';
   const event = payload.event;
   return event && event.version === 1 && typeof event.id === 'string' && event.id.length > 0 && event.id.length <= 256 &&
-    ['done', 'approval', 'question', 'test'].includes(event.type);
+    ['done', 'approval', 'question', 'test', 'task'].includes(event.type);
 }
 
 async function showWindowAlert(vscode, message, {open, history, cancelled = () => false}) {

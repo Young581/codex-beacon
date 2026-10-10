@@ -41,7 +41,7 @@ SOURCE_FILTER_VERSION = 1
 # launchers both set CODEX_INTERNAL_ORIGINATOR_OVERRIDE to this exact value.
 # Desktop sessions also use source="vscode", so that field is not sufficient.
 VSCODE_ORIGINATORS = frozenset(("codex_vscode",))
-EVENT_TYPES = {"done", "approval", "question", "test", "heartbeat"}
+EVENT_TYPES = {"done", "approval", "question", "test", "heartbeat", "task"}
 DEFAULT_RETENTION_DAYS = 7
 PRIVACY_FILE = "privacy-reset.json"
 PRIVACY_LOCK = ".privacy.lock"
@@ -729,6 +729,25 @@ def rollout_timestamp(value):
         return None
 
 
+TOKEN_FIELDS = {"input": "input_tokens", "cachedInput": "cached_input_tokens",
+                "cacheWrite": "cache_write_input_tokens", "output": "output_tokens",
+                "reasoningOutput": "reasoning_output_tokens"}
+
+
+def token_usage(value):
+    if not isinstance(value, dict) or not all(key in value for key in ("input_tokens", "output_tokens")):
+        return None
+    result = {}
+    for key, field in TOKEN_FIELDS.items():
+        count = value.get(field, 0)
+        if not isinstance(count, int) or isinstance(count, bool) or not 0 <= count <= 10 ** 12:
+            return None
+        result[key] = count
+    if result["cachedInput"] + result["cacheWrite"] > result["input"] or result["reasoningOutput"] > result["output"]:
+        return None
+    return result
+
+
 def session_metadata(path):
     """Read only the bounded first session_meta line, retaining no prompt text."""
     try:
@@ -927,12 +946,108 @@ class RolloutObserver:
         state["subagent"] = False
         state["originator"] = None
         state["cwd"] = ""
+        for key in ("task", "turn_id", "model", "tier", "previous_usage", "waiting_calls"):
+            state.pop(key, None)
         state["source_filter_version"] = SOURCE_FILTER_VERSION
         metadata = session_metadata(path)
         if metadata is not None:
             state.update(metadata)
             if self.sources is not None:
                 self.sources.remember(path, metadata["session_id"])
+
+    def update_task(self, outer, payload, state):
+        """Keep only state and validated counters. Never retain text/tool args."""
+        if state.get("subagent"):
+            return False
+        kind, subtype = outer.get("type"), payload.get("type")
+        changed = False
+        if kind == "turn_context":
+            state["model"] = clean_text(payload.get("model", ""), 128)
+            state["tier"] = clean_text(payload.get("service_tier") or "standard", 128)
+            turn = clean_text(payload.get("turn_id", ""), 128)
+            if turn and not state.get("turn_id"):
+                state["turn_id"] = turn
+                state["task"] = {"state": "unknown", "sequence": 0, "model": state["model"],
+                                 "usage": {"complete": False, "segments": []}}
+            if state.get("task"):
+                state["task"]["model"] = state["model"]
+                changed = True
+        if kind == "event_msg" and subtype == "task_started":
+            turn = clean_text(payload.get("turn_id", ""), 128)
+            if not turn:
+                return False
+            state["turn_id"] = turn
+            state["waiting_calls"] = {}
+            state["task"] = {"state": "running", "sequence": 0, "model": state.get("model", ""),
+                             "usage": {"complete": state.get("previous_usage") is not None or state.get("history_complete", False), "segments": []}}
+            changed = True
+        if kind == "event_msg" and subtype == "token_count":
+            info = payload.get("info")
+            if not isinstance(info, dict):
+                return False
+            total = token_usage(info.get("total_token_usage"))
+            if total is None:
+                return False
+            previous = state.get("previous_usage")
+            state["previous_usage"] = total
+            if not state.get("task") or not state.get("turn_id"):
+                return False  # Establish the baseline without guessing a task.
+            usage = state["task"]["usage"]
+            if previous is not None:
+                delta = {key: total[key] - previous[key] for key in TOKEN_FIELDS}
+                if any(count < 0 for count in delta.values()):
+                    delta = token_usage(info.get("last_token_usage"))
+                    usage["complete"] = False
+            elif usage["complete"]:
+                delta = total
+            else:
+                delta = token_usage(info.get("last_token_usage"))
+            if delta is None or not any(delta.values()):
+                return False
+            if delta["cachedInput"] + delta["cacheWrite"] > delta["input"] or delta["reasoningOutput"] > delta["output"]:
+                usage["complete"] = False
+                return False
+            model, tier = state.get("model", ""), state.get("tier", "standard")
+            segment = next((item for item in usage["segments"] if item["model"] == model and item["tier"] == tier), None)
+            if segment is None:
+                if len(usage["segments"]) >= 16:
+                    usage["complete"] = False
+                    return True
+                segment = {"model": model, "tier": tier, **{key: 0 for key in TOKEN_FIELDS}}
+                usage["segments"].append(segment)
+            if any(segment[key] + delta[key] > 10 ** 12 for key in TOKEN_FIELDS):
+                usage["complete"] = False
+                return True
+            for key in TOKEN_FIELDS:
+                segment[key] += delta[key]
+            if state["task"]["state"] == "unknown":
+                state["task"]["state"] = "running"
+            changed = True
+        if kind == "event_msg" and subtype in ("task_complete", "turn_aborted", "task_failed"):
+            turn = clean_text(payload.get("turn_id", state.get("turn_id", "")), 128)
+            if turn:
+                if turn != state.get("turn_id") or not state.get("task"):
+                    state["turn_id"] = turn
+                    state["task"] = {"state": "unknown", "sequence": 0, "model": state.get("model", ""),
+                                     "usage": {"complete": False, "segments": []}}
+                state["task"]["state"] = {"task_complete": "completed", "turn_aborted": "cancelled", "task_failed": "failed"}[subtype]
+                state["waiting_calls"] = {}
+                changed = True
+        if state.get("task") and kind == "response_item":
+            if subtype == "function_call" and payload.get("name") in ("request_user_input", "request_user_input_async"):
+                # A question logged after completion still belongs to that turn.
+                call = clean_text(payload.get("call_id", ""), 128)
+                if len(state.setdefault("waiting_calls", {})) < 128:
+                    state["waiting_calls"][call] = payload["name"] == "request_user_input_async"
+                state["task"]["state"] = "waiting_async" if all(state["waiting_calls"].values()) else "waiting_input"
+                changed = True
+            elif subtype == "function_call_output" and payload.get("call_id") in state.get("waiting_calls", set()):
+                state["waiting_calls"].pop(payload["call_id"], None)
+                state["task"]["state"] = ("waiting_async" if all(state["waiting_calls"].values()) else "waiting_input") if state["waiting_calls"] else "running"
+                changed = True
+        if changed and state.get("task"):
+            state["task"]["sequence"] = state.get("line_position", 0)
+        return changed and bool(state.get("task"))
 
     def convert(self, line, state, cutoff):
         if len(line) > ROLLOUT_TAIL_BYTES or not vscode_source(state):
@@ -949,7 +1064,10 @@ class RolloutObserver:
                 # cannot reclassify a Desktop/CLI-created session as VS Code.
                 return None
             timestamp = rollout_timestamp(outer.get("timestamp"))
-            if timestamp is None or timestamp < cutoff:
+            if timestamp is None:
+                return None
+            changed = self.update_task(outer, payload, state)
+            if timestamp < cutoff:
                 return None
             event_type = None
             stable_part = None
@@ -963,14 +1081,20 @@ class RolloutObserver:
                 event_type = "question"
                 stable_part = clean_text(payload.get("call_id", outer.get("timestamp")), 128)
             if event_type is None:
-                return None
+                if not changed or not state.get("turn_id"):
+                    return None
+                event_type = "task"
+                stable_part = state["turn_id"]
             record = event_record(self.home, event_type, {"cwd": state["cwd"],
                                   "session_id": state["session_id"],
-                                  "turn_id": payload.get("turn_id", "")},
+                                  "turn_id": payload.get("turn_id", state.get("turn_id", ""))},
                                   verified_originator=state["originator"])[0]
             record["timestamp"] = timestamp
             record["id"] = uuid.uuid5(uuid.NAMESPACE_URL,
                 "codex-notifier:{}:{}:{}".format(event_type, state["session_id"], stable_part)).hex
+            if state.get("task"):
+                # Deep copy counters: later updates must not rewrite earlier events.
+                record["task"] = json.loads(json.dumps(state["task"]))
             return record
         except (ValueError, UnicodeDecodeError, TypeError):
             return None
@@ -1003,6 +1127,7 @@ class RolloutObserver:
                     state["offset"] = max(0, info.st_size - ROLLOUT_TAIL_BYTES)
                     state["identity"] = current_identity
                     state["discard"] = state["offset"] > 0
+                    state["history_complete"] = state["offset"] == 0
                 if not vscode_source(state):
                     state["offset"] = info.st_size
                     state["discard"] = False
@@ -1018,12 +1143,16 @@ class RolloutObserver:
                         state["offset"] += len(chunk)
                         state["discard"] = True
                     continue
+                line_position = state["offset"]
                 state["offset"] += end + 1
                 lines = chunk[:end + 1].splitlines()
                 if state["discard"]:
+                    line_position += len(lines[0]) + 1
                     lines = lines[1:]
                     state["discard"] = False
                 for line in lines:
+                    line_position += len(line) + 1
+                    state["line_position"] = line_position
                     record = self.convert(line, state, cutoff)
                     if record is not None:
                         output.append(record)

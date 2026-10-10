@@ -1,14 +1,17 @@
 # Codex Beacon · Codex 灯塔
 
-为 VS Code 中的 Codex 提供任务完成提醒、声音、窗口状态标记和通知历史。
+为 VS Code 中的 Codex 提供按项目分组的任务列表、状态灯、token 与费用估算，以及完成提醒。
 
-基于 [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier) 的 MIT 开源项目，包含 Windows PowerShell 路径修复和安装辅助脚本。当前版本为主扩展 **0.4.3**、采集器 **0.2.5**。
+基于 [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier) 的 MIT 开源项目，包含 Windows PowerShell 路径修复和安装辅助脚本。当前版本为主扩展 **0.5.0**、采集器 **0.3.0**。
 
 ## 当前功能
 
 - Codex 每轮回复结束时提醒，可开启 Windows 弹窗与声音。
 - 窗口标题和任务栏标记，帮助定位需要处理的窗口。
-- 未读列表、通知历史、去重及会话跳转。
+- 按项目目录与来源分组，每轮请求一条任务；可切回未读／已读通知列表。
+- 彩色状态灯：运行、等待回答／审批、完成、失败、取消及状态未确认。
+- 按轮次与模型统计 token，美元 API 费用估算，支持自定义单价。
+- 未读提醒与任务状态独立；同一任务的多条通知合并显示，保留去重和会话跳转。
 - 结构化提问提醒；审批提醒需要另外配置并信任 Hook。
 - 中文和英文界面。
 
@@ -70,11 +73,46 @@ python -B build.py --output dist
 
 真实 VS Code 宿主测试按 [宿主测试说明](packaging/README.md) 使用独立用户数据和合成会话。仓库提供 Windows CI 工作流，用于检查与生成可下载的构建产物。
 
+## 项目任务与费用
+
+侧栏 **Codex Beacon → 项目任务** 默认按项目目录与来源分组，同名但目录或来源不同的项目保持独立，本窗口项目优先。每轮请求是一条任务，不代表整个项目或后台作业；点击打开会话，悬停查看完整目录、轮次、模型与用量。标题栏的分组按钮可切回原通知列表。
+
+| 状态 | 颜色 | 依据 |
+| --- | --- | --- |
+| 进行中 | 蓝 | 明确的任务开始或恢复事件 |
+| 阻塞 · 等待回答 | 黄 | 结构化提问；回答返回后恢复 |
+| 等待回答 · 继续运行 | 紫 | 异步提问，可继续工作 |
+| 阻塞 · 等待审批 | 橙 | 已配置的审批提醒 Hook |
+| 本轮完成 | 绿 | 本轮回复结束 |
+| 失败 | 红 | 明确的任务失败事件 |
+| 已取消 | 灰 | 明确的中断事件 |
+| 状态未确认 | 灰 | 来源窗口未连接或日志未提供状态 |
+
+状态基于最后采集到的事件，不根据静默或某次工具报错推断任务失败。没有开始事件的旧通知仍显示完成状态，但不会补造 token 用量。用量更新静默，不增加未读。清空已读会保留进行中的任务，以及仍有未读提醒的任务用量。
+
+默认单价来自 [OpenAI 官方价格表](https://developers.openai.com/api/docs/pricing)，核对日期 **2026-10-10**，单位为美元／百万 token。默认使用短上下文价格；有 `service_tier` 时使用该档位，否则按 Standard 估算。可通过 `codexNotifier.pricingContext` 和 `codexNotifier.pricingTier` 覆盖上下文与档位。
+
+内置模型：`gpt-6.1-sol`、`gpt-6-astra`、`gpt-6-luna`、`gpt-5.6-sol`、`gpt-5.3-codex`。金额为 **API 估算，不是实际账单**，不包含其他会话、子代理或后台任务。未知模型和未支持档位显示未知；缺少模型单价显示“未配置单价”。推理 token 包含在输出中，缓存命中和缓存写入从普通输入中扣除，避免重复计费；切换模型分别计价。
+
+在 VS Code 设置中编辑 `codexNotifier.modelPrices`，按精确模型名覆盖最终单价，自定义价格不再乘服务档位系数。产生缓存写入 token 时还需要 `cacheWrite`。例如：
+
+```json
+{
+  "codexNotifier.groupBy": "project",
+  "codexNotifier.modelPrices": {
+    "my-model": {"input": 2, "cachedInput": 0.1, "cacheWrite": 2.5, "output": 10}
+  }
+}
+```
+
+每轮用量通过累计计数的增量统计，不把整段会话累计值归到当前任务。缺少完整基线会标注“部分统计”，没有用量显示“Token 未提供”。只读取近期活动日志的有限尾部，不全量扫描历史正文。
+
+适配器采用本机观察到的 Codex 日志格式。[官方 App Server 文档](https://developers.openai.com/codex/app-server)描述了 token 用量事件，但会话日志不是稳定公共 API；未知格式会保留未知值。
+
 ## 后续方向
 
-- 运行中、等待输入、回复结束等状态灯。
 - 更多 AI 编程工具的状态与提醒整合。
-- 统一的任务状态面板。
+- 项目预算、用量筛选与统计导出。
 
 这些属于后续计划，当前版本尚未实现。
 

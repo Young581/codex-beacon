@@ -1,5 +1,6 @@
 'use strict';
 const {t} = require('./i18n');
+const {normalizeTask} = require('./task-data');
 
 const crypto = require('node:crypto');
 const os = require('node:os');
@@ -9,7 +10,7 @@ const { StringDecoder } = require('node:string_decoder');
 const RECEIVE_COMMAND = 'codexNotifier.internal.receive';
 const MAX_LINE_BYTES = 16 * 1024;
 const OWNER = 'codex-vscode-notifier-v1';
-const TYPES = new Set(['done', 'approval', 'question', 'test', 'heartbeat']);
+const TYPES = new Set(['done', 'approval', 'question', 'test', 'heartbeat', 'task']);
 
 function clean(value, limit) {
   if (typeof value !== 'string') return '';
@@ -27,6 +28,10 @@ function normalizeEvent(value) {
     record.originator = value.originator;
   }
   if (value.type === 'heartbeat' && typeof value.privacyPaused === 'boolean') record.privacyPaused = value.privacyPaused;
+  if (value.task !== undefined) {
+    try { record.task = normalizeTask(value.task); } catch { return null; }
+  }
+  if (value.type === 'task' && (!record.task || !record.session_id || !record.turn_id)) return null;
   return record;
 }
 
@@ -126,7 +131,14 @@ class EventBridge {
   }
   event(source, event) {
     if (event.type === 'heartbeat') return;
-    if (this.queue.some(item => item.event.id === event.id && item.source.id === source.id)) return;
+    const queued = this.queue.find(item => item.event.id === event.id && item.source.id === source.id);
+    if (queued) {
+      if (event.type === 'task' && event.task.sequence > queued.event.task.sequence) {
+        // Replace the queued snapshot without mutating one already in flight.
+        this.queue.splice(this.queue.indexOf(queued), 1, {version: 1, kind: 'event', source, event});
+      }
+      return;
+    }
     if (this.queue.length >= 500) {
       this.queue.shift();
       this.log(t('Notification queue reached 500 entries; oldest pending event was dropped.'));

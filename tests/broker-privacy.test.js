@@ -42,17 +42,17 @@ test('retention reduction expires unread/read alike and cancels matching pending
   for (const bad of [0, 31, -1, 1.5, '7']) assert.throws(() => store.setRetentionDays(bad));
 });
 test('privacy reset deletes only known caches, forgets IDs, and remains paused across restart', t => {
-  const f = fixture(t); const store = new NotificationStore(f.dir, {fileName: 'broker-state-v5.json', now: f.now});
+  const f = fixture(t); const store = new NotificationStore(f.dir, {fileName: 'broker-state-v6.json', now: f.now});
   const old = f.event('secret-id'); store.add(source, old, {});
   fs.writeFileSync(path.join(f.dir, 'broker-state-v3.json'), 'legacy private');
   fs.writeFileSync(path.join(f.dir, 'broker-token'), 'old-secret');
   fs.writeFileSync(path.join(f.dir, 'unrelated.txt'), 'preserve');
   const result = store.resetPrivacy();
   assert.equal(result.paused, true);
-  for (const name of ['broker-state-v5.json','broker-state-v3.json','broker-token']) assert.equal(fs.existsSync(path.join(f.dir,name)),false);
+  for (const name of ['broker-state-v6.json','broker-state-v3.json','broker-token']) assert.equal(fs.existsSync(path.join(f.dir,name)),false);
   assert.equal(fs.readFileSync(path.join(f.dir,'unrelated.txt'),'utf8'),'preserve');
   assert.ok(!fs.readFileSync(path.join(f.dir,privacy.CONTROL_FILE),'utf8').includes('secret-id'));
-  const recovered = new NotificationStore(f.dir, {fileName: 'broker-state-v5.json', now: f.now});
+  const recovered = new NotificationStore(f.dir, {fileName: 'broker-state-v6.json', now: f.now});
   assert.equal(recovered.add(source, f.event('during-pause'), {}).reason,'privacy-paused');
   recovered.resumePrivacy();
   assert.equal(recovered.add(source, old, {}).reason,'expired');

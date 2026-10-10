@@ -1,8 +1,8 @@
 {
   "name": "codex-notifier-ui",
-  "displayName": "Codex 会话通知",
-  "description": "VS Code Codex 会话提醒：声音、窗口标记、未读与跳转。Notifications and session navigation for Codex in VS Code.",
-  "version": "0.4.3",
+  "displayName": "Codex Beacon",
+  "description": "按项目管理 Codex 任务、状态灯、token 与费用估算，以及完成提醒。Project tasks, status, token usage, cost estimates and alerts for Codex.",
+  "version": "0.5.0",
   "publisher": "lengmo1996",
   "license": "MIT",
   "engines": {
@@ -142,13 +142,18 @@
       {
         "command": "codexNotifier.chooseLanguage",
         "title": "Codex 通知: 选择语言 / Choose language"
+      },
+      {
+        "command": "codexNotifier.toggleGrouping",
+        "title": "Codex Beacon：切换项目／通知分组 / Toggle project or notification grouping",
+        "icon": "$(list-tree)"
       }
     ],
     "viewsContainers": {
       "activitybar": [
         {
           "id": "codexNotifier",
-          "title": "Codex 通知 / Notifier",
+          "title": "Codex Beacon",
           "icon": "assets/bell.svg"
         }
       ]
@@ -157,12 +162,17 @@
       "codexNotifier": [
         {
           "id": "codexNotifier.history",
-          "name": "通知历史 / History"
+          "name": "项目任务 / Project Tasks"
         }
       ]
     },
     "menus": {
       "view/title": [
+        {
+          "command": "codexNotifier.toggleGrouping",
+          "when": "view == codexNotifier.history",
+          "group": "navigation@0"
+        },
         {
           "command": "codexNotifier.clearRead",
           "when": "view == codexNotifier.history",
@@ -377,6 +387,73 @@
             "英文 / English"
           ],
           "description": "弹窗、日志及运行时界面的语言，独立于 VS Code 界面语言。更改后立即用于新提示；已有日志保持原文。 / Language for popups, logs, and runtime UI, independent of the VS Code display language. Applies to new messages immediately; existing log lines stay unchanged."
+        },
+        "codexNotifier.groupBy": {
+          "type": "string",
+          "enum": [
+            "project",
+            "history"
+          ],
+          "default": "project",
+          "scope": "application",
+          "description": "按项目目录与来源分组，每轮请求显示为一条任务；history 保留原未读／已读通知列表。Group by project directory and source, one task per turn; history keeps the unread/read notification list."
+        },
+        "codexNotifier.modelPrices": {
+          "type": "object",
+          "default": {},
+          "scope": "application",
+          "additionalProperties": {
+            "type": "object",
+            "required": [
+              "input",
+              "cachedInput",
+              "output"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "input": {
+                "type": "number",
+                "minimum": 0
+              },
+              "cachedInput": {
+                "type": "number",
+                "minimum": 0
+              },
+              "cacheWrite": {
+                "type": "number",
+                "minimum": 0
+              },
+              "output": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          },
+          "description": "按精确模型名覆盖最终单价，单位为美元／百万 token。input 普通输入、cachedInput 缓存命中、cacheWrite 缓存写入、output 输出（含推理）。自定义价格不再乘服务档位系数。Override final USD prices per million tokens by exact model name; custom prices are not multiplied by service-tier factors."
+        },
+        "codexNotifier.pricingContext": {
+          "type": "string",
+          "enum": [
+            "short",
+            "long"
+          ],
+          "default": "short",
+          "scope": "application",
+          "description": "默认按官方短上下文价格估算；使用长上下文价格时选择 long。日志不含可靠的计费上下文档位，该选择用于所有默认模型价格。Default estimates use official short-context prices; choose long for long-context rates. This selection applies to all built-in model prices."
+        },
+        "codexNotifier.pricingTier": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "standard",
+            "fast",
+            "ultrafast",
+            "batch",
+            "flex"
+          ],
+          "default": "auto",
+          "scope": "application",
+          "description": "auto 使用日志的 service_tier；未提供时按 standard 估算。可覆盖为实际使用档位。金额为 API 估算，不等于订阅或服务商账单。auto uses the logged service tier, falling back to standard; override for your actual tier. API estimates are not subscription or provider bills."
         }
       }
     }

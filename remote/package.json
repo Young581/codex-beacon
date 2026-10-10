@@ -3,7 +3,7 @@
   "displayName": "Codex 远端通知采集器（lengmo1996）",
   "description": "SSH／容器中的 Codex 通知采集器。Remote notification collector for VS Code Codex sessions; inactive locally.",
   "publisher": "lengmo1996",
-  "version": "0.2.5",
+  "version": "0.3.0",
   "license": "MIT",
   "engines": {
     "vscode": "^1.96.0"

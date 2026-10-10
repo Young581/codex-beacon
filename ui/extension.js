@@ -17,8 +17,12 @@ async function activate(context) {
   configureLanguage(() => vscode.workspace.getConfiguration('codexNotifier').get('language', 'zh-CN'));
   const output = vscode.window.createOutputChannel(t('Codex 会话通知'));
   const client = new BrokerClient(context.globalStorageUri.fsPath, path.join(context.extensionPath, 'lib', 'broker.js'));
-  const history = new HistoryView(vscode, client.clientId);
-  const view = vscode.window.createTreeView('codexNotifier.history', {treeDataProvider: history, showCollapseAll: false});
+  const history = new HistoryView(vscode, client.clientId, () => {
+    const settings = vscode.workspace.getConfiguration('codexNotifier');
+    return {groupBy: settings.get('groupBy', 'project'), modelPrices: settings.get('modelPrices', {}),
+      pricingContext: settings.get('pricingContext', 'short'), pricingTier: settings.get('pricingTier', 'auto')};
+  });
+  const view = vscode.window.createTreeView('codexNotifier.history', {treeDataProvider: history, showCollapseAll: true});
   const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 50);
   statusBar.command = 'codexNotifier.openNext';
   let snapshot = {entries: [], unread: 0};
@@ -170,6 +174,11 @@ async function activate(context) {
       windowId: client.clientId, localUnread: attention(data.entries || [], client.clientId).local.length,
       windowAttention: {...windowAttention.state},
       ...(TESTING ? {lastNavigation, lastNavigationFailure, language: getLanguage(), groups: history.groups.map(group => ({id: group.id, title: group.title, count: group.entries.length})), statusText: statusBar.text,
+        tasks: history.groups.flatMap(group => group.entries).filter(row => row.taskState).map(row => {
+          const item = history.getTreeItem(row);
+          return {key: row.key, state: row.taskState, taskId: item.id, description: item.description,
+            icon: item.iconPath.id, color: item.iconPath.color.id, relatedKeys: row.relatedKeys};
+        }),
         statusColor: statusBar.backgroundColor?.id} : {})};
   });
   register('codexNotifier.testNotification', async () => {
@@ -187,7 +196,9 @@ async function activate(context) {
   register('codexNotifier.deleteEntry', async value => {
     const key = typeof value === 'string' ? value : value?.key;
     if (!key) return;
-    const result = await client.request('deleteEntry', {key});
+    let deleted = 0;
+    for (const related of history.keysFor(key)) deleted += (await client.request('deleteEntry', {key: related})).deleted;
+    const result = {deleted};
     await refresh();
     return result;
   });
@@ -195,6 +206,11 @@ async function activate(context) {
   register('codexNotifier.configureApprovalHook', () => remoteCommand('codexNotifier.remote.configureApprovalHook'));
   register('codexNotifier.removeApprovalHook', () => remoteCommand('codexNotifier.remote.removeApprovalHook'));
   register('codexNotifier.settings', () => vscode.commands.executeCommand('workbench.action.openSettings', 'codexNotifier'));
+  register('codexNotifier.toggleGrouping', async () => {
+    const next = config().get('groupBy', 'project') === 'project' ? 'history' : 'project';
+    await config().update('groupBy', next, vscode.ConfigurationTarget.Global);
+    history.update(snapshot.entries || []);
+  });
   register('codexNotifier.chooseLanguage', async () => {
     const selected = await vscode.window.showQuickPick([
       {label: '中文', description: '默认 / Default', value: 'zh-CN'},
@@ -252,7 +268,7 @@ async function activate(context) {
         ...(TESTING && process.env.CODEX_NOTIFIER_TEST_EDITOR === '1' ? {sidebarAuthority: 'notifier-test.notifier-route-fixture'} : {})});
     if (cancelled()) return;
     lastNavigation = result;
-    await client.request('markRead', {key: entry.key});
+    await client.request('markRead', {keys: history.keysFor(entry.key)});
     if (cancelled()) return;
     await refresh();
     if (cancelled()) return;
@@ -281,7 +297,7 @@ async function activate(context) {
   });
   register('codexNotifier.markEntryRead', async value => {
     const key = typeof value === 'string' ? value : value?.key;
-    if (key) await client.request('markRead', {key});
+    if (key) await client.request('markRead', {keys: history.keysFor(key)});
     await refresh();
   });
   register('codexNotifier.openNext', async () => {
@@ -298,7 +314,12 @@ async function activate(context) {
     await refresh();
     if (generation !== privacyGeneration) return;
     const entry = snapshot.entries.find(item => item.key === key);
-    if (entry) { log(JSON.stringify(entry, null, 2)); output.show(true); }
+    if (entry) {
+      const row = history.groups.flatMap(group => group.entries).find(row => row.key === key);
+      log(JSON.stringify(row || entry, null, 2));
+      if (row?.taskState) log(require('./lib/tasks').taskTooltip(row, history.options()));
+      output.show(true);
+    }
   });
   register('codexNotifier.menu', async () => {
     await client.request('interact');
@@ -367,7 +388,7 @@ async function activate(context) {
       if (sourceStatus) sourceStatus.status.message = renderMessage(sourceStatus.status.messageSpec, getLanguage(), sourceStatus.status.message);
       log(t('语言已切换为中文。'));
     }
-    if (event.affectsConfiguration('codexNotifier')) { lastRegistration = ''; updateBadge(); syncWindow().catch(error => log(error.message)); }
+    if (event.affectsConfiguration('codexNotifier')) { history.update(snapshot.entries || []); lastRegistration = ''; updateBadge(); syncWindow().catch(error => log(error.message)); }
   }), vscode.window.onDidChangeWindowState(() => { updateBadge(); syncWindow().catch(error => log(error.message)); }),
   vscode.workspace.onDidChangeWorkspaceFolders(() => { lastRegistration = ''; syncWindow().catch(error => log(error.message)); }),
   {dispose() { disposed = true; windowAttention.dispose(); clearInterval(reconnectTimer); clearTimeout(installationTimer); client.dispose(); }});

@@ -75,7 +75,7 @@ test('deletion cancels in-flight retries, queued alerts and CLICK keys while cle
   assert.deepEqual(await f.a.request('deleteEntry', {key: 'shared-source:missing'}), {deleted: 0, unread: 1});
   for (const id of ['in-flight', 'queued', 'read']) assert.equal((await notify(id)).duplicate, true);
   assert.equal(f.broker.scheduler.queue.length, 0, 'Replayed deleted notifications must not re-enter the delivery queue');
-  const restored = new NotificationStore(f.storage, {fileName: 'broker-state-v5.json'});
+  const restored = new NotificationStore(f.storage, {fileName: 'broker-state-v6.json'});
   for (const id of ['in-flight', 'queued', 'read']) assert.equal(restored.add(source, event(id), silent).duplicate, true);
   assert.equal(restored.history().unread, 1);
   assert.deepEqual(await f.b.request('clear'), {unread: 0});
@@ -154,7 +154,7 @@ test('authenticated privacy reset cancels all windows, pauses persistently, and 
   assert.equal((await f.b.request('history')).privacyPaused, true);
   assert.deepEqual((await f.b.request('history')).entries, []);
   assert.equal((await f.b.request('event', {source, event: event('during-pause'), options: silent})).reason, 'privacy-paused');
-  const reopened = new NotificationStore(f.storage, {fileName: 'broker-state-v5.json'});
+  const reopened = new NotificationStore(f.storage, {fileName: 'broker-state-v6.json'});
   assert.equal(reopened.history().privacyPaused, true);
   assert.equal(reopened.seen.size, 0);
   await f.b.request('resumePrivacy');

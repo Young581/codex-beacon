@@ -24,7 +24,7 @@ test('only the owning window gets colored attention and decisions sort before co
 });
 
 test('history separates current and other unread entries from collapsed read entries', () => {
-  const view = new HistoryView(mock, 'a');
+  const view = new HistoryView(mock, 'a', {groupBy: 'history'});
   view.update([entry('one', 'a', false), entry('two', 'b', false), entry('old', 'a', true)]);
   assert.deepEqual(view.getChildren().map(group => group.id), ['current-unread', 'other-unread', 'read']);
   assert.equal(view.getTreeItem(view.groups[0]).collapsibleState, 2);
@@ -45,7 +45,7 @@ test('history separates current and other unread entries from collapsed read ent
 });
 
 test('history refresh after deleting one item or clearing read items preserves remaining unread groups', () => {
-  const view = new HistoryView(mock, 'a');
+  const view = new HistoryView(mock, 'a', {groupBy: 'history'});
   const local = entry('local', 'a', false);
   const other = entry('other', 'b', false);
   const read = entry('old', 'a', true);

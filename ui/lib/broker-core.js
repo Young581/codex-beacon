@@ -6,12 +6,13 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { EventEmitter } = require('node:events');
 const privacy = require('./privacy-storage');
+const {normalizeTask} = require('../collector/src/task-data');
 
-const TYPES = new Set(['done', 'approval', 'question', 'test']);
+const TYPES = new Set(['done', 'approval', 'question', 'test', 'task']);
 const TITLES = { done: 'Codex 本轮已回复', approval: 'Codex 等待审批', question: 'Codex 等待回答', test: 'Codex 通知测试' };
 const MAX_HISTORY = 200;
 const MAX_SEEN = 5000;
-const BROKER_PROTOCOL_VERSION = 5;
+const BROKER_PROTOCOL_VERSION = 6;
 
 function object(value, name) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${name} must be an object`);
@@ -43,7 +44,7 @@ function validateEvent(event) {
   if (typeof event.timestamp !== 'number' || !Number.isFinite(event.timestamp) || event.timestamp < 0 || event.timestamp > 4102444800) {
     throw new Error('Invalid event.timestamp');
   }
-  return {
+  const result = {
     version: 1,
     id: field(event.id, 'event.id', 256, true),
     type: event.type,
@@ -55,6 +56,9 @@ function validateEvent(event) {
     turn_id: field(event.turn_id, 'event.turn_id', 256),
     originator: field(event.originator, 'event.originator', 64),
   };
+  if (event.task !== undefined) result.task = normalizeTask(event.task);
+  if (event.type === 'task' && (!result.task || !result.session_id || !result.turn_id)) throw new Error('Invalid task identity');
+  return result;
 }
 
 function validateOptions(options = {}) {
@@ -209,6 +213,23 @@ class NotificationStore extends EventEmitter {
       return {accepted: true, ignored: true, reason: this.control.paused ? 'privacy-paused' : 'expired'};
     }
     const key = `${source.id}:${event.id}`;
+    if (event.type === 'task') {
+      const index = this.entries.findIndex(record => record.key === key);
+      const existing = this.entries[index];
+      if (existing && (existing.event.session_id !== event.session_id || existing.event.turn_id !== event.turn_id || existing.event.cwd !== event.cwd)) throw new Error('Task identity changed');
+      if (existing && (event.task.sequence <= existing.event.task.sequence || event.timestamp < existing.event.timestamp)) return {accepted: true, duplicate: true, key};
+      // An explicit deletion keeps its tombstone, just as notifications do.
+      if (!existing && this.seen.has(key)) return {accepted: true, duplicate: true, key};
+      const previous = this.entries;
+      const oldSeen = new Set(this.seen);
+      const oldSeenAt = new Map(this.seenAt);
+      const record = {key, receivedAt: this.now(), source, event, read: true};
+      this.entries = existing ? this.entries.map((row, i) => i === index ? record : row) : [...this.entries, record].slice(-MAX_HISTORY);
+      this.seen.add(key); this.seenAt.set(key, this.now()); this.trimSeen();
+      try { this.save(); } catch (error) { this.entries = previous; this.seen = oldSeen; this.seenAt = oldSeenAt; throw error; }
+      this.emit('changed');
+      return {accepted: true, duplicate: false, key};
+    }
     if (this.seen.has(key)) return { accepted: true, duplicate: true, key };
     const record = { key, receivedAt: this.now(), source, event, read: false };
     const oldEntries = this.entries;
@@ -251,7 +272,13 @@ class NotificationStore extends EventEmitter {
     return this.removeMatching(record => record.key === key);
   }
 
-  clearRead() { return this.removeMatching(record => record.read); }
+  clearRead() {
+    const pendingTasks = new Set(this.entries.filter(record => !record.read).map(record =>
+      JSON.stringify([record.source.id, record.event.session_id, record.event.turn_id])));
+    return this.removeMatching(record => record.read && (record.event.type !== 'task' ||
+      ['completed', 'failed', 'cancelled'].includes(record.event.task.state) && !pendingTasks.has(
+        JSON.stringify([record.source.id, record.event.session_id, record.event.turn_id]))));
+  }
 
   removeMatching(predicate) {
     const previous = this.entries;

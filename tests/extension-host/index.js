@@ -66,6 +66,8 @@ exports.run = async function run() {
       const config = vscode.workspace.getConfiguration('codexNotifier');
       assert.equal(config.get('autoReadOnWindowFocus'), false, 'Window-wide auto-read must be off by default');
       assert.equal(config.get('openLocation'), 'sidebar', 'Sidebar must be the default open location');
+      assert.equal(config.get('groupBy'), 'project', 'Projects must be the default grouping');
+      await config.update('groupBy', 'history', vscode.ConfigurationTarget.Global);
     });
 
     const source = { id: `host-suite-${Date.now()}`, label: 'Host test fixture', host: 'test-host',
@@ -361,6 +363,48 @@ exports.run = async function run() {
       assert.equal(paused.paused, true);
       assert.equal((await command('local.resumePrivateData')).resumed, true);
       assert.equal((await command('local.privacyStatus')).paused, false);
+    });
+
+    await test('Real collector drives project task states, token estimates, custom rates and grouped deletion', async () => {
+      const config = vscode.workspace.getConfiguration('codexNotifier');
+      await config.update('groupBy', 'project', vscode.ConfigurationTarget.Global);
+      const turn = prefix + '-metrics';
+      const append = (type, payload) => fs.appendFileSync(fixturePath, JSON.stringify({
+        timestamp: new Date().toISOString(), type, payload}) + '\n');
+      append('event_msg', {type: 'task_started', turn_id: turn});
+      append('turn_context', {turn_id: turn, model: 'gpt-6.1-sol'});
+      const running = await waitFor(snapshot, s => s.tasks?.some(row => row.state === 'running'), 'Task start should appear under its project');
+      const runningRow = running.tasks.find(row => row.state === 'running');
+      assert.equal(runningRow.color, 'charts.blue');
+      const unreadBefore = running.unread;
+      append('event_msg', {type: 'token_count', info: {
+        total_token_usage: {input_tokens: 1000, cached_input_tokens: 400, output_tokens: 100, reasoning_output_tokens: 40}}});
+      const metered = await waitFor(snapshot, s => s.tasks?.some(row => /1,100 tokens/.test(row.description)), 'Token counts should refresh while running');
+      assert.equal(metered.unread, unreadBefore, 'Usage updates must stay silent and read');
+      assert.match(metered.tasks.find(row => row.taskId === runningRow.taskId).description, /\$0\.0022/);
+      append('response_item', {type: 'function_call', name: 'request_user_input', call_id: 'metrics-question', arguments: 'PRIVATE'});
+      await waitFor(snapshot, s => s.tasks?.some(row => row.state === 'waiting_input' && row.color === 'charts.yellow'), 'Structured question should block the task');
+      append('response_item', {type: 'function_call_output', call_id: 'metrics-question', output: 'PRIVATE'});
+      await waitFor(snapshot, s => s.tasks?.some(row => row.state === 'running'), 'Answer should resume the same task');
+      append('response_item', {type: 'function_call', name: 'request_user_input_async', call_id: 'async-metrics', arguments: 'PRIVATE'});
+      await waitFor(snapshot, s => s.tasks?.some(row => row.state === 'waiting_async' && row.color === 'charts.purple'), 'Async questions should not claim the task is blocked');
+      append('response_item', {type: 'function_call_output', call_id: 'async-metrics', output: 'PRIVATE'});
+      await waitFor(snapshot, s => s.tasks?.some(row => row.state === 'running'), 'Async answer should clear the pending input state');
+      append('event_msg', {type: 'task_complete', turn_id: turn, last_agent_message: 'PRIVATE'});
+      const completed = await waitFor(snapshot, s => s.tasks?.some(row => row.state === 'completed'), 'Completion should turn the task green');
+      const completedRow = completed.tasks.find(row => row.taskId === runningRow.taskId);
+      assert.equal(completedRow.color, 'charts.green');
+      assert.equal(completed.tasks.length, 1, 'Task telemetry and alerts must form one row');
+      assert.equal(JSON.stringify(history(completed)).includes('PRIVATE'), false);
+      await config.update('modelPrices', {'gpt-6.1-sol': {input: 10, cachedInput: 1, output: 20}}, vscode.ConfigurationTarget.Global);
+      await waitFor(snapshot, s => s.tasks?.some(row => /\$0\.0084/.test(row.description)), 'Custom prices should recalculate existing tasks');
+      await command('markEntryRead', completedRow.key);
+      const read = await snapshot();
+      assert.equal(read.unread, 0);
+      assert.equal(read.tasks[0].state, 'completed');
+      assert.equal((await command('deleteEntry', completedRow.key)).deleted, 4);
+      assert.equal((await snapshot()).tasks.length, 0);
+      await config.update('modelPrices', {}, vscode.ConfigurationTarget.Global);
     });
 
     const report = { passed: results.length, failed: 0, results,

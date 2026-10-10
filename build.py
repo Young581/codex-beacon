@@ -24,7 +24,7 @@ DEFAULT_OUTPUT = ROOT / "dist"
 NS = "http://schemas.microsoft.com/developer/vsx-schema/2011"
 CONTENT_NS = "http://schemas.openxmlformats.org/package/2006/content-types"
 IDS = {"ui": "codex-notifier-ui", "remote": "codex-notifier-collector"}
-VERSIONS = {"ui": "0.4.3", "remote": "0.2.5"}
+VERSIONS = {"ui": "0.5.0", "remote": "0.3.0"}
 MIMES = {".json": "application/json", ".js": "application/javascript", ".cjs": "application/javascript",
          ".ps1": "text/plain", ".py": "text/plain", ".md": "text/markdown", ".txt": "text/plain",
          ".html": "text/html", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png",
@@ -198,7 +198,7 @@ def build_one(source, output_dir, variant):
     source, output_dir = Path(source), Path(output_dir)
     files = collect_files(source, variant)
     if variant == 'ui' and source.resolve() == (ROOT / 'ui').resolve():
-        for relative in ('src/core.js', 'src/extension.js', 'scripts/collector.py'):
+        for relative in ('src/core.js', 'src/extension.js', 'scripts/collector.py', 'src/task-data.js'):
             copy = source / 'collector' / relative
             if not copy.is_file() or copy.read_bytes() != (ROOT / 'remote' / relative).read_bytes():
                 raise ValueError('Run packaging/sync-local-collector.py before packaging: ' + relative)

@@ -548,6 +548,96 @@ class RemoteTests(unittest.TestCase):
         self.assertEqual([json.loads(line)["type"] for line in replay.stdout.splitlines()],
                          ["heartbeat", "done", "question", "done"])
 
+    def test_task_lifecycle_counts_turn_deltas_models_and_duplicate_usage(self):
+        def usage(inp, cached, out, reasoning=0):
+            return {"input_tokens": inp, "cached_input_tokens": cached, "output_tokens": out,
+                    "reasoning_output_tokens": reasoning, "total_tokens": inp + out}
+        initial = usage(1000, 400, 100, 40)
+        final = usage(1200, 500, 150, 60)
+        records = [
+            ("event_msg", {"type": "task_started", "turn_id": "turn-one"}),
+            ("turn_context", {"turn_id": "turn-one", "model": "gpt-6.1-sol", "service_tier": "priority", "prompt": "PRIVATE"}),
+            ("event_msg", {"type": "token_count", "info": {"total_token_usage": initial, "last_token_usage": initial}}),
+            ("event_msg", {"type": "token_count", "info": {"total_token_usage": initial, "last_token_usage": initial}}),
+            ("response_item", {"type": "function_call", "name": "request_user_input", "call_id": "ask", "arguments": "PRIVATE"}),
+            ("response_item", {"type": "function_call_output", "call_id": "ask", "output": "PRIVATE"}),
+            ("turn_context", {"turn_id": "turn-one", "model": "gpt-6-luna"}),
+            ("event_msg", {"type": "token_count", "info": {"total_token_usage": final}}),
+            ("event_msg", {"type": "task_complete", "turn_id": "turn-one", "last_agent_message": "PRIVATE"}),
+            ("event_msg", {"type": "task_started", "turn_id": "turn-two"}),
+            ("event_msg", {"type": "token_count", "info": {"total_token_usage": usage(1300, 500, 170, 70)}}),
+            ("event_msg", {"type": "turn_aborted", "turn_id": "turn-two"}),
+        ]
+        self.write_session("task-metrics", records=records)
+        observer = REMOTE.RolloutObserver(self.home, 300)
+        events = observer.poll(force=True)
+        self.assertNotIn("PRIVATE", json.dumps(events))
+        self.assertEqual([row["type"] for row in events].count("question"), 1)
+        self.assertEqual(events[-1]["task"]["state"], "cancelled")
+        complete = next(row for row in events if row["type"] == "done")
+        segments = complete["task"]["usage"]["segments"]
+        self.assertTrue(complete["task"]["usage"]["complete"])
+        self.assertEqual([(s["model"], s["input"], s["cachedInput"], s["output"]) for s in segments],
+                         [("gpt-6.1-sol", 1000, 400, 100), ("gpt-6-luna", 200, 100, 50)])
+        self.assertEqual(segments[0]["tier"], "priority")
+        second = events[-1]["task"]["usage"]["segments"]
+        self.assertEqual(sum(s["input"] + s["output"] for s in second), 120)
+        question_index = next(i for i, row in enumerate(events) if row["type"] == "question")
+        self.assertEqual(events[question_index]["task"]["state"], "waiting_input")
+        self.assertEqual(events[question_index + 1]["task"]["state"], "running")
+        self.assertEqual(events[0]["task"]["usage"]["segments"], [])
+        self.assertTrue(all(a["task"]["sequence"] < b["task"]["sequence"] for a, b in zip(events, events[1:])))
+        self.assertEqual(observer.poll(force=True), [])
+        self.assertEqual(REMOTE.RolloutObserver(self.home, 300).poll(force=True), events)
+
+    def test_tail_partial_usage_never_uses_session_total_as_turn_total(self):
+        observer = REMOTE.RolloutObserver(self.home, 300)
+        state = {"originator": "codex_vscode", "subagent": False, "session_id": "partial", "cwd": "/fixture",
+                 "history_complete": False, "line_position": 1000}
+        def convert(kind, payload):
+            state["line_position"] += 100
+            return observer.convert(json.dumps({"timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                                                 "type": kind, "payload": payload}).encode(), state, 0)
+        convert("event_msg", {"type": "task_started", "turn_id": "partial-turn"})
+        convert("turn_context", {"model": "gpt-6.1-sol"})
+        result = convert("event_msg", {"type": "token_count", "info": {
+            "total_token_usage": {"input_tokens": 90000, "output_tokens": 2000},
+            "last_token_usage": {"input_tokens": 100, "output_tokens": 10}}})
+        self.assertFalse(result["task"]["usage"]["complete"])
+        self.assertEqual(result["task"]["usage"]["segments"][0]["input"], 100)
+        duplicate = convert("event_msg", {"type": "token_count", "info": {
+            "total_token_usage": {"input_tokens": 90000, "output_tokens": 2000}}})
+        self.assertIsNone(duplicate)
+        reset = convert("event_msg", {"type": "token_count", "info": {
+            "total_token_usage": {"input_tokens": 100, "output_tokens": 10},
+            "last_token_usage": {"input_tokens": 100, "output_tokens": 10}}})
+        self.assertEqual(reset["task"]["usage"]["segments"][0]["input"], 200)
+        self.assertFalse(reset["task"]["usage"]["complete"])
+        self.assertEqual(convert("event_msg", {"type": "task_failed", "turn_id": "partial-turn"})["task"]["state"], "failed")
+
+    def test_usage_schema_ignores_negative_boolean_and_impossible_counters(self):
+        for value in [{"input_tokens": -1, "output_tokens": 0}, {"input_tokens": True, "output_tokens": 0},
+                      {"input_tokens": 10, "cached_input_tokens": 11, "output_tokens": 0},
+                      {"input_tokens": 10, "output_tokens": 1, "reasoning_output_tokens": 2},
+                      {"input_tokens": 10 ** 13, "output_tokens": 0}, {}, None]:
+            self.assertIsNone(REMOTE.token_usage(value))
+        self.assertEqual(REMOTE.token_usage({"input_tokens": 0, "output_tokens": 0})["input"], 0)
+
+    def test_context_without_start_is_partial_and_async_question_keeps_working(self):
+        records = [("turn_context", {"turn_id": "tail-turn", "model": "gpt-6.1-sol"}),
+                   ("event_msg", {"type": "token_count", "info": {
+                       "total_token_usage": {"input_tokens": 5000, "output_tokens": 1000},
+                       "last_token_usage": {"input_tokens": 100, "output_tokens": 10}}}),
+                   ("response_item", {"type": "function_call", "name": "request_user_input_async", "call_id": "async"}),
+                   ("event_msg", {"type": "token_count", "info": {
+                       "total_token_usage": {"input_tokens": 5100, "output_tokens": 1010}}}),
+                   ("response_item", {"type": "function_call_output", "call_id": "async"})]
+        self.write_session("context-tail", records=records)
+        rows = REMOTE.RolloutObserver(self.home, 300).poll(force=True)
+        self.assertEqual([row["task"]["state"] for row in rows], ["unknown", "running", "waiting_async", "waiting_async", "running"])
+        self.assertFalse(rows[-1]["task"]["usage"]["complete"])
+        self.assertEqual(rows[-1]["task"]["usage"]["segments"][0]["input"], 200)
+
     def test_installed_script_follows_its_own_home(self):
         self.assertEqual(self.run_cli("install").returncode, 0)
         self.assertEqual(self.run_cli("test").returncode, 0)
