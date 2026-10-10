@@ -22,7 +22,7 @@ function event(id, cwd) {
 function windowRecord(client, label, cwd, focused = false) {
   return {
     id: client.clientId, label, sourceId: 'same-server-user',
-    workspaceUri: '', workspaceCwd: cwd, workspaceCwds: [cwd],
+    workspaceUri: 'vscode-remote://ssh-remote+fixture' + cwd, workspaceCwd: cwd, workspaceCwds: [cwd],
     focused, routeUri: '',
   };
 }
@@ -43,8 +43,12 @@ test('real shared pipe routes task opens only to the correct registered VS Code 
   const b = new BrokerClient(storage, brokerScript, options);
   const receivedA = [];
   const receivedB = [];
+  const focusedA = [];
+  const focusedB = [];
   a.on('openEntry', message => receivedA.push(message));
   b.on('openEntry', message => receivedB.push(message));
+  a.on('focusWindow', message => focusedA.push(message));
+  b.on('focusWindow', message => focusedB.push(message));
   // Each fixture has a unique storage directory. Dispose both clients and let
   // their isolated broker exit normally; never remove a user's directory.
   t.after(() => {a.dispose(); b.dispose();});
@@ -97,6 +101,19 @@ test('real shared pipe routes task opens only to the correct registered VS Code 
 
   await assertOpen(b, outerEntry.key, receivedA, receivedB);
   await assertOpen(a, innerEntry.key, receivedB, receivedA);
+  assert.equal(innerEntry.destination.workspaceUri, innerWindow.workspaceUri);
+  const counts = [receivedA.length, receivedB.length];
+  assert.equal((await a.request('focusEntry', {key: innerEntry.key})).routed, true);
+  await waitUntil(() => focusedB.length === 1, 'the targeted focusWindow message');
+  await Promise.all([a.request('ping'), b.request('ping')]);
+  assert.equal(focusedA.length, 0);
+  assert.equal(focusedB[0].key, innerEntry.key);
+  assert.deepEqual([receivedA.length, receivedB.length], counts, 'window-only focus must not open a session');
+  assert.equal((await a.request('history')).entries.find(entry => entry.key === innerEntry.key).read, false);
+  // Once the nested project's window leaves, its parent must not receive it.
+  await b.request('window', {window: windowRecord(b, 'other', '/work/other')});
+  assert.equal((await a.request('focusEntry', {key: innerEntry.key})).routed, false);
+  assert.equal((await a.request('history')).entries.find(entry => entry.key === innerEntry.key).destination.workspaceUri, innerWindow.workspaceUri);
 
   // Multiple windows can show the same remote workspace. The latest focus
   // transition should then choose the target for subsequent task events.

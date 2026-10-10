@@ -2,7 +2,7 @@
   "name": "codex-notifier-ui",
   "displayName": "Codex Beacon",
   "description": "按项目管理 Codex 任务、状态灯、token 与费用估算，以及完成提醒。Project tasks, status, token usage, cost estimates and alerts for Codex.",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "publisher": "lengmo1996",
   "license": "MIT",
   "engines": {
@@ -33,6 +33,11 @@
   },
   "contributes": {
     "commands": [
+      {
+        "command": "codexNotifier.openProjectWindow",
+        "title": "打开项目窗口 / Open project window",
+        "icon": "$(window)"
+      },
       {
         "command": "codexNotifier.chooseOpenLocation",
         "title": "Codex 通知：选择会话打开位置 / Choose session opening location"
@@ -196,6 +201,11 @@
       ],
       "view/item/context": [
         {
+          "command": "codexNotifier.openProjectWindow",
+          "when": "view == codexNotifier.history && (viewItem == projectTaskGroup || viewItem == readNotification || viewItem == unreadNotification)",
+          "group": "inline@0"
+        },
+        {
           "command": "codexNotifier.markEntryRead",
           "when": "view == codexNotifier.history && viewItem == unreadNotification",
           "group": "inline"
@@ -227,6 +237,10 @@
         }
       ],
       "commandPalette": [
+        {
+          "command": "codexNotifier.openProjectWindow",
+          "when": "false"
+        },
         {
           "command": "codexNotifier.showEntry",
           "when": "false"

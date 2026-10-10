@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.1
+
+- 项目分组与任务行新增“打开项目窗口”：切换到已有窗口，关闭后恢复项目；只打开窗口时保持未读。
+- 保存本机、SSH／容器项目 URI 和多根工作区文件，目标组件断连时也可打开；旧远端通知可从最近项目恢复连接。
+- 已关闭的子项目不会错误跳转到父目录窗口；协议 v7 优先迁移 v6 历史，保留原权限与通信认证检查。
+- Open/focus corresponding project windows without consuming unread reminders; retain remote authorities and saved workspace files.
+
 ## 0.5.0
 
 - 按项目与来源分组，每轮一条任务，支持切回通知历史。

@@ -9,6 +9,7 @@ const vscode = require('vscode');
 const UI_ID = 'lengmo1996.codex-notifier-ui';
 const REMOTE_ID = 'lengmo1996.codex-notifier-collector';
 const REQUIRED = ['testNotification', 'showHistory', 'pause', 'resume',
+  'openProjectWindow',
   'configureApprovalHook', 'showStatus', 'internal.receive', 'internal.snapshot',
   'privacy', 'clearPrivateData', 'clearLocalPrivateData', 'resumePrivateData', 'checkInstallation', 'chooseLanguage'];
 
@@ -305,6 +306,7 @@ exports.run = async function run() {
     await test('Window title variable and native taskbar target track pending state', async () => {
       const native = process.env.CODEX_NOTIFIER_ATTENTION_TEST === '1';
       const value = await waitFor(snapshot, s => s.windowAttention.ready && s.windowAttention.prefix.includes('本轮已回复') &&
+        s.windowAttention.displayPrefix?.includes('本轮已回复 1') &&
         (!native || s.windowAttention.bound && s.windowAttention.color === 'yellow'), 'Title and optional native taskbar must be updated', 30000);
       assert.equal(value.windowAttention.count, 1);
       assert.ok(vscode.workspace.getConfiguration('window').get('title').includes('${codexNotification}'));
@@ -362,7 +364,8 @@ exports.run = async function run() {
       const paused = await command('local.privacyStatus');
       assert.equal(paused.paused, true);
       assert.equal((await command('local.resumePrivateData')).resumed, true);
-      assert.equal((await command('local.privacyStatus')).paused, false);
+      const resumed = await command('local.privacyStatus');
+      assert.equal(resumed.paused, false, JSON.stringify(resumed));
     });
 
     await test('Real collector drives project task states, token estimates, custom rates and grouped deletion', async () => {
@@ -405,6 +408,53 @@ exports.run = async function run() {
       assert.equal((await command('deleteEntry', completedRow.key)).deleted, 4);
       assert.equal((await snapshot()).tasks.length, 0);
       await config.update('modelPrices', {}, vscode.ConfigurationTarget.Global);
+    });
+
+    await test('Window-only commands focus a live project and restore a disconnected project without reading or opening sessions', async () => {
+      const {BrokerClient} = require(path.join(vscode.extensions.getExtension(UI_ID).extensionPath, 'lib/client'));
+      const runtime = path.dirname(process.env.CODEX_NOTIFIER_TEST_REPORT);
+      // Use VS Code's URI spelling (including the Windows drive case), as the
+      // production client hashes context.globalStorageUri.fsPath for its pipe.
+      const storage = vscode.Uri.file(path.join(runtime, 'user-data', 'User', 'globalStorage', UI_ID)).fsPath;
+      const script = path.join(vscode.extensions.getExtension(UI_ID).extensionPath, 'lib/broker.js');
+      const peer = new BrokerClient(storage, script);
+      const realSource = (await command('local.status')).source;
+      const uri = vscode.workspace.workspaceFolders[0].uri;
+      const beforeTabs = vscode.window.tabGroups.all.flatMap(group => group.tabs).length;
+      const beforeNavigation = (await snapshot()).lastNavigation;
+      const payload = {version: 1, kind: 'event', source: realSource, event: {...samples[0].event,
+        id: prefix + '-focus-window', timestamp: Date.now() / 1000, cwd: realSource.cwd}};
+      await command('internal.receive', payload);
+      const entry = history(await snapshot()).find(item => item.event.id === payload.event.id);
+      assert.ok(entry && !entry.read);
+      assert.equal((await command('openProjectWindow', entry.key)).routed, true);
+      // Also exercise the opt-in focus acknowledgement guard.
+      await vscode.workspace.getConfiguration('codexNotifier').update('autoReadOnWindowFocus', true, vscode.ConfigurationTarget.Global);
+      await command('openProjectWindow', entry.key);
+      assert.equal(history(await snapshot()).find(item => item.key === entry.key).read, false);
+      await vscode.workspace.getConfiguration('codexNotifier').update('autoReadOnWindowFocus', false, vscode.ConfigurationTarget.Global);
+      const source = {...realSource, id: prefix + '-disconnected-source'};
+      let saved;
+      try {
+        await peer.connect();
+        await peer.request('window', {window: {id: peer.clientId, sourceId: source.id, label: 'isolated target',
+          workspaceUri: uri.toString(), workspaceCwd: uri.fsPath, workspaceCwds: [uri.fsPath], focused: false}});
+        const receipt = await peer.request('event', {source, event: {...payload.event,
+          id: prefix + '-restore-window'}, options: {desktop: false, sound: false}});
+        saved = receipt.key;
+        assert.equal((await peer.request('history')).entries.find(item => item.key === saved).destination.workspaceUri, uri.toString());
+      } finally {peer.dispose();}
+      await waitFor(snapshot, value => history(value).find(item => item.key === saved)?.targetWindowId === '', 'Synthetic target must disconnect');
+      const opened = await command('openProjectWindow', saved);
+      assert.equal(opened.opened, true);
+      assert.equal(opened.workspaceUri, uri.toString());
+      assert.equal(vscode.workspace.workspaceFolders[0].uri.toString(), uri.toString());
+      const after = await snapshot();
+      assert.equal(history(after).find(item => item.key === saved).read, false);
+      assert.deepEqual(after.lastNavigation, beforeNavigation);
+      assert.equal(vscode.window.tabGroups.all.flatMap(group => group.tabs).length, beforeTabs);
+      await command('deleteEntry', saved);
+      await command('deleteEntry', entry.key);
     });
 
     const report = { passed: results.length, failed: 0, results,

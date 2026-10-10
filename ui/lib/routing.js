@@ -55,6 +55,8 @@ class WindowRegistry {
   select(record, observedBy = new Set()) {
     const candidates = [];
     for (const window of this.windows.values()) {
+      // Keep a saved nested project's identity when only its parent is open.
+      if (record.destination && window.workspaceUri !== record.destination.workspaceUri) continue;
       const sameSource = window.sourceId === record.source.id;
       if (!sameSource && !(record.event.type === 'test' && observedBy.has(window.id))) continue;
       const roots = [...window.workspaceCwds, window.workspaceCwd].filter(Boolean);

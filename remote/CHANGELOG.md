@@ -1,5 +1,10 @@
 # 0.2.3
 
+## 0.3.1
+
+- 补充项目窗口恢复提示的中英文翻译，配合主扩展 0.5.1。
+- Added translations for project-window recovery; collection behavior is unchanged.
+
 ## 0.3.0
 
 - 采集任务开始、恢复、完成、中断、失败与 token 更新。

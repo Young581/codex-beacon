@@ -7,12 +7,13 @@ const crypto = require('node:crypto');
 const { EventEmitter } = require('node:events');
 const privacy = require('./privacy-storage');
 const {normalizeTask} = require('../collector/src/task-data');
+const {destination} = require('./project-window');
 
 const TYPES = new Set(['done', 'approval', 'question', 'test', 'task']);
 const TITLES = { done: 'Codex 本轮已回复', approval: 'Codex 等待审批', question: 'Codex 等待回答', test: 'Codex 通知测试' };
 const MAX_HISTORY = 200;
 const MAX_SEEN = 5000;
-const BROKER_PROTOCOL_VERSION = 6;
+const BROKER_PROTOCOL_VERSION = 7;
 
 function object(value, name) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${name} must be an object`);
@@ -121,7 +122,8 @@ class NotificationStore extends EventEmitter {
         const event = validateEvent(record.event);
         const key = `${source.id}:${event.id}`;
         if (record.key !== key || typeof record.read !== 'boolean' || !Number.isFinite(record.receivedAt)) throw new Error('Invalid history record');
-        return { key, receivedAt: record.receivedAt, source, event, read: record.read };
+        return { key, receivedAt: record.receivedAt, source, event, read: record.read,
+          ...(record.destination ? {destination: destination(record.destination)} : {}) };
       });
       const seen = state.seen.slice(-MAX_SEEN).map(key => field(key, 'seen key', 513, true));
       this.entries = entries;
@@ -150,6 +152,24 @@ class NotificationStore extends EventEmitter {
     privacy.checkedFile(this.storage, path.basename(this.file), true);
     atomicallyWrite(this.file, {version: 1, entries: this.entries, seen: [...this.seen],
       seenAt: Object.fromEntries([...this.seen].map(key => [key, this.seenAt.get(key) ?? this.now()]))});
+  }
+
+  rememberWindows(resolveWindow) {
+    const previous = this.entries;
+    let changed = false;
+    this.entries = previous.map(record => {
+      const window = resolveWindow(record);
+      if (!window?.workspaceUri) return record;
+      let value;
+      try { value = destination(window); } catch { return record; }
+      if (JSON.stringify(record.destination) === JSON.stringify(value)) return record;
+      changed = true;
+      return {...record, destination: value};
+    });
+    if (!changed) return false;
+    try { this.save(); } catch (error) { this.entries = previous; throw error; }
+    this.emit('changed');
+    return true;
   }
 
   prune() {
@@ -223,7 +243,8 @@ class NotificationStore extends EventEmitter {
       const previous = this.entries;
       const oldSeen = new Set(this.seen);
       const oldSeenAt = new Map(this.seenAt);
-      const record = {key, receivedAt: this.now(), source, event, read: true};
+      const record = {key, receivedAt: this.now(), source, event, read: true,
+        ...(existing?.destination ? {destination: existing.destination} : {})};
       this.entries = existing ? this.entries.map((row, i) => i === index ? record : row) : [...this.entries, record].slice(-MAX_HISTORY);
       this.seen.add(key); this.seenAt.set(key, this.now()); this.trimSeen();
       try { this.save(); } catch (error) { this.entries = previous; this.seen = oldSeen; this.seenAt = oldSeenAt; throw error; }

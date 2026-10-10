@@ -235,7 +235,7 @@ function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNo
     silencedKeys.add(key);
     scheduler.cancel(record => record.key === key);
   }
-  function routeEntry(key) {
+  function routeEntry(key, windowOnly = false) {
     const record = store.entries.find(entry => entry.key === key);
     if (!record) return {routed: false, reason: 'missing'};
     silenceKey(key);
@@ -243,7 +243,7 @@ function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNo
     const client = target && [...clients].find(item => item.authenticated && item.id === target.id);
     if (!client) return {routed: false, reason: 'window-unavailable'};
     interact(target.id);
-    if (!send(client, {type: 'openEntry', key, entry: annotated(record), routeUri: target.routeUri})) {
+    if (!send(client, {type: windowOnly ? 'focusWindow' : 'openEntry', key, entry: annotated(record), routeUri: target.routeUri})) {
       return {routed: false, reason: 'window-unavailable'};
     }
     return {routed: true, clientId: target.id, routeUri: target.routeUri};
@@ -319,6 +319,7 @@ function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNo
     switch (request.op) {
       case 'window': case 'registerWindow': case 'updateWindow': {
         const changed = windows.update(client.id, request.window);
+        store.rememberWindows(targetFor);
         if (changed) broadcast({type: 'historyChanged'});
         return {registered: true, clientId: client.id};
       }
@@ -331,6 +332,7 @@ function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNo
         if (receipt.ignored) return receipt;
         if (!observedBy.has(receipt.key)) observedBy.set(receipt.key, new Set());
         observedBy.get(receipt.key).add(client.id);
+        store.rememberWindows(targetFor);
         if (receipt.duplicate) broadcast({type: 'historyChanged'});
         const retained = new Set(store.entries.map(record => record.key));
         for (const map of [observedBy, deliveryOptions]) for (const key of map.keys()) if (!retained.has(key)) map.delete(key);
@@ -361,6 +363,7 @@ function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNo
       }
       case 'interact': interact(client.id, request.key); return {mutedUntil: mutedUntil.get(client.id)};
       case 'openEntry': return routeEntry(request.key);
+      case 'focusEntry': return routeEntry(request.key, true);
       case 'attentionBind': return attentionRequest('bind', {id: client.id, marker: request.marker, pid: request.pid, executable: request.executable});
       case 'attentionUpdate': return attentionRequest('update', {id: client.id, count: request.count, needsDecision: request.needsDecision, flash: request.flash});
       case 'clear': { const result = store.clear(); scheduler.cancel(); observedBy.clear(); deliveryOptions.clear(); forcedTests.clear(); silencedKeys.clear(); return result; }
@@ -422,7 +425,7 @@ function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNo
   server.on('listening', () => {
     if (stopping) return;
     try {
-      const legacyFileName = ['broker-state-v5.json', 'broker-state-v4.json', 'broker-state-v3.json', 'broker-state-v2.json', 'broker-state.json']
+      const legacyFileName = ['broker-state-v6.json', 'broker-state-v5.json', 'broker-state-v4.json', 'broker-state-v3.json', 'broker-state-v2.json', 'broker-state.json']
         .find(file => fs.existsSync(path.join(storage, file)));
       store.reload({legacyFileName});
       if (store.needsMigration) { store.save(); store.needsMigration = false; }

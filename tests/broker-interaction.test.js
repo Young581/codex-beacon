@@ -113,7 +113,7 @@ test('acknowledgement and interaction silence only the matching window; explicit
     assert.doesNotThrow(() => native.emit('click', {keys: [background.key]}));
     assert.equal(prematureWrites, 0, 'Clicking must not write read state before the target accepts navigation');
     broker.store.markRead = originalMarkRead;
-    assert.equal((await a.request('ping')).version, 6);
+    assert.equal((await a.request('ping')).version, 7);
   } finally {a.dispose(); b.dispose(); broker.close();}
 });
 
@@ -195,8 +195,8 @@ test('routing cancels queued and in-flight alerts permanently while failed navig
   } finally {release(); a.dispose(); b.dispose(); broker.close();}
 });
 
-test('v6 migration prefers v5, falls back through v4/v3/v2/v1, and never rewrites a live older broker state', async () => {
-  for (const legacyFileName of ['broker-state-v5.json', 'broker-state-v4.json', 'broker-state-v3.json', 'broker-state-v2.json', 'broker-state.json']) {
+test('v7 migration prefers v6, falls back through v5/v4/v3/v2/v1, and never rewrites a live older broker state', async () => {
+  for (const legacyFileName of ['broker-state-v6.json', 'broker-state-v5.json', 'broker-state-v4.json', 'broker-state-v3.json', 'broker-state-v2.json', 'broker-state.json']) {
     const directory = storage('migration');
     const legacy = new NotificationStore(directory, {fileName: legacyFileName});
     legacy.add(source, event('legacy'), {desktop: false, sound: false});
@@ -213,13 +213,13 @@ test('v6 migration prefers v5, falls back through v4/v3/v2/v1, and never rewrite
     const broker = startBroker({storage: directory, pipe: client.pipe, noNative: true});
     await once(broker.server, 'listening');
     try {
-      assert.equal(path.basename(broker.store.file), 'broker-state-v6.json');
+      assert.equal(path.basename(broker.store.file), 'broker-state-v7.json');
       assert.equal(broker.store.needsMigration, false);
       assert.deepEqual(broker.store.entries.map(record => record.event.id), ['legacy']);
       broker.store.markRead({});
       assert.deepEqual(fs.readFileSync(legacy.file), oldBytes);
       legacy.add(source, event('late-legacy'), {desktop: false, sound: false});
-      const reopened = new NotificationStore(directory, {fileName: 'broker-state-v6.json', legacyFileName});
+      const reopened = new NotificationStore(directory, {fileName: 'broker-state-v7.json', legacyFileName});
       assert.equal(reopened.entries.length, 1);
       assert.equal(reopened.history().unread, 0);
     } finally {client.dispose(); broker.close();}

@@ -1,6 +1,9 @@
 'use strict';
 // Only extension-owned templates are translated. Substitutions are opaque data.
 const MESSAGES = {
+  "选择此项目的连接": "Choose this project's connection",
+  "已打开对应项目窗口；通知保持未读。": "Opened the project window; the notification remains unread.",
+  "此旧通知缺少项目连接信息。请先打开对应 SSH／容器项目一次，后续即可直接打开窗口。": "This older notification lacks the project connection. Open its SSH/container project once; future notifications can open its window directly.",
   "进行中": "Running",
   "阻塞 · 等待回答": "Blocked · Awaiting input",
   "等待回答 · 继续运行": "Awaiting input · Still running",

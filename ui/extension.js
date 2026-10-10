@@ -6,6 +6,8 @@ const {BrokerClient} = require('./lib/client');
 const {clean, projectName, eventTitle, notificationOptions, validEnvelope, attention, showWindowAlert} = require('./lib/presentation');
 const {HistoryView} = require('./lib/history');
 const {openCodexSession} = require('./lib/navigation');
+const {openProjectWindow} = require('./lib/project-window');
+const {settings: collectorSettings, makeSource} = require('./collector/src/core');
 const {WindowAttention} = require('./lib/window-attention');
 const {ReadTracker} = require('./lib/read-tracking');
 const {PrivacyActions} = require('./lib/privacy');
@@ -275,6 +277,29 @@ async function activate(context) {
     log(t`已请求在目标窗口的 Codex ${result.method === 'sidebar' ? t('会话侧栏') : t('主编辑器')}打开会话：${clean(entry.targetWindowLabel || windowInfo().label)} · ${clean(entry.event.session_id)}`);
     return lastNavigation;
   }
+  async function reopenProject(entry, generation) {
+    const info = windowInfo();
+    const localConfig = collectorSettings(config(), {}, 'local');
+    const localSource = makeSource({...localConfig, codexHome: entry.source.home || localConfig.codexHome});
+    return openProjectWindow(vscode, entry, {localSourceId: localSource.id,
+      sourceId: info.sourceId, workspaceUri: info.workspaceUri, roots: info.workspaceCwds},
+      {isCancelled: () => generation !== privacyGeneration || disposed});
+  }
+  register('codexNotifier.openProjectWindow', async value => {
+    const generation = privacyGeneration;
+    const key = typeof value === 'string' ? value : value?.key || value?.entries?.[0]?.key;
+    await refresh();
+    if (generation !== privacyGeneration || disposed || !key) return;
+    const entry = snapshot.entries.find(row => row.key === key);
+    if (!entry) return;
+    const result = await client.request('focusEntry', {key});
+    if (result.routed || generation !== privacyGeneration || disposed) return result;
+    const opened = await reopenProject(entry, generation);
+    if (!opened.opened && !TESTING && generation === privacyGeneration) {
+      await vscode.window.showWarningMessage(t('此旧通知缺少项目连接信息。请先打开对应 SSH／容器项目一次，后续即可直接打开窗口。'));
+    }
+    return {...result, ...opened};
+  });
   register('codexNotifier.showEntry', async value => {
     const generation = privacyGeneration;
     const key = typeof value === 'string' ? value : value?.key;
@@ -287,9 +312,15 @@ async function activate(context) {
     const result = await client.request('openEntry', {key});
     if (generation !== privacyGeneration) return;
     if (!result.routed) {
+      const opened = await reopenProject(entry, generation);
+      if (opened.opened) {
+        log(t('已打开对应项目窗口；通知保持未读。'));
+        return {...result, ...opened};
+      }
+      if (generation !== privacyGeneration || disposed) return;
       log(t`${eventTitle(entry)}\n目录：${clean(entry.event.cwd)}\n会话：${clean(entry.event.session_id)}\n目标窗口尚未连接，保留未读。`);
       if (!TESTING) {
-        const choice = await vscode.window.showWarningMessage(t('对应窗口尚未连接通知组件。请打开该 SSH／容器窗口，或在升级后重载该窗口。'), t('复制会话 ID'));
+        const choice = await vscode.window.showWarningMessage(t('此旧通知缺少项目连接信息。请先打开对应 SSH／容器项目一次，后续即可直接打开窗口。'), t('复制会话 ID'));
         if (choice && generation === privacyGeneration) await vscode.env.clipboard.writeText(entry.event.session_id || '');
       }
     }
@@ -371,6 +402,19 @@ async function activate(context) {
     opening.catch(error => {
       if (generation !== privacyGeneration || error.code === 'PRIVACY_CANCELLED') return;
       lastNavigationFailure = {key: message.key, error: error.message}; return failure(error.message);
+    });
+  });
+  client.on('focusWindow', message => {
+    if (!message.entry || message.entry.key !== message.key || disposed) return;
+    const generation = privacyGeneration;
+    opening = opening.catch(() => {}).then(async () => {
+      if (disposed || generation !== privacyGeneration) return;
+      navigating = true;
+      try { await vscode.commands.executeCommand('workbench.action.focusWindow'); }
+      finally { navigating = false; }
+    });
+    opening.catch(error => {
+      if (!disposed && generation === privacyGeneration) failure(error.message).catch(() => {});
     });
   });
   client.on('navigationUnavailable', () => {

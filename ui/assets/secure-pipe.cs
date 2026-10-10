@@ -66,7 +66,7 @@ public static class CodexSecurePipe {
     foreach (string file in Directory.GetFiles(directory)) {
       string name = Path.GetFileName(file);
       bool allowed = credentials ? Regex.IsMatch(name, @"^(identity\.dpapi|[a-f0-9]{32}\.tmp)$") :
-        Regex.IsMatch(name, @"^(broker-state(-v[2-6])?\.json(\.\d+\.[a-f0-9]{12}\.tmp)?|broker-token|broker-privacy\.json(\.tmp-[a-f0-9-]+)?)$");
+        Regex.IsMatch(name, @"^(broker-state(-v[2-7])?\.json(\.\d+\.[a-f0-9]{12}\.tmp)?|broker-token|broker-privacy\.json(\.tmp-[a-f0-9-]+)?)$");
       if (!allowed) throw new IOException("Unexpected file in dedicated notification storage: " + name);
       CheckFile(file);
     }
