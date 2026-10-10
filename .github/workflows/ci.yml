@@ -15,21 +15,18 @@ jobs:
       PYTHONUTF8: '1'
       PYTHONIOENCODING: utf-8
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: '24'
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
       - name: Verify embedded collector
         run: python -B packaging/sync-local-collector.py --check
       - name: JavaScript regression checks
         shell: pwsh
-        run: |
-          $tests = Get-ChildItem tests -Filter '*.js' | Where-Object { $_.Name -ne 'tls-runtime-smoke.js' } | ForEach-Object { $_.FullName }
-          node --test --experimental-test-isolation=none $tests
-          exit $LASTEXITCODE
+        run: .\packaging\run-windows-checks.ps1
       - name: Python collector checks
         run: python -B tests/remote-collector.py
       - name: Packaging checks

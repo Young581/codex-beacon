@@ -25,7 +25,7 @@ EXTENSION_FILES = {
     "remote": COMMON_FILES | frozenset({"src/i18n.js", "src/core.js", "src/extension.js", "scripts/collector.py"}),
 }
 SOURCE_SUPPORT_FILES = frozenset({
-    "UPSTREAM.md", "docs/verification.md", ".github/workflows/ci.yml",
+    "UPSTREAM.md", "docs/verification.md", ".github/workflows/ci.yml", "packaging/run-windows-checks.ps1",
     "install.ps1", "configure-notifications.py", "test-configuration.py",
     ".gitignore", "LICENSE", "CONTRIBUTING.md", "SECURITY.md",
     ".github/ISSUE_TEMPLATE/bug_report.yml", ".github/ISSUE_TEMPLATE/feature_request.yml", ".github/ISSUE_TEMPLATE/config.yml",
