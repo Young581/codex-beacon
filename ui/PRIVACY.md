@@ -4,7 +4,7 @@
 
 ## 中文
 
-适用版本：主扩展 0.3.0–0.5.1、远端采集器 0.2.0–0.3.1。社区扩展，非 OpenAI 或 Microsoft 官方产品。
+适用版本：主扩展 0.3.0–0.5.2、远端采集器 0.2.0–0.3.1。社区扩展，非 OpenAI 或 Microsoft 官方产品。
 
 ## 数据去向与隔离
 
@@ -64,7 +64,7 @@
 
 Project recovery retains validated folder/workspace URIs and window labels with their notifications, including SSH/container authority identifiers. They follow the same retention/deletion policy; no connection passwords or private keys are stored. Legacy recovery reads VS Code's recent-project list only.
 
-Applies to main-extension versions 0.3.0–0.5.1 and remote-collector versions 0.2.0–0.3.1. This is a community extension, not an official OpenAI or Microsoft product.
+Applies to main-extension versions 0.3.0–0.5.2 and remote-collector versions 0.2.0–0.3.1. This is a community extension, not an official OpenAI or Microsoft product.
 
 ### Data destinations and isolation
 

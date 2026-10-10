@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.2
+
+- 标题缩短为“任务”（英文界面为 Task），顶部保留切换分组按钮。
+- 全部标读、清空已读、清空全部与完整通知菜单移入“…”菜单，窄侧栏无需拉宽即可操作。
+- Compact task title and overflow actions keep the toolbar usable in narrow sidebars.
+
 ## 0.5.1
 
 - 项目分组与任务行新增“打开项目窗口”：切换到已有窗口，关闭后恢复项目；只打开窗口时保持未读。

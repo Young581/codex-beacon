@@ -2,7 +2,7 @@
   "name": "codex-notifier-ui",
   "displayName": "Codex Beacon",
   "description": "按项目管理 Codex 任务、状态灯、token 与费用估算，以及完成提醒。Project tasks, status, token usage, cost estimates and alerts for Codex.",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "publisher": "lengmo1996",
   "license": "MIT",
   "engines": {
@@ -167,7 +167,7 @@
       "codexNotifier": [
         {
           "id": "codexNotifier.history",
-          "name": "项目任务 / Project Tasks"
+          "name": "任务"
         }
       ]
     },
@@ -181,22 +181,22 @@
         {
           "command": "codexNotifier.clearRead",
           "when": "view == codexNotifier.history",
-          "group": "navigation"
+          "group": "2_cleanup@1"
         },
         {
           "command": "codexNotifier.markRead",
           "when": "view == codexNotifier.history",
-          "group": "navigation"
+          "group": "1_read@1"
         },
         {
           "command": "codexNotifier.clearHistory",
           "when": "view == codexNotifier.history",
-          "group": "navigation"
+          "group": "2_cleanup@2"
         },
         {
           "command": "codexNotifier.menu",
           "when": "view == codexNotifier.history",
-          "group": "navigation"
+          "group": "3_tools@1"
         }
       ],
       "view/item/context": [

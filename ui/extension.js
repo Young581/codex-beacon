@@ -25,6 +25,7 @@ async function activate(context) {
       pricingContext: settings.get('pricingContext', 'short'), pricingTier: settings.get('pricingTier', 'auto')};
   });
   const view = vscode.window.createTreeView('codexNotifier.history', {treeDataProvider: history, showCollapseAll: true});
+  view.title = t('任务');
   const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 50);
   statusBar.command = 'codexNotifier.openNext';
   let snapshot = {entries: [], unread: 0};
@@ -428,6 +429,7 @@ async function activate(context) {
   });
   context.subscriptions.push(output, history, view, statusBar, vscode.workspace.onDidChangeConfiguration(event => {
     if (event.affectsConfiguration('codexNotifier.language')) {
+      view.title = t('任务');
       history.update(snapshot.entries || []);
       if (sourceStatus) sourceStatus.status.message = renderMessage(sourceStatus.status.messageSpec, getLanguage(), sourceStatus.status.message);
       log(t('语言已切换为中文。'));
