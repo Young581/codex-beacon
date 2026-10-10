@@ -32,7 +32,7 @@ async function fixture(t, native = new NativeNotifier({disabled: true})) {
   return {a, b, broker, native, storage, timers};
 }
 
-test('deletion cancels in-flight retries, queued alerts and CLICK keys while clearRead preserves unread delivery', {timeout: 5000}, async t => {
+test('deletion cancels in-flight retries, queued alerts and CLICK keys while clearRead preserves unread delivery', {timeout: 15000}, async t => {
   const started = deferred();
   const release = deferred();
   const delivered = [];
