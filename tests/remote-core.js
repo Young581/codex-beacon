@@ -39,6 +39,63 @@ test('source identity is stable across workspaces and changes with host or home'
   assert.notEqual(first.id, core.makeSource({...base, codexHome: '/home/b/.codex'}, {hostname: 'gpu-1'}).id);
 });
 
+function pythonFixture() {
+  const home = path.win32.join('C:', 'Users', '研究员');
+  const local = path.win32.join(home, 'AppData', 'Local');
+  const available = new Set();
+  const directories = new Map();
+  const environment = {platform: 'win32', home, env: {LOCALAPPDATA: local}, fs: {
+    statSync(file) {return {isFile: () => available.has(file)};},
+    readdirSync(directory) {return directories.get(directory) || [];},
+  }};
+  return {environment, home, local, available, directories};
+}
+
+test('Windows detects a standalone Python installation without py or PATH and chooses the newest supported version', () => {
+  const state = pythonFixture();
+  const root = path.win32.join(state.local, 'Programs', 'Python');
+  state.directories.set(root, ['Python39', 'Python313', 'Python311', 'Python27', 'Python37', 'unrelated']);
+  for (const name of ['Python39', 'Python311', 'Python313']) state.available.add(path.win32.join(root, name, 'python.exe'));
+  assert.deepEqual(core.windowsPython(state.environment), {python: path.win32.join(root, 'Python313', 'python.exe'), pythonArgs: []});
+  assert.deepEqual(core.settings(config({}), state.environment, 'local').pythonArgs, []);
+  assert.equal(core.settings(config({}), state.environment, 'local').python, path.win32.join(root, 'Python313', 'python.exe'));
+});
+
+test('Windows supports an actual launcher and executable PATH entries but skips Store aliases and relative workspace paths', () => {
+  const state = pythonFixture();
+  const launcher = path.win32.join(state.local, 'Programs', 'Python', 'Launcher', 'py.exe');
+  state.available.add(launcher);
+  assert.deepEqual(core.windowsPython(state.environment), {python: launcher, pythonArgs: ['-3']});
+  state.available.clear();
+  const aliases = path.win32.join(state.local, 'Microsoft', 'WindowsApps');
+  const runtime = path.win32.join(state.home, 'tools');
+  state.environment.env.Path = `.;${aliases};"${runtime}"`;
+  state.available.add(path.win32.join(aliases, 'python.exe'));
+  state.available.add(path.win32.join(runtime, 'python.exe'));
+  assert.deepEqual(core.windowsPython(state.environment), {python: path.win32.join(runtime, 'python.exe'), pythonArgs: []});
+  state.available.clear();
+  state.available.add(path.win32.join(aliases, 'python.exe'));
+  assert.deepEqual(core.windowsPython(state.environment), {python: 'py', pythonArgs: ['-3']});
+});
+
+test('Explicit local and remote Python settings remain authoritative over automatic discovery', () => {
+  const state = pythonFixture();
+  state.environment.fs.statSync = () => {throw new Error('Explicit settings must not trigger discovery');};
+  const explicit = path.win32.join(state.home, 'custom', 'python.exe');
+  assert.equal(core.settings(config({localPythonPath: explicit}), state.environment, 'local').python, explicit);
+  assert.deepEqual(core.settings(config({pythonPath: explicit}), state.environment).pythonArgs, []);
+});
+
+test('Windows discovers per-machine Python when no user installation or launcher is available', () => {
+  const state = pythonFixture();
+  const system = path.win32.join(state.home.slice(0, 3), 'Program Files');
+  state.environment.env.ProgramFiles = system;
+  state.directories.set(system, ['Python312', 'Python37', 'Other Application']);
+  const executable = path.win32.join(system, 'Python312', 'python.exe');
+  state.available.add(executable);
+  assert.deepEqual(core.windowsPython(state.environment), {python: executable, pythonArgs: []});
+});
+
 test('local settings use their own keys without inheriting remote overrides', () => {
   const environment = {platform: 'linux', home: '/home/local', env: {}};
   const values = {codexHome: '/remote/codex', pythonPath: '/remote/python', sourceLabel: 'remote', collectorEnabled: false};

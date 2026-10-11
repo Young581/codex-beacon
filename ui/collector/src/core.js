@@ -3,6 +3,7 @@ const {t} = require('./i18n');
 const {normalizeTask} = require('./task-data');
 
 const crypto = require('node:crypto');
+const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { StringDecoder } = require('node:string_decoder');
@@ -77,6 +78,51 @@ function settingKey(key, prefix = '') {
   return prefix ? prefix + key[0].toUpperCase() + key.slice(1) : key;
 }
 
+function windowsPython(environment = {}) {
+  const files = environment.fs || fs;
+  const vars = environment.env || process.env;
+  const home = environment.home || os.homedir();
+  const paths = path.win32;
+  const isFile = file => {
+    if (!paths.isAbsolute(file)) return false;
+    try { return files.statSync(file).isFile(); } catch { return false; }
+  };
+  // Do not search the current workspace or execute shell/batch wrappers.
+  const entries = (vars.PATH || vars.Path || '').split(';')
+    .map(value => value.trim().replace(/^"(.*)"$/, '$1')).filter(value => paths.isAbsolute(value));
+  const local = vars.LOCALAPPDATA || paths.join(home, 'AppData', 'Local');
+  const launchers = entries.map(directory => paths.join(directory, 'py.exe'));
+  if (vars.SystemRoot || vars.WINDIR) launchers.push(paths.join(vars.SystemRoot || vars.WINDIR, 'py.exe'));
+  launchers.push(paths.join(local, 'Programs', 'Python', 'Launcher', 'py.exe'));
+  for (const file of launchers) if (isFile(file)) return {python: file, pythonArgs: ['-3']};
+
+  // python.org's installers can install a runtime without the optional launcher
+  // or a PATH entry. Search their standard directories, newest Python 3 first.
+  const roots = [paths.join(local, 'Programs', 'Python'), vars.ProgramFiles, vars['ProgramFiles(x86)']]
+    .filter(value => typeof value === 'string' && paths.isAbsolute(value));
+  for (const root of roots) {
+    let names;
+    try { names = files.readdirSync(root); } catch { continue; }
+    const versions = names.flatMap(name => {
+      const match = /^Python3(?:\.)?(\d{1,2})(?:-(?:32|64|arm64))?$/i.exec(name);
+      return match && Number(match[1]) >= 8 ? [{name, minor: Number(match[1])}] : [];
+    }).sort((left, right) => right.minor - left.minor || left.name.localeCompare(right.name)).slice(0, 32);
+    for (const {name} of versions) {
+      const file = paths.join(root, name, 'python.exe');
+      if (isFile(file)) return {python: file, pythonArgs: []};
+    }
+  }
+  for (const executable of ['python.exe', 'python3.exe']) {
+    for (const directory of entries) {
+      // WindowsApps aliases can open the Store instead of starting Python.
+      if (/(?:^|[\\/])WindowsApps(?:[\\/]|$)/i.test(directory)) continue;
+      const file = paths.join(directory, executable);
+      if (isFile(file)) return {python: file, pythonArgs: []};
+    }
+  }
+  return {python: 'py', pythonArgs: ['-3']};
+}
+
 function settings(configuration, environment = {}, keyPrefix = '') {
   const platform = environment.platform || process.platform;
   const home = environment.home || os.homedir();
@@ -89,11 +135,13 @@ function settings(configuration, environment = {}, keyPrefix = '') {
   // A relative user setting is resolved against the OS home, never workspace content.
   codexHome = paths.resolve(home, codexHome);
   const customPython = get('pythonPath', '').trim();
+  const runtime = customPython ? {python: customPython, pythonArgs: []}
+    : platform === 'win32' ? windowsPython({...environment, home, env: vars})
+      : {python: 'python3', pythonArgs: []};
   const retention = get('cacheRetentionDays', 7);
   return {
     codexHome,
-    python: customPython || (platform === 'win32' ? 'py' : 'python3'),
-    pythonArgs: !customPython && platform === 'win32' ? ['-3'] : [],
+    ...runtime,
     label: clean(get('sourceLabel', ''), 200),
     enabled: get('collectorEnabled', true) !== false,
     retentionDays: Number.isInteger(retention) && retention >= 1 && retention <= 30 ? retention : 7,
@@ -188,4 +236,4 @@ class EventBridge {
 }
 
 module.exports = {OWNER, RECEIVE_COMMAND, MAX_LINE_BYTES, clean, normalizeEvent, JsonLines,
-  settings, settingKey, makeSource, hookIsConfigured, restartDelay, EventBridge};
+  settings, settingKey, windowsPython, makeSource, hookIsConfigured, restartDelay, EventBridge};

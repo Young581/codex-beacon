@@ -6,7 +6,7 @@
   "command.codexBeacon.remote.restart": "Restart collector",
   "configuration.title": "Remote Collector",
   "setting.codexBeacon.codexHome": "Codex home in this environment. Empty uses CODEX_HOME, then ~/.codex.",
-  "setting.codexBeacon.pythonPath": "Python executable without arguments. Defaults to python3 on Linux/macOS or py -3 on Windows.",
+  "setting.codexBeacon.pythonPath": "Python executable without arguments. Defaults to python3 on Linux/macOS; Windows automatically detects the launcher or installed Python.",
   "setting.codexBeacon.sourceLabel": "Server/container display label. Empty uses the connection type and hostname; each event carries its own project path.",
   "setting.codexBeacon.collectorEnabled": "Read Codex event metadata while this trusted workspace is open.",
   "setting.codexBeacon.cacheRetentionDays": "Collector notification-cache retention in this environment (1–30 days). Expiry runs during collection; original conversations are untouched."

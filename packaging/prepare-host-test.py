@@ -39,6 +39,7 @@ def main():
     parser.add_argument("--visual", action="store_true")
     parser.add_argument("--native-attention", action="store_true")
     parser.add_argument("--route-editor", action="store_true")
+    parser.add_argument("--auto-python", action="store_true", help="Exercise a fresh install without an explicit Python setting")
     args = parser.parse_args()
     code = find_code(args.code)
     visual = args.visual
@@ -54,13 +55,14 @@ def main():
     settings = {
         "codexBeacon.language": "zh-CN",
         "codexBeacon.localCodexHome": str(home), "codexBeacon.localCollectorEnabled": True,
-        "codexBeacon.localPythonPath": sys.executable,
         "extensions.confirmedUriHandlerExtensionIds": ["notifier-test.notifier-route-fixture"],
         "security.workspace.trust.enabled": False, "update.mode": "none",
         "extensions.autoCheckUpdates": False, "extensions.autoUpdate": False,
         "telemetry.telemetryLevel": "off", "workbench.startupEditor": "none",
         "window.restoreWindows": "none", "window.confirmBeforeClose": "never"
     }
+    if not args.auto_python:
+        settings["codexBeacon.localPythonPath"] = sys.executable
     if visual:
         version = json.loads((ROOT / "ui" / "package.json").read_text(encoding="utf-8-sig"))["version"]
         settings.update({"window.title": "Codex Notifier " + version + " - Visual Review", "codexBeacon.localSourceLabel": "Local test workspace"})
@@ -94,6 +96,8 @@ def main():
     if args.route_editor:
         metadata["env"]["CODEX_NOTIFIER_TEST_EDITOR"] = "1"
         metadata["args"].insert(-1, '--extensionDevelopmentPath=' + str(ROOT / 'tests' / 'route-editor-fixture'))
+    if args.auto_python:
+        metadata["env"]["CODEX_NOTIFIER_AUTO_PYTHON_TEST"] = "1"
     (runtime / "launch.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(metadata, indent=2))
     return 0

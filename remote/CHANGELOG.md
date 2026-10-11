@@ -1,4 +1,9 @@
-# 0.2.3
+# Changelog
+
+## 0.5.1
+
+- Detect Windows Python installations when the optional launcher is absent, while keeping explicit settings and Linux/macOS defaults.
+
 
 ## 0.4.0
 

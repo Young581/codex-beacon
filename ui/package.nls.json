@@ -46,7 +46,7 @@
   "setting.codexBeacon.openLocation.option.0": "Codex session sidebar (default)",
   "setting.codexBeacon.openLocation.option.1": "Main editor area",
   "setting.codexBeacon.localCodexHome": "Codex home for local VS Code folders. Empty uses CODEX_HOME, then ~/.codex. Only VS Code-origin sessions are collected.",
-  "setting.codexBeacon.localPythonPath": "Local Python executable, without arguments. Empty uses py -3.",
+  "setting.codexBeacon.localPythonPath": "Local Python executable, without arguments. Empty automatically detects the Windows launcher or Python installed in standard user/system directories and PATH.",
   "setting.codexBeacon.localSourceLabel": "Source label for notifications from local VS Code windows.",
   "setting.codexBeacon.localCollectorEnabled": "Collect VS Code Codex sessions in trusted local folders. SSH/container windows do not start local collection.",
   "setting.codexBeacon.soundOnDone": "Play sound when a response ends (on by default). Clicking and acknowledging are silent. Response completion does not mean the overall goal or a background job has finished.",

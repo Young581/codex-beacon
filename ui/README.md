@@ -24,7 +24,7 @@
 
 本机安装主扩展即可。点击右下角 **Codex** 或运行 **Codex Beacon: 打开仪表盘**，即可打开管理面板。命令面板中的 **测试本机弹窗和声音** 可检查提醒。
 
-Python 无法自动识别时，在 `codexBeacon.localPythonPath` 设置 Python 可执行文件的绝对路径。默认读取该环境的 `CODEX_HOME` 或 `~/.codex`。完成弹窗和声音默认开启，可在设置中分别关闭；Windows 勿扰模式可能抑制通知。
+Windows 会自动识别 `py` 启动器或用户／系统标准目录及 PATH 中的 Python，无需安装 `py` 启动器或预先添加 PATH。仍无法识别时，在 `codexBeacon.localPythonPath` 设置 Python 可执行文件的绝对路径。默认读取该环境的 `CODEX_HOME` 或 `~/.codex`。完成弹窗和声音默认开启，可在设置中分别关闭；Windows 勿扰模式可能抑制通知。
 
 SSH／容器项目需要在目标环境安装并启用 **Codex Beacon Collector**（`Young581.codex-beacon-collector`），并在那里安装 Python 3.8+。主扩展的 **检查／安装当前环境的组件** 可定位该组件。Windows 本地音效仍在本机播放。远端集成有自动化检查，本次未进行真实 SSH／容器环境验证。
 
@@ -62,7 +62,7 @@ Track Codex tasks by project in VS Code and get alerts when a response ends or i
 
 Install **Codex Beacon**, ID `Young581.codex-beacon`, on **Windows x64 with VS Code 1.96+ and Python 3.8+**. Open a trusted project folder with the Codex extension. Click the **Codex** status-bar button to open the dashboard, or run **Open dashboard** from the command palette.
 
-Local collection is embedded. If Python cannot be found, set `codexBeacon.localPythonPath` to its absolute executable path. Completion popups and sounds are enabled by default and can be adjusted independently. Run **Test desktop notification and sound** to verify them.
+Local collection is embedded. Windows automatically detects the launcher or Python in standard installation directories and PATH; the optional `py` launcher is not required. If Python cannot be found, set `codexBeacon.localPythonPath` to its absolute executable path. Completion popups and sounds are enabled by default and can be adjusted independently. Run **Test desktop notification and sound** to verify them.
 
 For SSH/container projects, install **Codex Beacon Collector** (`Young581.codex-beacon-collector`) and Python in that environment. Use **Check / install components for this environment** to locate it. Native audio plays on your Windows computer. Remote integration has automated checks but has not been tested against a live SSH/container host in this release.
 

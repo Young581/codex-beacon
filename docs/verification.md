@@ -1,5 +1,12 @@
 # 验证记录
 
+## 0.8.1 / Collector 0.5.1
+
+- 修复 Windows 未安装 `py` 启动器、Python 没加入 PATH 时的 `ENOENT`：自动检测 Python 标准安装目录、启动器和可执行文件 PATH，显式设置优先。
+- 新增用户／系统标准目录发现、Python 版本选择、WindowsApps 别名跳过和自定义设置优先级的回归检查。
+- 在全新的隔离 VS Code 配置中，不填写 Python 路径，实际收到采集器心跳并通过 23 项宿主检查。
+- 商店 0.8.0 的本机故障通过备份并补齐 `codexBeacon.localPythonPath` 修复，实际 Python 采集进程启动成功。
+
 ## 0.8.0 / Collector 0.5.0
 
 独立市场条目使用 `Young581.codex-beacon` 和 `Young581.codex-beacon-collector`。

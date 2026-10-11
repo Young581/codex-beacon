@@ -46,7 +46,7 @@
   "setting.codexBeacon.openLocation.option.0": "Codex 插件会话侧栏（默认）",
   "setting.codexBeacon.openLocation.option.1": "中间主编辑器区域",
   "setting.codexBeacon.localCodexHome": "VS Code 本地文件夹中 Codex 的配置目录；留空使用 CODEX_HOME 或 ~/.codex。仅采集 VS Code 插件会话。",
-  "setting.codexBeacon.localPythonPath": "本机 Python 可执行文件路径，不含参数；留空使用 py -3。",
+  "setting.codexBeacon.localPythonPath": "?? Python ??????????????????? Windows ???????????????? PATH ?? Python?",
   "setting.codexBeacon.localSourceLabel": "本地 VS Code 窗口的通知来源名称。",
   "setting.codexBeacon.localCollectorEnabled": "在受信任的本地文件夹中采集 VS Code Codex 插件会话；SSH／容器窗口不会启动本地采集。",
   "setting.codexBeacon.soundOnDone": "本轮回复结束时播放声音，默认开启。点击通知或标读仍静音；本轮结束不代表整个项目或后台任务完成。",

@@ -23,6 +23,10 @@ Run `py -3 -B packaging/prepare-host-test.py` first. It writes a fresh, isolated
 extensions directory, workspace and Codex home below `packaging/host-runs`, then prints a JSON launch
 descriptor and saves it as `launch.json`. It does not start a GUI.
 
+For a fresh-install Python-discovery check, add `--auto-python` when preparing the
+fixture. This omits `codexBeacon.localPythonPath`; the host suite requires a real
+collector heartbeat from the detected runtime before checking task behavior.
+
 Use its `code`, `args` and `env` fields to start a child process. Pass every argument as a separate
 argument, without constructing a shell command. In particular the two repeated arguments are:
 

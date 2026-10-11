@@ -71,6 +71,12 @@ exports.run = async function run() {
       assert.equal(config.get('openLocation'), 'sidebar', 'Sidebar must be the default open location');
       assert.equal(config.get('groupBy'), 'project', 'Projects must be the default grouping');
       assert.equal(config.get('soundFile'), '', 'System sound must remain the default');
+      if (process.env.CODEX_NOTIFIER_AUTO_PYTHON_TEST === '1') {
+        assert.equal(config.get('localPythonPath'), '', 'Fresh-install test must not configure Python explicitly');
+        const local = await waitFor(() => command('local.status'), value => value.state === 'connected',
+          'Default Python discovery must start collection and receive a real heartbeat');
+        assert.ok(path.isAbsolute(local.python) && fs.existsSync(local.python), 'Detected Python must exist');
+      }
       await config.update('groupBy', 'history', vscode.ConfigurationTarget.Global);
     });
 

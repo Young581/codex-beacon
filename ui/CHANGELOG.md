@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.1
+
+- Fix fresh Windows installs when Python is installed without the optional `py` launcher or a PATH entry.
+- Detect supported Python installations in standard user/system directories and executable PATH entries; preserve explicit Python settings.
+- Add a real extension-host test mode that exercises the default Python configuration.
+
 ## 0.8.0
 
 - Prepare the independent Codex Beacon Marketplace identity and companion.
