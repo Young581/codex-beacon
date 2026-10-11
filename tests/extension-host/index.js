@@ -245,14 +245,17 @@ exports.run = async function run() {
       assert.equal(value.statusCommand, 'codexBeacon.dashboard');
     });
 
-    await test('Default sidebar navigation reads only the clicked reminder and creates no editor tabs', async () => {
+    await test('Sidebar task inline action opens the exact conversation and reads only its reminder without editor tabs', async () => {
       const before = await snapshot();
       const entry = history(before).find(item => !item.read && item.event.session_id === process.env.CODEX_NOTIFIER_TEST_SESSION && item.event.type === 'done');
       assert.ok(entry);
       const otherUnread = history(before).filter(item => !item.read && item.key !== entry.key).map(item => item.key);
       assert.ok(otherUnread.length >= 2);
       const beforeTabs = vscode.window.tabGroups.all.flatMap(group => group.tabs).length;
-      const result = await command('showEntry', entry.key);
+      const menu = vscode.extensions.getExtension(UI_ID).packageJSON.contributes.menus['view/item/context'];
+      const open = menu.find(item => item.command === 'codexBeacon.showEntry.zhCN' && item.group === 'inline@0');
+      assert.ok(open, 'Task rows must expose conversation navigation inline');
+      const result = await vscode.commands.executeCommand(open.command, entry);
       assert.equal(result.routed, true);
       const after = await waitFor(snapshot, value => value.lastNavigation?.method === 'sidebar' &&
         history(value).find(item => item.key === entry.key)?.read, 'Sidebar request should read only its notification');

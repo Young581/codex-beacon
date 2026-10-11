@@ -24,7 +24,7 @@ DEFAULT_OUTPUT = ROOT / "dist"
 NS = "http://schemas.microsoft.com/developer/vsx-schema/2011"
 CONTENT_NS = "http://schemas.openxmlformats.org/package/2006/content-types"
 IDS = {"ui": "codex-beacon", "remote": "codex-beacon-collector"}
-VERSIONS = {"ui": "0.8.6", "remote": "0.5.5"}
+VERSIONS = {"ui": "0.8.7", "remote": "0.5.5"}
 MIMES = {".json": "application/json", ".js": "application/javascript", ".cjs": "application/javascript",
          ".ps1": "text/plain", ".py": "text/plain", ".md": "text/markdown", ".txt": "text/plain",
          ".html": "text/html", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png",

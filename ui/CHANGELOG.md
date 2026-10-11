@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.7
+
+- 修复原生侧栏每轮任务右侧按钮：直接打开对应 Codex 对话，成功后标为已读。
+- “打开项目窗口”按钮只显示在项目行，保留任务的标为已读与删除操作。
+- Open the corresponding conversation from each sidebar task; keep project-window navigation on project rows.
+
 ## 0.8.6
 
 - 本轮完成、等待回答、等待审批可以分别设置本机 WAV／MP3 音效，留空跟随原有通用音效。

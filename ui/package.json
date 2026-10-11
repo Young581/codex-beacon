@@ -2,7 +2,7 @@
   "name": "codex-beacon",
   "displayName": "Codex Beacon",
   "description": "Track Codex tasks by project with a compact dashboard, colored states, token usage and completion alerts.",
-  "version": "0.8.6",
+  "version": "0.8.7",
   "publisher": "Young581",
   "license": "MIT",
   "engines": {
@@ -387,12 +387,12 @@
       "view/item/context": [
         {
           "command": "codexBeacon.openProjectWindow.zhCN",
-          "when": "(view == codexBeacon.history && (viewItem == projectTaskGroup || viewItem == readNotification || viewItem == unreadNotification)) && codexBeacon.menuLanguage == zh-CN",
+          "when": "(view == codexBeacon.history && viewItem == projectTaskGroup) && codexBeacon.menuLanguage == zh-CN",
           "group": "inline@0"
         },
         {
           "command": "codexBeacon.openProjectWindow.en",
-          "when": "(view == codexBeacon.history && (viewItem == projectTaskGroup || viewItem == readNotification || viewItem == unreadNotification)) && codexBeacon.menuLanguage == en",
+          "when": "(view == codexBeacon.history && viewItem == projectTaskGroup) && codexBeacon.menuLanguage == en",
           "group": "inline@0"
         },
         {
@@ -408,12 +408,12 @@
         {
           "command": "codexBeacon.showEntry.zhCN",
           "when": "(view == codexBeacon.history && (viewItem == readNotification || viewItem == unreadNotification)) && codexBeacon.menuLanguage == zh-CN",
-          "group": "navigation"
+          "group": "inline@0"
         },
         {
           "command": "codexBeacon.showEntry.en",
           "when": "(view == codexBeacon.history && (viewItem == readNotification || viewItem == unreadNotification)) && codexBeacon.menuLanguage == en",
-          "group": "navigation"
+          "group": "inline@0"
         },
         {
           "command": "codexBeacon.showEntryDetails.zhCN",

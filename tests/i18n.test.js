@@ -46,6 +46,25 @@ test('manifest menus select exactly one language and all localization keys resol
   }
 });
 
+test('sidebar inline actions open task conversations and reserve window navigation for projects in both languages', () => {
+  const manifest = require('../ui/package.json');
+  const menus = manifest.contributes.menus['view/item/context'];
+  for (const [language, suffix] of [['zh-CN', 'zhCN'], ['en', 'en']]) {
+    const inline = menus.filter(item => item.group.startsWith('inline') && item.when.endsWith('== ' + language));
+    const actions = context => inline.filter(item =>
+      [...item.when.matchAll(/viewItem == (\w+)/g)].some(match => match[1] === context)).map(item => item.command);
+    assert.deepEqual(actions('projectTaskGroup'), ['codexBeacon.openProjectWindow.' + suffix]);
+    for (const context of ['readNotification', 'unreadNotification']) {
+      const commands = actions(context);
+      assert.ok(commands.includes('codexBeacon.showEntry.' + suffix));
+      assert.equal(inline.find(item => item.command === 'codexBeacon.showEntry.' + suffix).group, 'inline@0');
+      assert.ok(commands.includes('codexBeacon.deleteEntry.' + suffix));
+      assert.equal(commands.includes('codexBeacon.markEntryRead.' + suffix), context === 'unreadNotification');
+      assert.equal(commands.includes('codexBeacon.openProjectWindow.' + suffix), false);
+    }
+  }
+});
+
 test('Chinese is the independent default; fixed translators and opaque substitutions survive live changes', () => {
   assert.equal(getLanguage(), 'zh-CN');
   let language = 'en';
