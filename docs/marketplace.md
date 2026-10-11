@@ -1,11 +1,17 @@
 # Marketplace publication
 
-The independent listing uses publisher ID `Young581` (pending account confirmation).
-The primary extension is `Young581.codex-beacon` version 0.8.0; its companion is
-`Young581.codex-beacon-collector` version 0.5.0. This is separate from the upstream
-`lengmo1996` listings. GitHub access does not grant Marketplace publisher permissions.
+The independent listings use publisher ID `Young581` and are public. Verified on
+2026-10-11:
 
-Create or sign in to the publisher at https://marketplace.visualstudio.com/manage.
+- [Codex Beacon](https://marketplace.visualstudio.com/items?itemName=Young581.codex-beacon), version 0.8.0.
+- [Codex Beacon Collector](https://marketplace.visualstudio.com/items?itemName=Young581.codex-beacon-collector), version 0.5.0.
+
+Both public downloads have the same SHA256 and payload files as the reviewed,
+tested GitHub release packages. These are separate from the upstream `lengmo1996`
+listings. GitHub access does not grant Marketplace publisher permissions.
+
+For future releases, sign in to the publisher at https://marketplace.visualstudio.com/manage,
+increment the appropriate extension versions, rebuild and re-audit the packages.
 Confirm that the signed-in Microsoft account owns the publisher ID used in both manifests.
 If the actual publisher ID differs, update both manifests, the companion locator,
 build identity validation and the relevant test fixtures, then rebuild and audit.
@@ -27,7 +33,8 @@ Use an authenticated publisher session. Keep any PAT in the local credential
 store or process environment (`VSCE_PAT`), never in source, terminal commands,
 chat messages or release files. Microsoft's current documentation recommends
 Entra ID for automated publication. Alternatively, use **New extension → Visual
-Studio Code** in the publisher portal and upload these same audited files.
+Studio Code** in the publisher portal for the first publication. Use the
+existing listing's update action for subsequent versions, uploading the audited files.
 
 Publication is complete only after the portal validates both uploads and the
 public listing reports the intended versions. Build artifacts alone are not

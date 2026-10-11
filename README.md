@@ -22,6 +22,8 @@
 
 需要 Windows、VS Code ≥ 1.96 和 Python 3.8+。
 
+从 VS Code 扩展市场安装 [Codex Beacon](https://marketplace.visualstudio.com/items?itemName=Young581.codex-beacon)，发布者为 **Young581**。Windows 本机采集已内置；SSH／容器项目在目标环境安装 [Codex Beacon Collector](https://marketplace.visualstudio.com/items?itemName=Young581.codex-beacon-collector)，也可通过主扩展的“检查／安装当前环境的组件”定位它。
+
 从 [Releases](https://github.com/Young581/codex-beacon/releases) 下载主扩展与采集器的 VSIX 文件，在 VS Code 扩展面板选择“从 VSIX 安装”。也可自行构建：
 
 ```powershell
@@ -158,4 +160,4 @@ python -B build.py --output dist
 
 源代码基于上游提交 `4fa74775c65980a5015e0515b5877bc4ebe51e45`，保留原版权声明及 [MIT 许可证](LICENSE)。[UPSTREAM.md](UPSTREAM.md) 保存原项目介绍。
 
-这是独立维护的衍生项目，市场发布准备使用 `Young581.codex-beacon` 与 `Young581.codex-beacon-collector` 两个新 ID；发布者权限确认及市场上传尚待完成。命令、设置、缓存与 Hook 所有者均使用独立标识。迁移及发布说明见 [docs/marketplace.md](docs/marketplace.md)。旧版通知历史不自动迁移；启用新版前，在任务空闲时停用旧通知扩展并重新配置自定义设置。
+这是独立维护的衍生项目，已在扩展市场发布 `Young581.codex-beacon` 与 `Young581.codex-beacon-collector` 两个独立条目。命令、设置、缓存与 Hook 所有者均使用独立标识。迁移及发布说明见 [docs/marketplace.md](docs/marketplace.md)。旧版通知历史不自动迁移；启用新版前，在任务空闲时停用旧通知扩展并重新配置自定义设置。
