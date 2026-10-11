@@ -8,13 +8,13 @@ const { EventEmitter } = require('node:events');
 const privacy = require('./privacy-storage');
 const {normalizeTask} = require('../collector/src/task-data');
 const {destination} = require('./project-window');
-const {validateSoundFile} = require('./sound');
+const {validateSoundFile, validateSoundVolume} = require('./sound');
 
 const TYPES = new Set(['done', 'approval', 'question', 'test', 'task']);
 const TITLES = { done: 'Codex 本轮已回复', approval: 'Codex 等待审批', question: 'Codex 等待回答', test: 'Codex 通知测试' };
 const MAX_HISTORY = 200;
 const MAX_SEEN = 5000;
-const BROKER_PROTOCOL_VERSION = 9;
+const BROKER_PROTOCOL_VERSION = 10;
 
 function object(value, name) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${name} must be an object`);
@@ -70,6 +70,7 @@ function validateOptions(options = {}) {
     if (options[key] !== undefined && typeof options[key] !== 'boolean') throw new Error(`Invalid options.${key}`);
   }
   return { sound: options.sound !== false, desktop: options.desktop !== false,
+    ...(options.soundVolume !== undefined ? {soundVolume: validateSoundVolume(options.soundVolume)} : {}),
     ...(options.soundFile !== undefined ? {soundFile: validateSoundFile(options.soundFile)} : {}) };
 }
 
@@ -368,10 +369,11 @@ function formatBatch(items) {
   });
   if (visibleItems.length > 4) lines.push(t`另有 ${visibleItems.length - 4} 条，请查看通知历史`);
   // A merged alert plays once, using the highest-priority audible event's sound.
-  const audible = items.filter(item => item.options.sound)
+  const audible = items.filter(item => item.options.sound && validateSoundVolume(item.options.soundVolume) > 0)
     .sort((a, b) => priority[a.record.event.type] - priority[b.record.event.type]);
   const soundFile = audible[0]?.options.soundFile;
   return { title, body: lines.join('\n'), sound: audible.length > 0,
+    soundVolume: validateSoundVolume(audible[0]?.options.soundVolume),
     ...(soundFile ? {soundFile} : {}), desktop: items.some(item => item.options.desktop), keys: visibleItems.map(item => item.record.key) };
 }
 

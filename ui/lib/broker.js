@@ -7,7 +7,7 @@ const crypto = require('node:crypto');
 const { spawn } = require('node:child_process');
 const { EventEmitter } = require('node:events');
 const { NotificationStore, BatchScheduler, validateSource, validateEvent, formatBatch, BROKER_PROTOCOL_VERSION } = require('./broker-core');
-const {resolveSoundFile} = require('./sound');
+const {resolveSoundFile, resolveSoundVolume, validateSoundVolume} = require('./sound');
 const { WindowRegistry } = require('./routing');
 const { notificationOptions } = require('./presentation');
 const {loadIdentity, powershell} = require('./ipc-security');
@@ -78,6 +78,7 @@ class NativeNotifier extends EventEmitter {
   }
 
   once(batch) {
+    const soundVolume = validateSoundVolume(batch.soundVolume);
     this.start();
     const child = this.child;
     const id = crypto.randomUUID();
@@ -88,7 +89,7 @@ class NativeNotifier extends EventEmitter {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => this.fail(child, new Error('Windows notification helper did not acknowledge delivery')), 12000);
       this.pending = { id, child, resolve, reject, timer, soundFile: batch.soundFile || '' };
-      child.stdin.write(`${JSON.stringify({ id, title: batch.title, body: batch.body, sound: batch.sound, soundFile: batch.soundFile || '', desktop: batch.desktop, appName: batch.title.startsWith('Codex ') ? batch.title : 'Codex' })}\n`, 'utf8', error => {
+      child.stdin.write(`${JSON.stringify({ id, title: batch.title, body: batch.body, sound: batch.sound, soundVolume, soundFile: batch.soundFile || '', desktop: batch.desktop, appName: batch.title.startsWith('Codex ') ? batch.title : 'Codex' })}\n`, 'utf8', error => {
         if (error) this.fail(child, error);
       });
     });
@@ -169,6 +170,7 @@ function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNo
     if (forcedTests.has(record.key) || !target?.policy) return original;
     const config = {get: (key, fallback) => target.policy[key] ?? fallback};
     return {...notificationOptions(config, target.focused, record.event.type),
+      soundVolume: resolveSoundVolume(config),
       soundFile: resolveSoundFile(config, ['done', 'question', 'approval'].includes(record.event.type) ? record.event.type : 'default')};
   }
   function liveItems(items) {
@@ -320,7 +322,7 @@ function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNo
       client.authenticated = true;
       client.id = request.clientId;
       clearTimeout(client.helloTimer);
-      return { version: BROKER_PROTOCOL_VERSION, pid: process.pid, capabilities: ['notification-language-v1', 'custom-sound-v1', 'event-sounds-v1'] };
+      return { version: BROKER_PROTOCOL_VERSION, pid: process.pid, capabilities: ['notification-language-v1', 'custom-sound-v1', 'event-sounds-v1', 'sound-volume-v1'] };
     }
     switch (request.op) {
       case 'window': case 'registerWindow': case 'updateWindow': {
@@ -435,7 +437,7 @@ function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNo
   server.on('listening', () => {
     if (stopping) return;
     try {
-      const legacyFileName = ['broker-state-v8.json', 'broker-state-v7.json', 'broker-state-v6.json', 'broker-state-v5.json', 'broker-state-v4.json', 'broker-state-v3.json', 'broker-state-v2.json', 'broker-state.json']
+      const legacyFileName = ['broker-state-v9.json', 'broker-state-v8.json', 'broker-state-v7.json', 'broker-state-v6.json', 'broker-state-v5.json', 'broker-state-v4.json', 'broker-state-v3.json', 'broker-state-v2.json', 'broker-state.json']
         .find(file => fs.existsSync(path.join(storage, file)));
       store.reload({legacyFileName});
       if (store.needsMigration) { store.save(); store.needsMigration = false; }

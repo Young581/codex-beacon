@@ -4,6 +4,14 @@ const path = require('node:path');
 const os = require('node:os');
 const {t} = require('./i18n');
 const SOUND_KEYS = {default: 'soundFile', done: 'soundFileOnDone', question: 'soundFileOnQuestion', approval: 'soundFileOnApproval'};
+function validateSoundVolume(value = 100) {
+  if (!Number.isInteger(value) || value < 0 || value > 100) throw new Error('Invalid sound volume (0–100)');
+  return value;
+}
+function resolveSoundVolume(config) {
+  try { return validateSoundVolume(config.get('soundVolume', 100)); }
+  catch { return 100; }
+}
 function soundKey(type = 'default') {
   if (typeof type !== 'string' || !Object.hasOwn(SOUND_KEYS, type)) throw new Error('Invalid sound event');
   return SOUND_KEYS[type];
@@ -87,4 +95,4 @@ class SoundSettings {
     }
   }
 }
-module.exports = {SOUND_KEYS, soundKey, resolveSoundFile, validateSoundFile, checkSoundFile, SoundSettings};
+module.exports = {SOUND_KEYS, soundKey, resolveSoundFile, validateSoundFile, validateSoundVolume, resolveSoundVolume, checkSoundFile, SoundSettings};

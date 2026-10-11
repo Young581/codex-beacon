@@ -12,7 +12,7 @@ const {WindowAttention} = require('./lib/window-attention');
 const {ReadTracker} = require('./lib/read-tracking');
 const {PrivacyActions} = require('./lib/privacy');
 const {inspectInstallation, showInstallation} = require('./lib/installation');
-const {SOUND_KEYS, SoundSettings, validateSoundFile, resolveSoundFile} = require('./lib/sound');
+const {SOUND_KEYS, SoundSettings, validateSoundFile, resolveSoundFile, resolveSoundVolume, validateSoundVolume} = require('./lib/sound');
 const {Dashboard, dashboardData} = require('./lib/dashboard');
 const {projectGroups} = require('./lib/tasks');
 const TESTING = process.env.CODEX_NOTIFIER_TEST_MODE === '1';
@@ -58,7 +58,7 @@ async function activate(context) {
       paused: !config().get('notificationsEnabled', true), connected: !!client.authenticated,
       collectionState: sourceStatus?.status?.state || '', collectionMessage: sourceStatus?.status?.message || '',
       environment: sourceStatus?.source?.label || '', approvalHook: sourceStatus?.status?.approvalHook,
-      preferences: {language: config().get('language', 'auto'), openLocation: config().get('openLocation', 'sidebar'),
+      preferences: {language: config().get('language', 'auto'), openLocation: config().get('openLocation', 'sidebar'), soundVolume: resolveSoundVolume(config()),
         ...Object.fromEntries(Object.values(SOUND_KEYS).map(key => [key, config().get(key, '')]))}}),
     action: async (action, key, value) => {
       const generation = privacyGeneration;
@@ -74,6 +74,7 @@ async function activate(context) {
         return config().update(setting, value, vscode.ConfigurationTarget.Global);
       }
       if (action === 'setAutoHook') return remoteCommand('codexBeacon.remote.setAutoApprovalHook', value);
+      if (action === 'setSoundVolume') return config().update('soundVolume', validateSoundVolume(value), vscode.ConfigurationTarget.Global);
       if (action === 'soundFile') return soundSettings.chooseFile();
       if (action === 'resetSound') return soundSettings.reset();
       if (action === 'chooseEventSound') return soundSettings.chooseFile(value);
@@ -113,6 +114,7 @@ async function activate(context) {
     const environment = sourceStatus?.source?.label || vscode.env.remoteName || t('本机');
     const policy = Object.fromEntries(['notificationsEnabled', 'desktopNotifications', 'sound', 'soundOnDone', 'desktopOnDone', 'notifyOnDone', 'notifyOnApproval', 'notifyOnQuestion', 'onlyWhenUnfocused']
       .map(key => [key, config().get(key, !['onlyWhenUnfocused', 'desktopOnDone'].includes(key))]));
+    policy.soundVolume = resolveSoundVolume(config());
     for (const key of Object.values(SOUND_KEYS)) {
       try { policy[key] = validateSoundFile(config().get(key, '')); }
       catch (error) { policy[key] = ''; log(error.message); }
@@ -285,7 +287,7 @@ async function activate(context) {
   });
   register('codexBeacon.testNotification', async () => {
     const source = {id: `test-${vscode.env.machineId}`, label: t('Windows 本机测试'), host: t('本机'), home: '', cwd: ''};
-    const receipt = await client.request('test', {source, options: {desktop: true, sound: config().get('sound', true), soundFile: validateSoundFile(config().get('soundFile', ''))}});
+    const receipt = await client.request('test', {source, options: {desktop: true, sound: config().get('sound', true), soundVolume: resolveSoundVolume(config()), soundFile: validateSoundFile(config().get('soundFile', ''))}});
     await refresh();
     log(t('已提交一条本机测试通知；是否可见可听取决于 Windows 通知和音量设置。'));
     return receipt;
@@ -298,7 +300,7 @@ async function activate(context) {
       return {unsupported: true};
     }
     const source = {id: `test-${vscode.env.machineId}`, label: t('Windows 本机测试'), host: 'localhost', home: '', cwd: ''};
-    return client.request('test', {source, options: {desktop: false, sound: true, soundFile}});
+    return client.request('test', {source, options: {desktop: false, sound: true, soundFile, soundVolume: resolveSoundVolume(config())}});
   });
   const soundSettings = new SoundSettings(vscode, {config,
     preview: type => vscode.commands.executeCommand('codexBeacon.testSound', type)});

@@ -39,6 +39,7 @@
   "setting.codexBeacon.notificationsEnabled": "启用提醒。关闭时仍保存通知历史。",
   "setting.codexBeacon.desktopNotifications": "在 Windows 显示系统托盘通知。系统勿扰可能抑制显示。",
   "setting.codexBeacon.sound": "播放提示音，使用自定义音频文件或 Windows 系统提示音。",
+  "setting.codexBeacon.soundVolume": "所有提示音和试听的音量（0–100%），0 为静音；不会改变系统或其他应用的音量。",
   "setting.codexBeacon.taskbarAttention": "在 Windows 任务栏显示黄色／红色待处理标记，并在窗口预览标题前显示状态。首次使用会为窗口标题模板添加通知变量；已读后自动清除标记。",
   "setting.codexBeacon.blinkWindowTitle": "未读时让窗口预览标题的状态圆点每 0.8 秒交替显示彩色和浅色，标为已读后停止。不播放声音，不切换焦点。",
   "setting.codexBeacon.notifyOnDone": "本轮回复结束时提醒。",

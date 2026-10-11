@@ -39,6 +39,7 @@
   "setting.codexBeacon.notificationsEnabled": "Enable alerts. Turning this off still records notification history.",
   "setting.codexBeacon.desktopNotifications": "Show Windows desktop notifications. Do Not Disturb may suppress them.",
   "setting.codexBeacon.sound": "Play notification sounds using the custom audio file or Windows system sound.",
+  "setting.codexBeacon.soundVolume": "Volume for all notification sounds and previews (0–100%). 0 mutes sound; system and other application volumes are unchanged.",
   "setting.codexBeacon.taskbarAttention": "Show yellow/red taskbar attention and a status prefix in window preview titles. Adds a title variable on first use; read notifications clear the indicator.",
   "setting.codexBeacon.blinkWindowTitle": "Alternate the unread title dot every 0.8 seconds until read. Does not play sound, steal focus or flash the whole thumbnail background.",
   "setting.codexBeacon.notifyOnDone": "Notify when the current response ends.",

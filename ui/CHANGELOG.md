@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.8
+
+- 仪表盘“管理与设置 → 提醒与显示”加入 0–100% 音量滑块，0% 静音，默认 100%。
+- 系统提示音、自定义 WAV／MP3、各类提醒及试听共用独立播放音量，不修改系统或其他应用音量。
+- 通知使用对应项目窗口的最新音量；升级至通知协议 v10 并迁移 v9 历史。
+- Adjust notification and preview volume from the dashboard, including system sounds and custom audio.
+
 ## 0.8.7
 
 - 修复原生侧栏每轮任务右侧按钮：直接打开对应 Codex 对话，成功后标为已读。

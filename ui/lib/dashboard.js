@@ -10,6 +10,7 @@ const GLOBAL_ACTIONS = new Set(['refresh', 'sound', 'soundFile', 'resetSound', '
   'openLocation', 'installation', 'history', 'clearHistory', 'markRead', 'testNotification', 'testCollector', 'restartCollector',
   'configureHook', 'removeHook', 'openCodex', 'privacyPolicy', 'clearPrivateData', 'clearLocalPrivateData', 'resumePrivateData']);
 const SETTING_ACTIONS = {setLanguage: ['auto', 'zh-CN', 'en'], setOpenLocation: ['sidebar', 'editor'], setAutoHook: [true, false],
+  setSoundVolume: Array.from({length: 101}, (_, value) => value),
   chooseEventSound: ['done', 'question', 'approval'], previewEventSound: ['done', 'question', 'approval'], resetEventSound: ['done', 'question', 'approval']};
 const LABELS = {
   eyebrow: '工作空间动态', title: '项目任务总览', subtitle: '查看任务名称、模型与进度，展开查看用量和详情。',
@@ -33,6 +34,7 @@ const LABELS = {
   soundFile: '选择音频文件（WAV／MP3）', resetSound: '恢复系统默认提示音', defaultSound: 'Windows 系统默认提示音',
   soundScenario: '提示音场景', commonSound: '通用提示音', doneSound: '本轮完成提示音', questionSound: '等待回答提示音', approvalSound: '等待审批提示音',
   inheritSound: '跟随通用提示音', soundHint: '未单独设置的场景使用通用提示音；通用提示音为空时使用系统默认声音。',
+  soundVolume: '提示音音量', volumeHint: '所有提示音和试听共用此音量，0% 为静音；不会改变系统音量。',
   installation: '检查／安装当前环境组件', history: '查看通知历史', clearHistory: '清空全部通知', markRead: '全部标为已读',
   testNotification: '测试本机弹窗和声音', testCollector: '测试当前窗口采集链路', restartCollector: '重启当前环境采集器',
   autoHook: '自动添加审批 Hook', configureHook: '重新配置审批提醒', removeHook: '移除审批提醒', openCodex: '打开 Codex',
@@ -96,6 +98,7 @@ function dashboardData(snapshot, {windowId, options = {}, paused = false, connec
         autoEnabled: approvalHook.autoEnabled !== false, trust: 'unknown'},
       language: ['auto', 'zh-CN', 'en'].includes(preferences.language) ? preferences.language : 'auto',
       openLocation: preferences.openLocation === 'editor' ? 'editor' : 'sidebar',
+      soundVolume: Number.isInteger(preferences.soundVolume) && preferences.soundVolume >= 0 && preferences.soundVolume <= 100 ? preferences.soundVolume : 100,
       soundName: clean(path.basename(preferences.soundFile || ''), 200),
       eventSounds: Object.fromEntries([['done', 'soundFileOnDone'], ['question', 'soundFileOnQuestion'], ['approval', 'soundFileOnApproval']]
         .map(([type, key]) => [type, clean(path.basename(preferences[key] || ''), 200)]))},

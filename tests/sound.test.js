@@ -6,7 +6,7 @@ const os = require('node:os');
 const path = require('node:path');
 const {spawnSync} = require('node:child_process');
 const {once} = require('node:events');
-const {validateSoundFile, checkSoundFile, SoundSettings, resolveSoundFile} = require('../ui/lib/sound');
+const {validateSoundFile, checkSoundFile, SoundSettings, resolveSoundFile, validateSoundVolume, resolveSoundVolume} = require('../ui/lib/sound');
 const {formatBatch, validateOptions} = require('../ui/lib/broker-core');
 const {WindowRegistry} = require('../ui/lib/routing');
 const {powershell} = require('../ui/lib/ipc-security');
@@ -36,6 +36,30 @@ function fixture(t) {
   fs.writeFileSync(wav, buffer);
   return {dir, wav};
 }
+
+test('notification volume accepts integer percentages, rejects unsafe packets and preserves window policy atomically', () => {
+  assert.equal(validateSoundVolume(), 100);
+  const windows = new WindowRegistry();
+  const info = {id: 'a', sourceId: 'local', focused: false, policy: {soundVolume: 37}};
+  windows.update('a', info);
+  for (const value of [0, 1, 37, 100]) assert.equal(validateOptions({soundVolume: value}).soundVolume, value);
+  for (const value of [-1, 101, 0.5, NaN, Infinity, '50', null, [], true]) {
+    assert.throws(() => validateSoundVolume(value));
+    assert.throws(() => validateOptions({soundVolume: value}));
+    assert.throws(() => windows.update('a', {...info, policy: {soundVolume: value}}));
+    assert.equal(windows.windows.get('a').policy.soundVolume, 37);
+    assert.equal(resolveSoundVolume({get: () => value}), 100);
+  }
+  assert.equal(resolveSoundVolume({get: () => 0}), 0);
+});
+
+test('merged audio uses the chosen event volume and zero-volume events cannot suppress another audible event', () => {
+  const item = (type, volume) => ({record: {key: type, event: {type, cwd: '', session_id: ''}, source: {id: 'local'}},
+    options: {desktop: false, sound: true, soundVolume: volume}});
+  assert.equal(formatBatch([item('done', 72), item('approval', 18)]).soundVolume, 18);
+  assert.equal(formatBatch([item('done', 72), item('approval', 0)]).soundVolume, 72);
+  assert.equal(formatBatch([item('question', 0)]).sound, false);
+});
 
 test('audio paths preserve Unicode and quotes safe for MCI while rejecting nonlocal and injected paths', () => {
   const file = path.join(os.tmpdir(), "提示 tone's (1).MP3");
@@ -176,6 +200,7 @@ test('native sound delivery plays WAV, skips invalid muted audio and acknowledge
     try {
       await native.deliver({title: 'Audio fixture', body: '', desktop: false, sound: true, soundFile: wav});
       await native.deliver({title: 'Muted fixture', body: '', desktop: false, sound: false, soundFile: 'invalid'});
+      await native.deliver({title: 'Zero volume fixture', body: '', desktop: false, sound: true, soundVolume: 0, soundFile: 'invalid'});
       if (audioAvailable) assert.deepEqual(fallbacks, []);
       else assert.deepEqual(fallbacks, [{soundFile: wav}], 'Without an audio device, custom audio gracefully falls back');
       const missing = path.join(dir, 'missing.wav');
@@ -185,5 +210,22 @@ test('native sound delivery plays WAV, skips invalid muted audio and acknowledge
     } finally {
       const exited = native.child ? once(native.child, 'exit') : Promise.resolve();
       native.close(); await exited;
+    }
+  });
+
+test('Windows applies and reads independent volume on WAV, MP3 and the system sound without playback',
+  {skip: process.platform !== 'win32', timeout: 60000}, t => {
+    if (!hasAudioDevice()) {t.skip('Requires a Windows audio output device'); return;}
+    const {dir, wav} = fixture(t);
+    const frame = Buffer.alloc(417); Buffer.from([0xff, 0xfb, 0x90, 0x64]).copy(frame);
+    const mp3 = path.join(dir, 'volume.mp3'); fs.writeFileSync(mp3, Buffer.concat(Array(12).fill(frame)));
+    const helper = path.resolve(__dirname, '../ui/assets/show-notification.ps1');
+    for (const file of [wav, mp3, '']) for (const volume of [0, 37, 100]) {
+      const args = ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', helper, '-CheckVolume', String(volume)];
+      if (file) args.push('-CheckSoundFile', file);
+      const result = spawnSync(powershell(), args, {windowsHide: true, encoding: 'utf8', timeout: 10000});
+      assert.ifError(result.error); assert.equal(result.status, 0, result.stderr);
+      const match = result.stdout.match(/Audio playback volume: (\d+)/); assert.ok(match, result.stdout);
+      assert.ok(Math.abs(Number(match[1]) - volume * 10) <= 5, 'Driver volume must match the selected percentage within quantization');
     }
   });

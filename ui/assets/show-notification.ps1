@@ -1,4 +1,4 @@
-param([switch]$CheckOnly, [string]$CheckSoundFile)
+param([switch]$CheckOnly, [string]$CheckSoundFile, [int]$CheckVolume = -1)
 $ErrorActionPreference = 'Stop'
 [Console]::InputEncoding = New-Object System.Text.UTF8Encoding($false)
 [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
@@ -20,11 +21,13 @@ public static class CodexNotifierAudio {
     private const string Alias = "codex_beacon_sound";
     [DllImport("winmm.dll", CharSet = CharSet.Unicode, EntryPoint = "mciSendStringW")]
     private static extern uint Send(string command, IntPtr result, uint length, IntPtr callback);
+    [DllImport("winmm.dll", CharSet = CharSet.Unicode, EntryPoint = "mciSendStringW")]
+    private static extern uint Read(string command, StringBuilder result, uint length, IntPtr callback);
     public static void Close() { Send("close " + Alias, IntPtr.Zero, 0, IntPtr.Zero); }
     private static void Command(string command) {
         if (Send(command, IntPtr.Zero, 0, IntPtr.Zero) != 0) throw new Exception("Windows could not decode or play the audio file");
     }
-    private static void Open(string file) {
+    private static void Open(string file, bool adjustable = false) {
         if (String.IsNullOrEmpty(file) || file.Length > 2048 || !Path.IsPathRooted(file) ||
             file.StartsWith("\\\\") || file.StartsWith("//") || file.IndexOf('"') >= 0)
             throw new Exception("Choose a local WAV or MP3 file");
@@ -32,19 +35,61 @@ public static class CodexNotifierAudio {
         string extension = Path.GetExtension(file).ToLowerInvariant();
         if (extension != ".wav" && extension != ".mp3") throw new Exception("Choose a WAV or MP3 file");
         if (!File.Exists(file)) throw new Exception("Audio file does not exist");
-        Command("open \"" + file + "\" type " + (extension == ".wav" ? "waveaudio" : "mpegvideo") + " alias " + Alias);
+        // The MPEG device supports per-playback volume for both WAV and MP3.
+        // The waveaudio device does not implement setaudio volume.
+        Command("open \"" + file + "\" type " + (extension == ".wav" && !adjustable ? "waveaudio" : "mpegvideo") + " alias " + Alias);
     }
     public static void Check(string file) {
         Close();
         try { Open(file); } finally { Close(); }
     }
-    public static bool Play(string file) {
+    private static void SetVolume(int volume) {
+        if (volume < 0 || volume > 100) throw new Exception("Invalid sound volume");
+        Command("setaudio " + Alias + " volume to " + (volume * 10));
+    }
+    private static string SystemSoundFile() {
+        object configured = Microsoft.Win32.Registry.GetValue(
+            @"HKEY_CURRENT_USER\AppEvents\Schemes\Apps\.Default\SystemExclamation\.Current", "", null);
+        // An empty registered value is the user's No Sounds choice.
+        if (configured is string) return Environment.ExpandEnvironmentVariables((string)configured);
+        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Media", "Windows Notify System Generic.wav");
+    }
+    public static int CheckVolume(string file, int volume) {
         Close();
+        try {
+            Open(String.IsNullOrEmpty(file) ? SystemSoundFile() : file, true);
+            SetVolume(volume);
+            var value = new StringBuilder(64);
+            if (Read("status " + Alias + " volume", value, 64, IntPtr.Zero) != 0) throw new Exception("Could not read playback volume");
+            return Int32.Parse(value.ToString());
+        } finally { Close(); }
+    }
+    private static void PlayFile(string file, int volume) {
+        Open(file, true);
+        SetVolume(volume);
+        Command("play " + Alias + " from 0");
+    }
+    public static bool Play(string file, int volume) {
+        Close();
+        if (volume < 0 || volume > 100) throw new Exception("Invalid sound volume");
+        if (volume == 0) return true;
         if (!String.IsNullOrEmpty(file)) {
-            try { Open(file); Command("play " + Alias + " from 0"); return true; }
+            try { PlayFile(file, volume); return true; }
             catch { Close(); }
         }
-        System.Media.SystemSounds.Exclamation.Play();
+        // Resolve the user's Windows sound scheme and play at the same volume,
+        // including custom-file fallback. Never adjust device/master volume.
+        string systemSound = SystemSoundFile();
+        if (!String.IsNullOrEmpty(systemSound)) {
+            try { PlayFile(systemSound, volume); }
+            catch {
+                Close();
+                // Preserve the original default at full volume on systems
+                // without the media device. Reduced volume never bypasses it.
+                if (volume == 100) System.Media.SystemSounds.Exclamation.Play();
+                else throw;
+            }
+        }
         return String.IsNullOrEmpty(file);
     }
 }
@@ -206,12 +251,18 @@ public static class CodexNotifierHost {
                     if (Char.IsControl(character) || Char.IsWhiteSpace(character)) throw new Exception("Invalid notification ID");
                 }
                 id = requestId;
+                int volume = 100;
+                if (data.ContainsKey("soundVolume")) {
+                    if (!(data["soundVolume"] is int)) throw new Exception("Invalid sound volume");
+                    volume = (int)data["soundVolume"];
+                    if (volume < 0 || volume > 100) throw new Exception("Invalid sound volume");
+                }
                 if (!data.ContainsKey("desktop") || !(data["desktop"] is bool) || (bool)data["desktop"]) {
                     icon.Show(id, title, body, data.ContainsKey("appName") ? Convert.ToString(data["appName"]) : "Codex");
                 }
                 if (data.ContainsKey("sound") && data["sound"] is bool && (bool)data["sound"]) {
                     string file = data.ContainsKey("soundFile") ? Convert.ToString(data["soundFile"]) : "";
-                    if (!CodexNotifierAudio.Play(file)) Console.WriteLine("SOUND_FALLBACK " + id);
+                    if (!CodexNotifierAudio.Play(file, volume)) Console.WriteLine("SOUND_FALLBACK " + id);
                 }
                 Console.WriteLine("SHOWN " + id);
                 Console.Out.Flush();
@@ -228,5 +279,6 @@ public static class CodexNotifierHost {
 '@
 Add-Type -TypeDefinition $notifierSource -ReferencedAssemblies System.Windows.Forms,System.Drawing,System.Web.Extensions
 if ($CheckOnly) { Write-Output 'Notification helper compiled successfully'; exit 0 }
+if ($CheckVolume -ge 0) { Write-Output ('Audio playback volume: ' + [CodexNotifierAudio]::CheckVolume($CheckSoundFile, $CheckVolume)); exit 0 }
 if ($CheckSoundFile) { [CodexNotifierAudio]::Check($CheckSoundFile); Write-Output 'Audio file decoded successfully'; exit 0 }
 [CodexNotifierHost]::Run()

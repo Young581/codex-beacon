@@ -35,6 +35,8 @@ SSH／容器项目需要在目标环境安装并启用 **Codex Beacon Collector*
 
 ### 提示音与用量
 
+在 **管理与设置 → 提醒与显示 → 提示音音量** 拖动滑块，设置 0–100% 音量，0% 为静音。系统声音、自定义 WAV／MP3、各类提醒和试听共用此音量，默认 100%；不会改变系统或其他应用的音量。也可设置 `codexBeacon.soundVolume`，立即生效。
+
 打开 **管理与设置 → 提醒与显示 → 提示音场景**，选择通用、本轮完成、等待回答或等待审批，再选择音频文件、试听或恢复默认。每类音效独立保存，留空跟随通用音效；通用音效留空使用 Windows 系统声音。仍受声音总开关控制，完成音效还受 `soundOnDone` 控制。
 
 对应设置：`codexBeacon.soundFileOnDone`、`codexBeacon.soundFileOnQuestion`、`codexBeacon.soundFileOnApproval`。SSH／容器项目也使用当前 Windows 电脑的音频。合并提醒只播放一次，按审批、回答、完成的顺序选择最高优先级音效。
@@ -70,6 +72,8 @@ SSH／容器项目需要在目标环境安装并启用 **Codex Beacon Collector*
 ## English
 
 Track Codex tasks by project and conversation in VS Code and get alerts when a response ends or input is needed. Compact cards show the chat title, numbered round, model, state and time. Open the session, mark read or delete from the card header; open the project window beside its name. Expand each card independently for tokens, estimated API costs and full identifiers. Marking read hides the unread dot and mark-read button; history remains under All and leaves the Unread filter. The native sidebar groups project → conversation → round, with no token count in row labels. Round numbers refer to retained records and are recalculated after deletion or expiry. Management uses category navigation and one control per row.
+
+Use **Management and settings → Alerts and display → Notification sound volume** to set 0–100% volume for all notifications and previews. 0% mutes sound; the default is 100%. System sounds and custom WAV/MP3 use the same level without changing system or other application volumes. The setting `codexBeacon.soundVolume` takes effect immediately.
 
 ### Getting started
 

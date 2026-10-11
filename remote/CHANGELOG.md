@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.6
+
+- 同步提示音音量的中文与英文界面资源，本机音量由主扩展控制。
+- Synchronize volume-control translations used by the main extension.
+
 ## 0.5.5
 
 - Synchronize localized sound-scenario labels for Beacon's completion, question and approval sound settings.

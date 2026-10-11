@@ -94,6 +94,8 @@ const MESSAGES = {
   "最近更新": "Last updated",
   "查看全部任务": "View tasks",
   "自定义提示音": "Custom notification sound",
+  "提示音音量": "Notification sound volume",
+  "所有提示音和试听共用此音量，0% 为静音；不会改变系统音量。": "All notification sounds and previews use this volume. 0% mutes sound; system volume is unchanged.",
   "$(unmute) 自定义提示音": "$(unmute) Custom notification sound",
   "选择音频文件（WAV／MP3）": "Choose audio file (WAV/MP3)",
   "Windows 系统默认提示音": "Default Windows notification sound",

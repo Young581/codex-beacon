@@ -148,6 +148,9 @@ button.metric:hover { background: var(--vscode-toolbar-hoverBackground); }
 .management-actions .button { width: 100%; min-height: 40px; white-space: normal; text-align: left; justify-content: flex-start; padding: 10px 12px; }
 .management-field { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin: 14px 0; }
 .management-field select { color: var(--vscode-dropdown-foreground, var(--ink)); background: var(--vscode-dropdown-background, var(--canvas)); border: 1px solid var(--border); border-radius: 6px; padding: 7px 9px; max-width: 100%; }
+.volume-control { display: flex; align-items: center; gap: 12px; flex: 1 1 220px; max-width: 360px; min-width: 0; }
+.volume-control input { width: 100%; min-width: 0; accent-color: var(--vscode-focusBorder, #58a6ff); }
+.volume-percentage { min-width: 4ch; text-align: right; font-variant-numeric: tabular-nums; }
 .management-note { color: var(--muted); line-height: 1.7; overflow-wrap: anywhere; margin-top: 10px; font-size: 12px; }
 .hook-status { color: var(--accent); font-weight: 600; }
 .management-toggle { display: flex; align-items: center; gap: 8px; margin-top: 16px; }

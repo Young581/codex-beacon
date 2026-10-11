@@ -8,6 +8,7 @@
   let page = saved?.page === 'management' ? 'management' : 'tasks';
   let management = ['alerts', 'approval', 'tools', 'records'].includes(saved?.management) ? saved.management : 'alerts';
   let soundType = ['default', 'done', 'question', 'approval'].includes(saved?.soundType) ? saved.soundType : 'default';
+  let volumeDraft = null;
   function saveView() {vscode.setState({page, management, soundType});}
   const expanded = new Set();
   const icons = {
@@ -156,9 +157,20 @@
       node.dataset.action = event; node.dataset.focus = event; return node;
     };
     const selectedSound = soundType === 'default' ? settings.soundName : settings.eventSounds[soundType];
+    const volumeField = el('label', 'management-field volume-field');
+    volumeField.append(el('span', '', text.soundVolume));
+    const volumeControl = el('div', 'volume-control');
+    const volume = el('input'); volume.type = 'range'; volume.min = '0'; volume.max = '100'; volume.step = '1';
+    volume.value = String(volumeDraft ?? settings.soundVolume); volume.disabled = !!pending;
+    volume.dataset.setting = 'setSoundVolume'; volume.dataset.focus = 'setSoundVolume';
+    volume.setAttribute('aria-label', text.soundVolume);
+    const percentage = el('output', 'volume-percentage', volume.value + '%');
+    volume.addEventListener('input', () => {volumeDraft = Number(volume.value); percentage.textContent = volume.value + '%';});
+    volume.addEventListener('change', () => send('setSoundVolume', undefined, Number(volume.value)));
+    volumeControl.append(volume, percentage); volumeField.append(volumeControl);
     alerts.append(soundField, el('p', 'management-note', text.sound + ': ' +
       (selectedSound || (soundType === 'default' ? '' : text.inheritSound + ' · ') + (settings.soundName || text.defaultSound))),
-      el('p', 'management-note', text.soundHint),
+      el('p', 'management-note', text.soundHint), volumeField, el('p', 'management-note', text.volumeHint),
       actions(soundAction(text.soundFile, 'sound', 'soundFile', 'chooseEventSound'), soundAction(text.preview, 'play', 'preview', 'previewEventSound'),
         soundAction(soundType === 'default' ? text.resetSound : text.inheritSound, 'refresh', 'resetSound', 'resetEventSound')),
       actions(action(data.privacyPaused ? text.resumePrivateData : data.paused ? text.resume : text.pause,
@@ -354,7 +366,7 @@
       revision = message.revision; data = message.data; render();
     }
     if (message?.type === 'result' && message.id === pending) {
-      pending = 0; error = message.error || ''; render();
+      pending = 0; volumeDraft = null; error = message.error || ''; render();
     }
     if (message?.type === 'view' && ['tasks', 'management'].includes(message.page)) {
       page = message.page; saveView(); render();

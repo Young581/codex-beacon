@@ -2,7 +2,7 @@
   "name": "codex-beacon",
   "displayName": "Codex Beacon",
   "description": "Track Codex tasks by project with a compact dashboard, colored states, token usage and completion alerts.",
-  "version": "0.8.7",
+  "version": "0.8.8",
   "publisher": "Young581",
   "license": "MIT",
   "engines": {
@@ -593,6 +593,14 @@
           "default": "",
           "scope": "machine",
           "description": "%setting.codexBeacon.soundFile%"
+        },
+        "codexBeacon.soundVolume": {
+          "type": "integer",
+          "default": 100,
+          "minimum": 0,
+          "maximum": 100,
+          "scope": "application",
+          "description": "%setting.codexBeacon.soundVolume%"
         },
         "codexBeacon.soundFileOnDone": {
           "type": "string",

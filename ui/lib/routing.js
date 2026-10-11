@@ -1,5 +1,5 @@
 'use strict';
-const {SOUND_KEYS, validateSoundFile} = require('./sound');
+const {SOUND_KEYS, validateSoundFile, validateSoundVolume} = require('./sound');
 
 function text(value, limit, required = false) {
   if (value === undefined && !required) return '';
@@ -40,6 +40,7 @@ class WindowRegistry {
     if (value.policy !== undefined) {
       if (!value.policy || typeof value.policy !== 'object' || Array.isArray(value.policy)) throw new Error('Invalid notification policy');
       window.policy = {};
+      if (value.policy.soundVolume !== undefined) window.policy.soundVolume = validateSoundVolume(value.policy.soundVolume);
       for (const key of Object.values(SOUND_KEYS)) {
         if (value.policy[key] !== undefined) window.policy[key] = validateSoundFile(value.policy[key]);
       }

@@ -203,3 +203,19 @@ test('sound scenario actions accept only supported event enums and expose filena
   assert.equal(JSON.stringify(model).includes('private-folder'), false);
   dashboard.dispose();
 });
+
+test('dashboard volume changes accept only 0–100 integer values and retain explicit mute in the model', async () => {
+  const calls = [];
+  const {dashboard, panels} = fixture(async (...args) => calls.push(args));
+  dashboard.open(); const panel = panels[0]; await panel.receive({type: 'ready'});
+  let id = 0;
+  for (const value of [-1, 101, 0.5, '50', null, [], true]) {
+    await panel.receive({type: 'action', id: ++id, action: 'setSoundVolume', value});
+  }
+  assert.deepEqual(calls, []);
+  for (const value of [0, 37, 100]) await panel.receive({type: 'action', id: ++id, action: 'setSoundVolume', value});
+  assert.deepEqual(calls.map(call => call[2]), [0, 37, 100]);
+  assert.equal(dashboardData({entries: []}, {preferences: {soundVolume: 0}}).management.soundVolume, 0);
+  assert.equal(dashboardData({entries: []}, {preferences: {soundVolume: '37'}}).management.soundVolume, 100);
+  dashboard.dispose();
+});
