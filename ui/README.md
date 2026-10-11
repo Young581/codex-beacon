@@ -1,6 +1,6 @@
 # Codex 会话通知 / Codex Session Notifier
 
-> Codex Beacon 衍生版本：主扩展 0.5.3，支持直接切换／恢复对应项目窗口、项目任务、状态灯、token/费用估算和自定义单价，并保留 Windows PowerShell 路径修复。项目／任务行的窗口按钮保持未读。请从 [本仓库 Releases](https://github.com/Young581/codex-beacon/releases) 下载；下方扩展市场说明指向上游产品。本仓库未向扩展市场发布新条目。安装、费用配置请优先参阅 [项目首页](https://github.com/Young581/codex-beacon)。
+> Codex Beacon 衍生版本：主扩展 0.5.4，支持直接切换／恢复对应项目窗口、项目任务、状态灯、token/费用估算和自定义单价，并保留 Windows PowerShell 路径修复。项目／任务行的窗口按钮保持未读。请从 [本仓库 Releases](https://github.com/Young581/codex-beacon/releases) 下载；下方扩展市场说明指向上游产品。本仓库未向扩展市场发布新条目。安装、费用配置请优先参阅 [项目首页](https://github.com/Young581/codex-beacon)。
 
 [GitHub](https://github.com/lengmo1996/codex-vscode-notifier) · [下载安装 / Downloads](https://github.com/lengmo1996/codex-vscode-notifier/releases/latest) · [反馈 / Issues](https://github.com/lengmo1996/codex-vscode-notifier/issues)
 
@@ -10,7 +10,7 @@
 
 **提示语言：** 默认跟随 VS Code。通知菜单的语言选项支持 `auto`、`zh-CN`、`en`，可指定中文或英文；右键与顶部菜单、弹窗、任务和窗口标题即时切换，不显示固定双语文字。命令面板与设置使用 VS Code 的界面语言。语言切换不重启采集，不改变已读状态；已有日志、会话路径、主机名与原始系统错误保持原样。SSH／容器请同时更新采集器。
 
-版本 0.5.3 · Windows x64 · 保留上游扩展 ID
+版本 0.5.4 · Windows x64 · 保留上游扩展 ID
 
 只关注 **VS Code 的 Codex 插件**发起的本地文件夹、SSH 和容器会话。Codex 桌面 App、CLI 及来源无法确认的会话不提醒。这是社区扩展，并非 OpenAI 或 Microsoft 官方产品。
 
@@ -24,7 +24,7 @@
 
 统一入口采用 VS Code 的 `extensionPack`，不保证把组件自动安装到所有未来连接的远端环境。扩展管理器可能在本机保留配套采集器；它在本地不启动采集，SSH／容器中的采集仍只在对应环境运行。配套组件可独立安装或卸载，不阻止主扩展在本地使用。
 
-离线安装时，先在 Windows 安装 `codex-notifier-ui-0.5.3.vsix`；需要 SSH／容器采集时，在对应环境安装 `codex-notifier-collector-0.3.2.vsix`。离线 VSIX 不包含其他扩展的安装包。
+离线安装时，先在 Windows 安装 `codex-notifier-ui-0.5.4.vsix`；需要 SSH／容器采集时，在对应环境安装 `codex-notifier-collector-0.3.3.vsix`。离线 VSIX 不包含其他扩展的安装包。
 
 本地需要 Python 3.8 或以上及受信任的本地文件夹。SSH／容器窗口不会启动 Windows 本地采集，空窗口不采集。
 
@@ -32,6 +32,7 @@
 
 ## 提醒与标读
 
+- **自定义提示音**：在通知菜单或命令面板选择本机 WAV／MP3 文件，可单独试听或恢复系统默认。也可设置 `codexNotifier.soundFile`；留空使用系统音。SSH／容器项目也读取 Windows 本机音频；文件失效时回退系统音并提示一次。主动试听忽略声音总开关，不弹桌面通知，会留下测试记录。首次升级需在任务空闲时关闭全部 VS Code 窗口，等待 10 秒后重开；之后换音效无需重载。
 - 对应窗口的未读回复用黄色标记，审批或提问用红色。窗口预览标题圆点持续闪动到已读。Windows 合并任务栏按钮只显示汇总颜色，扩展不改变整张缩略图背景。
 - 默认本轮回复结束播放声音，并显示颜色和未读；审批／提问也按声音总开关提醒。回复结束默认不弹系统通知，可通过 **Sound On Done / Desktop On Done** 分别调整。标题显示“本轮已回复”，不把它称为整个任务完成。
 - **新提醒默认未读；切回窗口不会自动标读。点击通知只标读被点击的那一条**，同一窗口、同一会话的其他提醒也保留原状态。
@@ -75,13 +76,15 @@ MIT License。
 
 ## 远端组件改名后的升级
 
-配套组件的新 ID 为 `lengmo1996.codex-notifier-collector`。原远端市场条目删除后名称不可重用，因此主扩展 0.3.2 已改为关联新 ID。请保留主扩展市场条目并使用 Update；新远端组件使用 New extension 上传。
+配套组件的新 ID 为 `lengmo1996.codex-notifier-collector`。原远端市场条目删除后名称不可重用，因此主扩展 0.3.3 已改为关联新 ID。请保留主扩展市场条目并使用 Update；新远端组件使用 New extension 上传。
 
 如果目标服务器或容器仍装有旧 `lengmo1996.codex-notifier-remote` 或 `lengmo.codex-notifier-remote`，请在任务空闲时卸载旧扩展，再安装新组件并重载该窗口，避免两个采集器同时注册相同命令。无需删除 Codex 原始会话或执行隐私清理；采集逻辑及既有数据目录未变。
 
 ## English
 
-Version 0.5.3 · Windows x64 · Upstream extension identifiers retained
+**Custom sounds:** use **Customize notification sound** in the notification menu or Command Palette to select a local WAV/MP3 file, preview it, or restore the system sound. `codexNotifier.soundFile` accepts an absolute path on the local Windows computer, including for SSH/container projects; empty uses the system sound. Missing or unsupported audio falls back with one warning. Explicit preview plays even when sounds are disabled, creates a test-history entry and shows no desktop popup. After upgrading, close all VS Code windows when tasks are idle, wait 10 seconds and reopen once to update the shared broker. Later sound changes apply immediately.
+
+Version 0.5.4 · Windows x64 · Upstream extension identifiers retained
 
 Get sound, window indicators and unread reminders when **Codex in VS Code** finishes a response, asks a structured question or needs approval. Track local folders, Remote SSH servers and containers across multiple VS Code windows. Codex Desktop App sessions, standalone CLI sessions and sessions of unknown origin are excluded. This is a community extension, not an official OpenAI or Microsoft product.
 
@@ -96,7 +99,7 @@ Install **Codex 会话通知**, ID `lengmo1996.codex-notifier-ui`, from the Mark
 
 In each SSH/container window, run **Codex Notifier: Check / install components for this environment** from the Command Palette, or click the yellow missing-component status indicator. On the companion's extension page, choose **Install in SSH / Container** and enable it. Check every new environment: extension packs do not guarantee installation into all future remote connections. A locally retained copy of the companion stays inactive and can be managed independently.
 
-For this derivative's offline installation, download `codex-notifier-ui-0.5.3.vsix` from the Codex Beacon repository and install `codex-notifier-collector-0.3.2.vsix` in the remote environment as needed. A VSIX does not embed its extension-pack members. Reload affected windows after active tasks are idle.
+For this derivative's offline installation, download `codex-notifier-ui-0.5.4.vsix` from the Codex Beacon repository and install `codex-notifier-collector-0.3.3.vsix` in the remote environment as needed. A VSIX does not embed its extension-pack members. Reload affected windows after active tasks are idle.
 
 ### Understand the reminders
 

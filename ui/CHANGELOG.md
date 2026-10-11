@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.4
+
+- 增加“自定义提示音”：选择本机 WAV／MP3 文件，单独试听或恢复系统默认提示音。
+- 本轮完成、审批与提问提醒使用所选音频；保留静音、暂停和前台过滤行为。
+- 音频无法读取或解码时回退到系统音，提示一次；不重复发送桌面通知。
+- Custom local WAV/MP3 notification sounds, preview and system-default fallback.
+
 ## 0.5.3
 
 - 右键与顶部菜单只显示所选语言，默认跟随 VS Code；切换插件语言后菜单即时更新。

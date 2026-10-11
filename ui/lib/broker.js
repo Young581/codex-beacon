@@ -48,6 +48,8 @@ class NativeNotifier extends EventEmitter {
           this.clicks.delete(id);
           if (keys) this.emit('click', {id, keys});
         }
+        if (line.startsWith('SOUND_FALLBACK ') && this.pending?.child === child &&
+            line === `SOUND_FALLBACK ${this.pending.id}`) this.emit('soundFallback', {soundFile: this.pending.soundFile});
         if (!this.pending || this.pending.child !== child) continue;
         if (line === `SHOWN ${this.pending.id}`) this.finishPending(null);
         else if (line.startsWith(`ERROR ${this.pending.id} `)) this.finishPending(new Error(line.slice(`ERROR ${this.pending.id} `.length)));
@@ -84,8 +86,8 @@ class NativeNotifier extends EventEmitter {
     }
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => this.fail(child, new Error('Windows notification helper did not acknowledge delivery')), 12000);
-      this.pending = { id, child, resolve, reject, timer };
-      child.stdin.write(`${JSON.stringify({ id, title: batch.title, body: batch.body, sound: batch.sound, desktop: batch.desktop, appName: batch.title.startsWith('Codex ') ? batch.title : 'Codex' })}\n`, 'utf8', error => {
+      this.pending = { id, child, resolve, reject, timer, soundFile: batch.soundFile || '' };
+      child.stdin.write(`${JSON.stringify({ id, title: batch.title, body: batch.body, sound: batch.sound, soundFile: batch.soundFile || '', desktop: batch.desktop, appName: batch.title.startsWith('Codex ') ? batch.title : 'Codex' })}\n`, 'utf8', error => {
         if (error) this.fail(child, error);
       });
     });
@@ -164,7 +166,8 @@ function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNo
   function effectiveOptions(record, original) {
     const target = targetFor(record);
     if (forcedTests.has(record.key) || !target?.policy) return original;
-    return notificationOptions({get: (key, fallback) => target.policy[key] ?? fallback}, target.focused, record.event.type);
+    return {...notificationOptions({get: (key, fallback) => target.policy[key] ?? fallback}, target.focused, record.event.type),
+      soundFile: target.policy.soundFile || ''};
   }
   function liveItems(items) {
     return items.flatMap(item => {
@@ -214,6 +217,7 @@ function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNo
   }
 
   function broadcast(message) { for (const client of clients) if (client.authenticated) send(client, message); }
+  native.on('soundFallback', detail => broadcast({type: 'soundFallback', soundFile: detail.soundFile}));
   store.on('removed', keys => {
     const removed = new Set(keys);
     scheduler.cancel(record => removed.has(record.key));
@@ -314,7 +318,7 @@ function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNo
       client.authenticated = true;
       client.id = request.clientId;
       clearTimeout(client.helloTimer);
-      return { version: BROKER_PROTOCOL_VERSION, pid: process.pid, capabilities: ['notification-language-v1'] };
+      return { version: BROKER_PROTOCOL_VERSION, pid: process.pid, capabilities: ['notification-language-v1', 'custom-sound-v1'] };
     }
     switch (request.op) {
       case 'window': case 'registerWindow': case 'updateWindow': {

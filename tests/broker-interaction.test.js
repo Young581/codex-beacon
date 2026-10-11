@@ -17,6 +17,40 @@ const storage = label => path.resolve(__dirname, 'runtime', label + '-' + crypto
 // These cases exercise delivery cancellation, so explicitly enable done alerts.
 const doneDeliveryPolicy = {soundOnDone: true, desktopOnDone: true};
 
+test('custom sounds follow live destination policy and an explicit muted-window preview uses its selected file', {timeout: 12000}, async () => {
+  const directory = storage('custom-sound-policy');
+  const client = new BrokerClient(directory, path.resolve(__dirname, '../ui/lib/broker.js'));
+  const deliveries = [];
+  const native = new EventEmitter(); native.close = () => {};
+  native.deliver = async (batch, latest) => {deliveries.push(latest());};
+  const broker = startBroker({storage: directory, pipe: client.pipe, nativeNotifier: native, noNative: true,
+    batchOptions: {batchMs: 30, intervalMs: 10}});
+  const first = path.join(directory, 'first.wav'), next = path.join(directory, 'next.mp3');
+  const window = {id: client.clientId, sourceId: source.id, workspaceCwd: '/a', focused: false,
+    policy: {sound: true, soundFile: first}};
+  try {
+    await once(broker.server, 'listening'); await client.connect();
+    assert.ok(client.capabilities.includes('custom-sound-v1'));
+    await client.request('window', {window});
+    await client.request('event', {source, event: event('custom-live'), options: {desktop: false, sound: true}});
+    window.policy.soundFile = next;
+    await client.request('window', {window});
+    await pause(180);
+    assert.equal(deliveries.length, 1); assert.equal(deliveries[0].soundFile, next);
+    window.policy.sound = false;
+    await client.request('window', {window});
+    await client.request('event', {source, event: event('custom-muted'), options: {desktop: false, sound: true}});
+    await pause(80); assert.equal(deliveries.length, 1);
+    await client.request('interact');
+    await client.request('test', {source, options: {desktop: false, sound: true, soundFile: first}});
+    await pause(150);
+    assert.equal(deliveries.length, 2); assert.equal(deliveries[1].soundFile, first);
+    assert.equal(deliveries[1].desktop, false);
+    assert.deepEqual(deliveries[1].keys, []);
+    assert.equal(JSON.stringify(await client.request('history')).includes(first), false, 'Audio paths do not enter task history');
+  } finally {client.dispose(); broker.close();}
+});
+
 test('background completion alerts the foreground client and routes its click back to the owner', {timeout: 12000}, async () => {
   const directory = storage('foreground-alert');
   const a = new BrokerClient(directory, path.resolve(__dirname, '../ui/lib/broker.js'));

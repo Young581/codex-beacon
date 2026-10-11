@@ -4,7 +4,7 @@
 
 ## 中文
 
-适用版本：主扩展 0.3.0–0.5.0、远端采集器 0.2.0–0.3.0。社区扩展，非 OpenAI 或 Microsoft 官方产品。
+适用版本：主扩展 0.3.0–0.5.4、远端采集器 0.2.0–0.3.3。社区扩展，非 OpenAI 或 Microsoft 官方产品。
 
 ## 数据去向与隔离
 
@@ -17,6 +17,9 @@
 本机组件使用 TLS 双向认证和固定证书校验。通信身份在当前用户的受保护目录中生成，长期私钥不通过管道发送；Windows 管道只允许当前用户访问并拒绝网络客户端。旧版通信令牌不会作为新版身份使用。系统管理员和已经具有同一用户文件权限的程序仍属于该用户的系统信任范围；本扩展不为其他 VS Code 扩展提供独立沙箱。
 
 ## 读取、传递与保存的数据
+
+自定义提示音只读取用户选择的 Windows 本机 WAV／MP3 文件。文件路径保存在本机用户设置中，经受保护的本机通道传给播放组件；音频内容不进入通知历史、安装包或网络上传。
+为恢复对应项目窗口，通知历史还保存经过 URI 类型校验的项目目录／工作区文件地址和窗口名称。远端 URI 包含 SSH／容器连接标识，随对应通知保留与删除；不保存连接密码或私钥。恢复旧远端通知时只读取 VS Code 的最近项目列表。
 
 新版还保存任务状态、模型名、服务档位和各类 token 计数。费用在本机按配置单价计算，不请求账单接口或定价服务器；任务标题不保存提示词。清空已读保留运行中的任务及仍有未读提醒的任务用量。
 
@@ -60,7 +63,11 @@
 
 ## English
 
-Applies to main-extension versions 0.3.0–0.5.0 and remote-collector versions 0.2.0–0.3.0. This is a community extension, not an official OpenAI or Microsoft product.
+Custom notification sounds read only the selected local Windows WAV/MP3 file. Its path is stored in local user settings and passed to the local playback helper over authenticated IPC. Audio content is not included in notification history, release packages or network uploads.
+
+Project recovery retains validated folder/workspace URIs and window labels with their notifications, including SSH/container authority identifiers. They follow the same retention/deletion policy; no connection passwords or private keys are stored. Legacy recovery reads VS Code's recent-project list only.
+
+Applies to main-extension versions 0.3.0–0.5.4 and remote-collector versions 0.2.0–0.3.3. This is a community extension, not an official OpenAI or Microsoft product.
 
 ### Data destinations and isolation
 

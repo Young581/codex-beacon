@@ -1,5 +1,10 @@
 # 0.2.3
 
+## 0.3.3
+
+- 同步自定义提示音相关翻译，采集行为保持不变。音频仅在 Windows 主扩展本机播放。
+- Sync custom-sound translations; audio playback stays in the local Windows UI.
+
 ## 0.3.2
 
 - 采集器提示默认跟随 VS Code，仍支持主扩展指定中文／英文。

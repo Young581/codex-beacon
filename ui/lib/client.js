@@ -49,6 +49,7 @@ class BrokerClient extends EventEmitter {
           throw error;
         }
         this.authenticated = true;
+        this.capabilities = hello.capabilities || [];
         if (!hello.capabilities?.includes('notification-language-v1')) this.emit('diagnostic', t('旧版通知后台仍在运行。请在任务空闲后关闭所有 VS Code 窗口，等待 10 秒再重新打开，以启用原生通知语言切换。'));
         this.emit('connected');
         return;

@@ -9,6 +9,7 @@ const vscode = require('vscode');
 const UI_ID = 'lengmo1996.codex-notifier-ui';
 const REMOTE_ID = 'lengmo1996.codex-notifier-collector';
 const REQUIRED = ['testNotification', 'showHistory', 'pause', 'resume',
+  'chooseSound', 'testSound',
   'openProjectWindow',
   'configureApprovalHook', 'showStatus', 'internal.receive', 'internal.snapshot',
   'privacy', 'clearPrivateData', 'clearLocalPrivateData', 'resumePrivateData', 'checkInstallation', 'chooseLanguage'];
@@ -68,6 +69,7 @@ exports.run = async function run() {
       assert.equal(config.get('autoReadOnWindowFocus'), false, 'Window-wide auto-read must be off by default');
       assert.equal(config.get('openLocation'), 'sidebar', 'Sidebar must be the default open location');
       assert.equal(config.get('groupBy'), 'project', 'Projects must be the default grouping');
+      assert.equal(config.get('soundFile'), '', 'System sound must remain the default');
       await config.update('groupBy', 'history', vscode.ConfigurationTarget.Global);
     });
 
@@ -135,6 +137,9 @@ exports.run = async function run() {
 
     await test('Public test and status commands run without native UI in test mode', async () => {
       await command('testNotification');
+      const preview = await command('testSound');
+      assert.ok(accepted(preview), 'Sound-only preview must reach the new broker');
+      assert.ok(history(await snapshot()).some(entry => entry.key === preview.key && entry.event.type === 'test'));
       await command('showStatus');
     });
 

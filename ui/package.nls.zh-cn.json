@@ -1,4 +1,7 @@
 {
+  "command.codexNotifier.chooseSound": "自定义提示音",
+  "command.codexNotifier.testSound": "试听提示音",
+  "setting.codexNotifier.soundFile": "当前 Windows 电脑上 WAV 或 MP3 文件的绝对路径，SSH／容器项目也使用本机文件。可通过“自定义提示音”命令选择文件。留空使用系统提示音；无法读取或播放时自动回退。用于回复完成、审批与提问提醒。升级旧版通知后台后需重启一次 VS Code。",
   "command.codexNotifier.openProjectWindow": "打开项目窗口",
   "command.codexNotifier.chooseOpenLocation": "Codex 通知：选择会话打开位置",
   "command.codexNotifier.checkInstallation": "Codex 通知：检查／安装当前环境组件",
@@ -30,7 +33,7 @@
   "configuration.title": "Codex 会话通知",
   "setting.codexNotifier.notificationsEnabled": "启用提醒。关闭时仍保存通知历史。",
   "setting.codexNotifier.desktopNotifications": "在 Windows 显示系统托盘通知。系统勿扰可能抑制显示。",
-  "setting.codexNotifier.sound": "播放 Windows 系统提示音。",
+  "setting.codexNotifier.sound": "播放提示音，使用自定义音频文件或 Windows 系统提示音。",
   "setting.codexNotifier.taskbarAttention": "在 Windows 任务栏显示黄色／红色待处理标记，并在窗口预览标题前显示状态。首次使用会为窗口标题模板添加通知变量；已读后自动清除标记。",
   "setting.codexNotifier.blinkWindowTitle": "未读时让窗口预览标题的状态圆点每 0.8 秒交替显示彩色和浅色，标为已读后停止。不播放声音，不切换焦点。",
   "setting.codexNotifier.notifyOnDone": "本轮回复结束时提醒。",

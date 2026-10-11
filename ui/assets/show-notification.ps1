@@ -1,4 +1,4 @@
-param([switch]$CheckOnly)
+param([switch]$CheckOnly, [string]$CheckSoundFile)
 $ErrorActionPreference = 'Stop'
 [Console]::InputEncoding = New-Object System.Text.UTF8Encoding($false)
 [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
@@ -10,10 +10,44 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
+
+public static class CodexNotifierAudio {
+    private const string Alias = "codex_beacon_sound";
+    [DllImport("winmm.dll", CharSet = CharSet.Unicode, EntryPoint = "mciSendStringW")]
+    private static extern uint Send(string command, IntPtr result, uint length, IntPtr callback);
+    public static void Close() { Send("close " + Alias, IntPtr.Zero, 0, IntPtr.Zero); }
+    private static void Command(string command) {
+        if (Send(command, IntPtr.Zero, 0, IntPtr.Zero) != 0) throw new Exception("Windows could not decode or play the audio file");
+    }
+    private static void Open(string file) {
+        if (String.IsNullOrEmpty(file) || file.Length > 2048 || !Path.IsPathRooted(file) ||
+            file.StartsWith("\\\\") || file.StartsWith("//") || file.IndexOf('"') >= 0)
+            throw new Exception("Choose a local WAV or MP3 file");
+        foreach (char character in file) if (Char.IsControl(character)) throw new Exception("Invalid audio path");
+        string extension = Path.GetExtension(file).ToLowerInvariant();
+        if (extension != ".wav" && extension != ".mp3") throw new Exception("Choose a WAV or MP3 file");
+        if (!File.Exists(file)) throw new Exception("Audio file does not exist");
+        Command("open \"" + file + "\" type " + (extension == ".wav" ? "waveaudio" : "mpegvideo") + " alias " + Alias);
+    }
+    public static void Check(string file) {
+        Close();
+        try { Open(file); } finally { Close(); }
+    }
+    public static bool Play(string file) {
+        Close();
+        if (!String.IsNullOrEmpty(file)) {
+            try { Open(file); Command("play " + Alias + " from 0"); return true; }
+            catch { Close(); }
+        }
+        System.Media.SystemSounds.Exclamation.Play();
+        return String.IsNullOrEmpty(file);
+    }
+}
 
 public static class CodexNotifierHost {
     // WinForms' ShowBalloonTip does not expose NIIF_NOSOUND. This small
@@ -176,7 +210,8 @@ public static class CodexNotifierHost {
                     icon.Show(id, title, body, data.ContainsKey("appName") ? Convert.ToString(data["appName"]) : "Codex");
                 }
                 if (data.ContainsKey("sound") && data["sound"] is bool && (bool)data["sound"]) {
-                    System.Media.SystemSounds.Exclamation.Play();
+                    string file = data.ContainsKey("soundFile") ? Convert.ToString(data["soundFile"]) : "";
+                    if (!CodexNotifierAudio.Play(file)) Console.WriteLine("SOUND_FALLBACK " + id);
                 }
                 Console.WriteLine("SHOWN " + id);
                 Console.Out.Flush();
@@ -187,10 +222,11 @@ public static class CodexNotifierHost {
         };
         timer.Start();
         try { Application.Run(context); }
-        finally { timer.Dispose(); icon.Dispose(); context.Dispose(); }
+        finally { timer.Dispose(); icon.Dispose(); context.Dispose(); CodexNotifierAudio.Close(); }
     }
 }
 '@
 Add-Type -TypeDefinition $notifierSource -ReferencedAssemblies System.Windows.Forms,System.Drawing,System.Web.Extensions
 if ($CheckOnly) { Write-Output 'Notification helper compiled successfully'; exit 0 }
+if ($CheckSoundFile) { [CodexNotifierAudio]::Check($CheckSoundFile); Write-Output 'Audio file decoded successfully'; exit 0 }
 [CodexNotifierHost]::Run()

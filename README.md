@@ -2,7 +2,7 @@
 
 为 VS Code 中的 Codex 提供按项目分组的任务列表、状态灯、token 与费用估算，以及完成提醒。
 
-基于 [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier) 的 MIT 开源项目，包含 Windows PowerShell 路径修复和安装辅助脚本。当前版本为主扩展 **0.5.3**、采集器 **0.3.2**。
+基于 [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier) 的 MIT 开源项目，包含 Windows PowerShell 路径修复和安装辅助脚本。当前版本为主扩展 **0.5.4**、采集器 **0.3.3**。
 
 ## 当前功能
 
@@ -51,6 +51,14 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 在任务空闲时运行“开发人员：重新加载窗口”。升级后若共享通知后台仍使用旧代码，可在任务空闲时关闭所有 VS Code 窗口，等待 10 秒后再打开。验证提醒可运行 **Codex 通知：测试本机弹窗和声音**。
 
 Windows 勿扰模式、通知权限和静音设置可能影响实际提醒。首次启用任务栏状态时，扩展会在原 `window.title` 模板前加入 `${codexNotification}${separator}`。
+
+## 自定义提示音
+
+打开任务面板右上角“…” → 通知菜单 → **自定义提示音**，或在命令面板运行 **Codex Beacon: 自定义提示音**，选择本机 WAV／MP3 文件。该菜单也可 **试听当前提示音** 或 **恢复系统默认提示音**。试听只播放声音，不弹出桌面通知；即使声音总开关关闭，主动试听仍播放。试听会在历史中留下测试记录。
+
+所选音频用于本轮完成、等待审批和等待回答的声音提醒。也可在用户设置中填写 `codexNotifier.soundFile` 的本机绝对路径；留空使用系统提示音。SSH／容器项目也读取 Windows 本机音频。修改后无需重载；首次从旧版升级需在任务空闲时关闭全部 VS Code 窗口，等待 10 秒再打开，以更新共享通知后台。
+
+文件被删除或无法解码时自动回退到系统提示音，并提示一次。部分特殊 WAV／MP3 编码可能不被 Windows 支持，建议使用 PCM WAV 或常见 MP3。合并的提醒只播放一次，以优先级最高且启用声音的提醒选择音频（审批、提问、完成）。选择音频不会自动开启已关闭的声音总开关。音频文件只在本机读取，不打包或上传。
 
 ## 本次修复
 

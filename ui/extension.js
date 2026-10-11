@@ -12,6 +12,7 @@ const {WindowAttention} = require('./lib/window-attention');
 const {ReadTracker} = require('./lib/read-tracking');
 const {PrivacyActions} = require('./lib/privacy');
 const {inspectInstallation, showInstallation} = require('./lib/installation');
+const {SoundSettings, validateSoundFile} = require('./lib/sound');
 const TESTING = process.env.CODEX_NOTIFIER_TEST_MODE === '1';
 let current;
 
@@ -56,6 +57,8 @@ async function activate(context) {
     const environment = sourceStatus?.source?.label || vscode.env.remoteName || t('本机');
     const policy = Object.fromEntries(['notificationsEnabled', 'desktopNotifications', 'sound', 'soundOnDone', 'desktopOnDone', 'notifyOnDone', 'notifyOnApproval', 'notifyOnQuestion', 'onlyWhenUnfocused']
       .map(key => [key, config().get(key, !['onlyWhenUnfocused', 'desktopOnDone'].includes(key))]));
+    try { policy.soundFile = validateSoundFile(config().get('soundFile', '')); }
+    catch (error) { policy.soundFile = ''; log(error.message); }
     return {id: client.clientId, label: clean(`${project} · ${environment}`, 200),
       sourceId: sourceStatus?.source?.id || '', workspaceUri: (vscode.workspace.workspaceFile || folder)?.toString() || '',
       workspaceCwd: cwd, workspaceCwds: paths, focused: vscode.window.state.focused, routeUri: '', policy, language: getLanguage()};
@@ -195,11 +198,24 @@ async function activate(context) {
   });
   register('codexNotifier.testNotification', async () => {
     const source = {id: `test-${vscode.env.machineId}`, label: t('Windows 本机测试'), host: t('本机'), home: '', cwd: ''};
-    const receipt = await client.request('test', {source, options: {desktop: true, sound: config().get('sound', true)}});
+    const receipt = await client.request('test', {source, options: {desktop: true, sound: config().get('sound', true), soundFile: validateSoundFile(config().get('soundFile', ''))}});
     await refresh();
     log(t('已提交一条本机测试通知；是否可见可听取决于 Windows 通知和音量设置。'));
     return receipt;
   });
+  register('codexNotifier.testSound', async () => {
+    const soundFile = validateSoundFile(config().get('soundFile', ''));
+    await client.connect();
+    if (!client.capabilities?.includes('custom-sound-v1')) {
+      await vscode.window.showWarningMessage(t('旧版通知后台仍在运行。请在任务空闲后关闭所有 VS Code 窗口，等待 10 秒再重新打开，以启用自定义提示音。'));
+      return {unsupported: true};
+    }
+    const source = {id: `test-${vscode.env.machineId}`, label: t('Windows 本机测试'), host: 'localhost', home: '', cwd: ''};
+    return client.request('test', {source, options: {desktop: false, sound: true, soundFile}});
+  });
+  const soundSettings = new SoundSettings(vscode, {config,
+    preview: () => vscode.commands.executeCommand('codexNotifier.testSound')});
+  register('codexNotifier.chooseSound', () => soundSettings.choose());
   register('codexNotifier.pause', async () => { await config().update('notificationsEnabled', false, vscode.ConfigurationTarget.Global); updateBadge(); return {paused: true}; });
   register('codexNotifier.resume', async () => { await config().update('notificationsEnabled', true, vscode.ConfigurationTarget.Global); updateBadge(); return {paused: false}; });
   register('codexNotifier.showHistory', async () => { await client.request('interact'); await refresh(); await vscode.commands.executeCommand('codexNotifier.history.focus'); });
@@ -368,6 +384,7 @@ async function activate(context) {
     const paused = !config().get('notificationsEnabled', true);
     const items = [
       {label: t('$(globe) 语言'), command: 'codexNotifier.chooseLanguage'},
+      {label: t('$(unmute) 自定义提示音'), command: 'codexNotifier.chooseSound'},
       {label: t('$(layout-sidebar-right) 选择会话打开位置'), command: 'codexNotifier.chooseOpenLocation'},
       {label: t('$(extensions) 检查／安装当前环境组件'), command: 'codexNotifier.checkInstallation'},
       {label: t('$(history) 查看通知历史'), command: 'codexNotifier.showHistory'},
@@ -432,12 +449,21 @@ async function activate(context) {
     failure(t('这条通知对应的窗口尚未连接。请打开对应 SSH／容器窗口，或在升级后重载该窗口。')).catch(() => {});
   });
   client.on('actionError', message => { failure(clean(message.error, 1000)).catch(() => {}); });
+  let soundFallbackWarned = false;
+  client.on('soundFallback', message => {
+    if (!message.soundFile || config().get('soundFile', '') !== message.soundFile || soundFallbackWarned) return;
+    soundFallbackWarned = true;
+    const warning = t('自定义提示音无法播放，已使用系统默认提示音。请重新选择有效的 WAV／MP3 文件。');
+    log(warning);
+    vscode.window.showWarningMessage(warning).then(() => {}, () => {});
+  });
   client.on('deliveryError', message => {
     const relevant = (message.entries || []).filter(entry => !sourceStatus || entry.source.id === sourceStatus.source.id);
     if (!relevant.length) return;
     failure(t('Windows 系统通知显示失败，更新已保存在通知历史。') + clean(message.error, 200)).catch(() => {});
   });
   context.subscriptions.push(output, history, view, statusBar, vscode.workspace.onDidChangeConfiguration(event => {
+    if (event.affectsConfiguration('codexNotifier.soundFile')) soundFallbackWarned = false;
     if (event.affectsConfiguration('codexNotifier.language')) {
       vscode.commands.executeCommand('setContext', 'codexNotifier.menuLanguage', getLanguage()).catch(error => log(error.message));
       view.title = t('任务');

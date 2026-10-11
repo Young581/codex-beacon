@@ -1,6 +1,18 @@
 'use strict';
 // Only extension-owned templates are translated. Substitutions are opaque data.
 const MESSAGES = {
+  "自定义提示音": "Custom notification sound",
+  "$(unmute) 自定义提示音": "$(unmute) Custom notification sound",
+  "选择音频文件（WAV／MP3）": "Choose audio file (WAV/MP3)",
+  "Windows 系统默认提示音": "Default Windows notification sound",
+  "试听当前提示音": "Preview current sound",
+  "恢复系统默认提示音": "Restore default system sound",
+  "选择本机提示音": "Choose a local notification sound",
+  "使用此提示音": "Use this sound",
+  "提示音路径无效。请选择本机 WAV 或 MP3 文件。": "Invalid sound path. Choose a local WAV or MP3 file.",
+  "无法读取提示音文件。请重新选择本机 WAV 或 MP3 文件。": "Cannot read the sound file. Choose another local WAV or MP3 file.",
+  "自定义提示音无法播放，已使用系统默认提示音。请重新选择有效的 WAV／MP3 文件。": "Cannot play the custom sound; the default system sound was used. Choose a valid WAV/MP3 file.",
+  "旧版通知后台仍在运行。请在任务空闲后关闭所有 VS Code 窗口，等待 10 秒再重新打开，以启用自定义提示音。": "An older notification broker is still running. When tasks are idle, close all VS Code windows, wait 10 seconds and reopen to enable custom sounds.",
   "跟随 VS Code": "Follow VS Code",
   "通知语言": "Notification language",
   "$(globe) 语言": "$(globe) Language",
