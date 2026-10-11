@@ -1,8 +1,6 @@
 # Codex Beacon Collector
 
-Python 3.8+ is required in the collection environment. Installed runtimes are validated before use; Windows automatically tries another candidate when a runtime or launcher cannot start. Explicit Python settings remain authoritative. If no runtime works, the collector reports installation/configuration and restart steps. Python is not bundled or automatically downloaded.
-
-[GitHub](https://github.com/Young581/codex-beacon) · [Issues](https://github.com/Young581/codex-beacon/issues)
+[中文](#中文) · [English](#english) · [GitHub](https://github.com/Young581/codex-beacon) · [Issues](https://github.com/Young581/codex-beacon/issues)
 
 ## 中文
 
@@ -11,6 +9,8 @@ Python 3.8+ is required in the collection environment. Installed runtimes are va
 - 主扩展：`Young581.codex-beacon`，在 Windows 本机安装。
 - 本组件：`Young581.codex-beacon-collector`，在对应 SSH／容器中安装和启用。
 - 远端要求 Python 3.8+、受信任文件夹和同一用户可读取的 Codex Home。
+
+使用前会验证 Python 版本和所需标准库；Windows 在某个运行时或启动器无法启动时自动尝试其他候选。用户显式配置的 Python 路径会被验证并保留。没有可用运行时时会显示安装、配置与重启步骤。扩展不附带 Python，也不会自动下载。
 
 在目标远端窗口运行主扩展的 **检查／安装当前环境的组件**，在扩展页面选择安装到该 SSH／容器。离线安装可从 [Releases](https://github.com/Young581/codex-beacon/releases) 下载对应 VSIX。
 
@@ -27,6 +27,8 @@ Python 3.8+ is required in the collection environment. Installed runtimes are va
 Remote SSH/container companion for **Codex Beacon**. Install `Young581.codex-beacon` on Windows and `Young581.codex-beacon-collector` in the target remote environment. Local collection is already included in the main extension; this companion is inactive in local windows.
 
 Requires Python 3.8+, a trusted folder and access to that environment's Codex Home under the same user. Run **Check / install components for this environment** in the remote window, then install/enable the companion there. Set `codexBeacon.pythonPath` or `codexBeacon.codexHome` in remote settings if needed.
+
+Installed runtimes and required standard libraries are validated before use; Windows automatically tries another candidate when a runtime or launcher cannot start. Explicit Python settings are validated and retained. If no runtime works, the collector reports installation/configuration and restart steps. Python is not bundled or automatically downloaded.
 
 Only notification/task metadata crosses the existing VS Code connection. No developer server or telemetry; original Codex conversations are retained. Approval alerts require a separately configured and trusted hook. Disable older notifier collectors before enabling this component to avoid duplicate collection; settings, caches and hook ownership are independent.
 

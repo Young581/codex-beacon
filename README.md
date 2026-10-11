@@ -1,6 +1,10 @@
 # Codex Beacon · Codex 灯塔
 
+[简体中文](README.md) · [English](README.en.md) · [下载 / Downloads](https://github.com/Young581/codex-beacon/releases) · [扩展市场 / Marketplace](https://marketplace.visualstudio.com/items?itemName=Young581.codex-beacon)
+
 为 VS Code 中的 Codex 提供按项目分组的任务列表、状态灯、token 与费用估算，以及完成提醒。
+
+Track Codex tasks by project in VS Code with colored status lights, token usage, estimated API costs and completion alerts. [Read the full English guide →](README.en.md)
 
 基于 [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier) 的 MIT 开源项目，包含 Windows PowerShell 路径修复和安装辅助脚本。当前代码版本为主扩展 **0.8.9**、采集器 **0.5.7**，支持音量调节、分场景音效、对话分组与轮次显示，并将常用操作集中到仪表盘“管理与设置”。市场安装版本请以扩展详情为准，最新修复版可从 Releases 获取。
 
@@ -21,7 +25,7 @@
 
 ## 安装
 
-需要 Windows、VS Code ≥ 1.96 和 Python 3.8+。
+需要 Windows x64、VS Code ≥ 1.96 和 Python 3.8+。
 
 从 VS Code 扩展市场安装 [Codex Beacon](https://marketplace.visualstudio.com/items?itemName=Young581.codex-beacon)，发布者为 **Young581**。Windows 本机采集已内置；SSH／容器项目在目标环境安装 [Codex Beacon Collector](https://marketplace.visualstudio.com/items?itemName=Young581.codex-beacon-collector)，也可通过主扩展的“检查／安装当前环境的组件”定位它。
 
@@ -49,7 +53,9 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 }
 ```
 
-如 Python 不在启动器默认位置，还需在 `codexBeacon.localPythonPath` 中设置其完整路径。默认用户配置以外的 VS Code Profile 需要在该 Profile 中单独配置。
+Windows 会自动检测标准安装目录与 PATH 中的 Python，并验证版本和所需标准库；真实运行时优先于 `py` 启动器，某个候选启动失败时自动尝试其他候选。无需预先安装 `py` 启动器或添加 PATH。用户显式配置的 Python 路径会被验证并保留。
+
+扩展不附带 Python，也不会自动下载运行时。没有可用 Python 时，请安装 [Python 3.8 或更新版本](https://www.python.org/downloads/windows/)，或在 `codexBeacon.localPythonPath` 中指定有效 Python 可执行文件的完整路径，然后点击 **管理与设置 → 测试与连接 → 重启当前环境采集器**。默认用户配置以外的 VS Code Profile 需要在该 Profile 中单独配置。
 
 在任务空闲时运行“开发人员：重新加载窗口”。升级后若共享通知后台仍使用旧代码，可在任务空闲时关闭所有 VS Code 窗口，等待 10 秒后再打开。验证提醒可运行 **Codex 通知：测试本机弹窗和声音**。
 
@@ -75,6 +81,8 @@ Windows 勿扰模式、通知权限和静音设置可能影响实际提醒。首
 
 ## 自定义提示音
 
+在 **管理与设置 → 提醒与显示 → 提示音音量** 设置 0–100% 音量，默认 100%，0% 为静音。系统声音、自定义 WAV／MP3、所有提醒与试听共用此音量，不改变系统或其他应用的音量。设置 `codexBeacon.soundVolume` 也可立即生效。
+
 打开 **管理与设置 → 提醒与显示 → 提示音场景**，分别选择通用、本轮完成、等待回答或等待审批，再选择本机 WAV／MP3 文件、试听或恢复默认。也可运行 **Codex Beacon: 自定义提示音**，在菜单中进入对应场景。试听只播放声音，不弹出桌面通知；即使声音总开关关闭，主动试听仍播放。试听会在历史中留下测试记录。
 
 分场景设置为 `codexBeacon.soundFileOnDone`、`codexBeacon.soundFileOnQuestion`、`codexBeacon.soundFileOnApproval`。留空跟随通用 `codexBeacon.soundFile`，通用留空使用系统声音。各场景独立保存，恢复某一场景不影响其他音效；仍遵守声音总开关与完成声音开关。
@@ -83,7 +91,9 @@ Windows 勿扰模式、通知权限和静音设置可能影响实际提醒。首
 
 文件被删除或无法解码时自动回退到系统提示音，并提示一次。部分特殊 WAV／MP3 编码可能不被 Windows 支持，建议使用 PCM WAV 或常见 MP3。合并的提醒只播放一次，以优先级最高且启用声音的提醒选择音频（审批、提问、完成）。选择音频不会自动开启已关闭的声音总开关。音频文件只在本机读取，不打包或上传。
 
-## 本次修复
+## 运行时与启动修复
+
+0.8.9 在启动采集前验证真实 Python 3.8+ 和所需标准库，自动尝试其他可用候选，并让采集、测试和 Hook 命令复用验证后的运行时。没有可用运行时时显示安装、配置及重启步骤。退出码 101 表示启动失败，单凭它不能判断 Codex Home 配置有误。已使用真实返回 101 的 Windows 程序验证自动回退，并通过最终 VSIX 的隔离安装测试。
 
 通知和任务栏辅助进程统一通过 Windows 系统目录内的 PowerShell 绝对路径启动，修复 VS Code 继承的 PATH 缺少 PowerShell 时出现的 `spawn powershell.exe ENOENT`。没有修改系统 PATH，也没有放宽通信认证。
 
@@ -117,7 +127,7 @@ python -B build.py --output dist
 
 侧栏按项目 → 对话名称 → 第几轮分组，任务行显示轮次与简短状态。token、金额与完整用量放在任务悬停信息和仪表盘的可展开详情里；`*` 表示部分统计。
 
-将鼠标移到项目分组或任务行，点击窗口图标 **打开项目窗口**。它只切换／恢复项目窗口，保留未读状态；普通任务点击仍打开对应会话。目标通知组件暂未连接时也能恢复保存的项目 URI，包括多根工作区文件和远端连接地址；已关闭的子项目不会跳到其父目录窗口。
+将鼠标移到项目分组，点击窗口图标 **打开项目窗口**。它只切换／恢复项目窗口，保留未读状态；任务行点击及旁边的按钮打开对应会话。目标通知组件暂未连接时也能恢复保存的项目 URI，包括多根工作区文件和远端连接地址；已关闭的子项目不会跳到其父目录窗口。
 
 旧通知没有保存远端地址时，会尝试从 VS Code 最近项目恢复；同一路径匹配多个 SSH／容器连接时需选择连接。未找到连接信息则需手动打开正确远端项目一次，后续通知会记住它。
 

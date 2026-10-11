@@ -30,7 +30,7 @@ SOURCE_SUPPORT_FILES = frozenset({
     "install.ps1", "configure-notifications.py", "test-configuration.py",
     ".gitignore", "LICENSE", "CONTRIBUTING.md", "SECURITY.md",
     ".github/ISSUE_TEMPLATE/bug_report.yml", ".github/ISSUE_TEMPLATE/feature_request.yml", ".github/ISSUE_TEMPLATE/config.yml",
-    "build.py", "README.md", "PRIVACY.md", "packaging/README.md", "packaging/package_policy.py",
+    "build.py", "README.md", "README.en.md", "PRIVACY.md", "packaging/README.md", "packaging/package_policy.py",
     "packaging/bundle-source.py", "packaging/release-audit.py", "packaging/prepare-host-test.py",
     "packaging/run-host-test.py", "packaging/sync-local-collector.py",
     "packaging/native-smoke.js", "packaging/reproduce-url-window-routing.js",
