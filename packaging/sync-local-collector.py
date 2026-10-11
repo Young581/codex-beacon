@@ -7,7 +7,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-FILES = ("src/core.js", "src/extension.js", "scripts/collector.py", "src/i18n.js", "src/task-data.js")
+FILES = ("src/core.js", "src/extension.js", "scripts/collector.py", "src/i18n.js", "src/task-data.js", "src/python-runtime.js")
 
 
 def main():

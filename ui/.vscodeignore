@@ -16,6 +16,7 @@
 !collector/src/core.js
 !collector/src/extension.js
 !collector/src/i18n.js
+!collector/src/python-runtime.js
 !collector/src/task-data.js
 !extension.js
 !lib/broker-core.js

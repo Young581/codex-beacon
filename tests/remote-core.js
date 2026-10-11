@@ -239,7 +239,8 @@ function fixture(trusted = true, enabled = true, options = {}) {
     return process;
   };
   const context = {extensionPath: options.extensionPath || path.join(__dirname, '../remote'), subscriptions: []};
-  const controller = options.autoCreate === false ? null : createController(vscode, context, {spawn, ...options.dependencies});
+  const controller = options.autoCreate === false ? null : createController(vscode, context, {spawn,
+    resolvePython: config => ({python: config.python, pythonArgs: config.pythonArgs}), ...options.dependencies});
   return {controller, commands, children, messages, vscode, values, context, outputNames, updates, logs,
     grant() {vscode.workspace.isTrusted = true; granted();},
     change(key) {changed({affectsConfiguration: actual => actual === `codexBeacon.${key}`});},
@@ -554,5 +555,24 @@ test('Language changes translate remote popups, status and logs without restarti
     assert.equal(state.children[0].process.killed, false);
     assert.match((await state.controller.status()).message, /正在启动 Codex/);
     assert.match(state.logs.at(-1), /采集器语言已更新/);
+  } finally {state.controller.dispose();}
+});
+
+test('asynchronous runtime detection respects disposal and never starts a late collector', async () => {
+  let finish;
+  const state=fixture(true,true,{dependencies:{resolvePython:()=>new Promise(resolve=>{finish=resolve;})}});
+  assert.equal(state.children.length,0);
+  state.controller.dispose(); finish({python:'/verified/python',pythonArgs:[]});
+  await tick(); assert.equal(state.children.length,0);
+});
+
+test('missing Python reports an actionable local setting and sanitized 101 diagnostic before collection', async () => {
+  const error=Object.assign(new Error('SECRET'),{code:'PYTHON_RUNTIME_UNAVAILABLE',attempts:['EXIT_101']});
+  const state=fixture(true,true,{...localOptions(),dependencies:{...localDependencies,resolvePython:async()=>{throw error;}}});
+  try {
+    await tick(); const status=await state.controller.status();
+    assert.equal(status.state,'error'); assert.equal(state.children.length,0);
+    assert.match(status.message,/Python 3\.8\+/); assert.match(status.message,/localPythonPath/); assert.match(status.message,/EXIT_101/);
+    assert.equal(JSON.stringify(state.messages).includes('SECRET'),false);
   } finally {state.controller.dispose();}
 });

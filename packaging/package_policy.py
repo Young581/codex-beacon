@@ -21,9 +21,9 @@ EXTENSION_FILES = {
         "assets/secure-pipe.ps1", "assets/secure-pipe.cs",
         "assets/show-notification.ps1", "assets/window-attention.cs", "assets/window-attention.ps1",
         "assets/dashboard.js", "assets/dashboard.css",
-        "collector/src/i18n.js", "collector/src/core.js", "collector/src/task-data.js", "collector/src/extension.js", "collector/scripts/collector.py",
+        "collector/src/i18n.js", "collector/src/core.js", "collector/src/task-data.js", "collector/src/extension.js", "collector/src/python-runtime.js", "collector/scripts/collector.py",
     }),
-    "remote": COMMON_FILES | frozenset({"src/i18n.js", "src/core.js", "src/task-data.js", "src/extension.js", "scripts/collector.py", "assets/beacon.png"}),
+    "remote": COMMON_FILES | frozenset({"src/i18n.js", "src/core.js", "src/task-data.js", "src/extension.js", "src/python-runtime.js", "scripts/collector.py", "assets/beacon.png"}),
 }
 SOURCE_SUPPORT_FILES = frozenset({
     "UPSTREAM.md", "docs/verification.md", "docs/dashboard.png", "docs/marketplace.md", ".github/workflows/ci.yml", "packaging/run-windows-checks.ps1",
@@ -36,7 +36,7 @@ SOURCE_SUPPORT_FILES = frozenset({
     "packaging/native-smoke.js", "packaging/reproduce-url-window-routing.js",
     "tests/i18n.test.js", "tests/package-validation.py", "tests/broker-core.js", "tests/broker-pipe.js",
     "tests/broker-deletion.test.js", "tests/broker-interaction.test.js", "tests/broker-routing.test.js",
-    "tests/read-tracking.test.js", "tests/remote-collector.py", "tests/remote-core.js",
+    "tests/read-tracking.test.js", "tests/remote-collector.py", "tests/remote-core.js", "tests/python-runtime.test.js",
     "tests/broker-privacy.test.js", "tests/ui-privacy.test.js", "tests/ui-installation.test.js", "tests/sidebar-navigation.test.js",
     "tests/title-pulse.test.js", "tests/tls-runtime-smoke.js", "tests/ipc-security.test.js", "tests/ui-client-lifecycle.test.js", "tests/ui-client.test.js",
     "tests/ui-history.test.js", "tests/tasks.test.js", "tests/project-window.test.js", "tests/ui-navigation.test.js", "tests/ui-presentation.test.js",

@@ -6,11 +6,13 @@ const path = require('node:path');
 const os = require('node:os');
 const childProcess = require('node:child_process');
 const {settings, settingKey, makeSource, hookIsConfigured, JsonLines, restartDelay, EventBridge} = require('./core');
+const {resolvePython, pythonEnvironment} = require('./python-runtime');
 
 function createController(vscode, context, dependencies = {}) {
   let languageOverride;
   configureLanguage(() => languageOverride || resolveLanguage(vscode.workspace.getConfiguration('codexBeacon').get('language', 'auto'), vscode.env.language));
   const spawn = dependencies.spawn || childProcess.spawn;
+  const resolveRuntime = dependencies.resolvePython || resolvePython;
   const commandPrefix = dependencies.commandPrefix || 'codexBeacon.remote';
   const configKeyPrefix = dependencies.configKeyPrefix || '';
   const localMode = configKeyPrefix === 'local';
@@ -20,6 +22,7 @@ function createController(vscode, context, dependencies = {}) {
   let config;
   let source;
   let child = null;
+  let runtimeSelection = null;
   let generation = 0;
   let failureCount = 0;
   let restartTimer = null;
@@ -38,7 +41,7 @@ function createController(vscode, context, dependencies = {}) {
   const bridge = new EventBridge((...args) => vscode.commands.executeCommand(...args), log);
 
   function updateSettings() {
-    config = settings(vscode.workspace.getConfiguration('codexBeacon'), {}, configKeyPrefix);
+    config = settings(vscode.workspace.getConfiguration('codexBeacon'), dependencies.environment || {}, configKeyPrefix);
     const folder = vscode.workspace.workspaceFolders?.[0]?.uri;
     source = makeSource(config, {
       hostname: os.hostname(), remoteName: localMode ? '' : vscode.env.remoteName || '', cwd: folder?.fsPath || '',
@@ -58,10 +61,38 @@ function createController(vscode, context, dependencies = {}) {
     const previous = child;
     child = null;
     lastHeartbeat = 0;
+    if (runtimeSelection && !runtimeSelection.value) {
+      runtimeSelection.controller.abort(); runtimeSelection = null;
+    }
     if (previous) {
       try { previous.kill(); } catch { /* It may already have exited. */ }
     }
     return previous;
+  }
+
+  function selectPython() {
+    const configuration = vscode.workspace.getConfiguration('codexBeacon');
+    const explicit = configuration.get(configKey('pythonPath'), '').trim();
+    const key = JSON.stringify([explicit, config.python, config.pythonArgs]);
+    if (runtimeSelection?.key === key) return runtimeSelection.value || runtimeSelection.pending;
+    runtimeSelection?.controller.abort();
+    const lookup = {key, controller: new AbortController()};
+    runtimeSelection = lookup;
+    try {
+      const result = resolveRuntime(config, {auto: !explicit, environment: dependencies.environment || {},
+        spawn, signal: lookup.controller.signal});
+      if (!result?.then) {lookup.value = result; return result;}
+      lookup.pending = result.then(value => {
+        if (lookup.controller.signal.aborted) throw Object.assign(new Error('PYTHON_CANCELLED'), {code: 'PYTHON_CANCELLED'});
+        lookup.value = value; return value;
+      }, error => {if (runtimeSelection === lookup) runtimeSelection = null; throw error;});
+      return lookup.pending;
+    } catch (error) {if (runtimeSelection === lookup) runtimeSelection = null; throw error;}
+  }
+
+  function pythonFailure(error) {
+    const codes = (error.attempts || [error.code]).filter(value => /^(?:EXIT_-?\d+|ENOENT|EACCES|EPERM|PYTHON_(?:TIMEOUT|TOO_OLD|INVALID_RESPONSE|SPAWN_FAILED|EXITED))$/u.test(value || '')).slice(0, 8).join(', ');
+    return t`未找到可用的 Python 3.8+。请安装 Python 3.8 或更新版本，或在 codexBeacon.${configKey('pythonPath')} 指定有效的 Python 可执行文件，然后点击“重启当前环境采集器”。检测结果：${codes || 'unknown'}`;
   }
 
   function start() {
@@ -84,58 +115,72 @@ function createController(vscode, context, dependencies = {}) {
     }
     const token = ++generation;
     let failed = false;
-    const fail = reason => {
+    let receivedHeartbeat = false;
+    const fail = (reason, runtimeFailure = false) => {
       if (failed || token !== generation || disposed) return;
       failed = true;
       const previous = child;
       child = null;
       lastHeartbeat = 0;
+      if (!receivedHeartbeat) {runtimeSelection?.controller.abort(); runtimeSelection = null;}
       try { previous?.kill(); } catch { /* No remaining process. */ }
-      const delay = restartDelay(++failureCount);
-      setStatus('error', describe`${reason} Retrying in ${delay / 1000} seconds; check the Python path and Codex home.`);
+      const delay = Math.max(restartDelay(++failureCount), runtimeFailure ? 30000 : 0);
+      setStatus('error', runtimeFailure ? describe`${reason} 将在 ${delay / 1000} 秒后重新检测 Python。`
+        : describe`${reason} Retrying in ${delay / 1000} seconds; check the Python path and Codex home.`);
       restartTimer = setTimeout(() => {
         restartTimer = null;
         start();
       }, delay);
     };
-    setStatus('starting', describe('Starting Codex event collector.'));
-    const framing = new JsonLines(event => {
-      if (token !== generation || disposed) return;
-      if (event.type === 'heartbeat') {
-        lastHeartbeat = Date.now();
-        privacyPaused = event.privacyPaused === true;
-        if (privacyPaused) {
-          bridge.queue.length = 0;
-          setStatus('stopped', describe('Privacy cleanup paused collection; resume it explicitly to collect new notifications.'));
-          return;
-        }
-        // A process that repeatedly starts then crashes must retain backoff.
-        if (Date.now() - startedAt >= 30000) failureCount = 0;
-        if (currentStatus.state !== 'connected') setStatus('connected', describe('Collector is reading Codex event metadata.'));
-        else bridge.status(source, renderedStatus());
-        void ensureApprovalHook(token);
-      } else bridge.event(source, event);
-    });
-    const startedAt = Date.now();
-    try {
-      child = spawn(config.python, [...config.pythonArgs, '-u', script, 'follow', '--retention-days', String(config.retentionDays), '--codex-home', config.codexHome], {
-        shell: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'],
-        env: {...process.env, PYTHONIOENCODING: 'utf-8'},
+    setStatus('starting', describe('正在检测可用的 Python 运行时。'));
+    const launch = runtime => {
+      if (disposed || token !== generation || cleanupInProgress || privacyPaused || !vscode.workspace.isTrusted || !config.enabled) return;
+      setStatus('starting', describe('Starting Codex event collector.'));
+      const framing = new JsonLines(event => {
+        if (token !== generation || disposed) return;
+        if (event.type === 'heartbeat') {
+          receivedHeartbeat = true;
+          lastHeartbeat = Date.now();
+          privacyPaused = event.privacyPaused === true;
+          if (privacyPaused) {
+            bridge.queue.length = 0;
+            setStatus('stopped', describe('Privacy cleanup paused collection; resume it explicitly to collect new notifications.'));
+            return;
+          }
+          // A process that repeatedly starts then crashes must retain backoff.
+          if (Date.now() - startedAt >= 30000) failureCount = 0;
+          if (currentStatus.state !== 'connected') setStatus('connected', describe('Collector is reading Codex event metadata.'));
+          else bridge.status(source, renderedStatus());
+          void ensureApprovalHook(token);
+        } else bridge.event(source, event);
       });
-      child.stdout.on('data', data => framing.push(data));
-      // Drain stderr without relaying arbitrary text from an executable or environment.
-      child.stderr.on('data', () => {});
-      child.on('error', error => fail(t`Collector process could not start (${error.code || t('spawn error')}).`));
-      child.on('close', (code, signal) => fail(t`Collector exited (${code === null ? signal || 'unknown' : code}).`));
-    } catch (error) {
-      fail(t`Collector process could not start (${error.code || t('spawn error')}).`);
-    }
-    // Also detect a process that starts but never produces its first heartbeat.
-    lastHeartbeat = startedAt;
+      const startedAt = Date.now();
+      try {
+        child = spawn(runtime.python, [...runtime.pythonArgs, '-u', script, 'follow', '--retention-days', String(config.retentionDays), '--codex-home', config.codexHome], {
+          shell: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'],
+          env: pythonEnvironment(),
+        });
+        child.stdout.on('data', data => framing.push(data));
+        // Drain stderr without relaying arbitrary text from an executable or environment.
+        child.stderr.on('data', () => {});
+        child.on('error', error => fail(t`Collector process could not start (${error.code || t('spawn error')}).`));
+        child.on('close', (code, signal) => fail(t`Collector exited (${code === null ? signal || 'unknown' : code}).`));
+      } catch (error) {
+        fail(t`Collector process could not start (${error.code || t('spawn error')}).`);
+      }
+      // Also detect a process that starts but never produces its first heartbeat.
+      lastHeartbeat = startedAt;
+    };
+    try {
+      const result = selectPython();
+      if (result?.then) result.then(launch, error => fail(pythonFailure(error), true)).catch(error => fail(pythonFailure(error), true));
+      else launch(result);
+    } catch (error) {fail(pythonFailure(error), true);}
   }
 
   function restart() {
     stopChild();
+    runtimeSelection?.controller.abort(); runtimeSelection = null;
     failureCount = 0;
     updateSettings();
     start();
@@ -155,6 +200,13 @@ function createController(vscode, context, dependencies = {}) {
     requireTrust();
     if (cleanupInProgress && action !== 'clear-private-data') throw new Error(t('隐私清理正在执行，请稍后重试。'));
     updateSettings();
+    const token = generation;
+    let runtime;
+    try {
+      const result = selectPython(); runtime = result?.then ? await result : result;
+    } catch (error) {throw new Error(pythonFailure(error));}
+    requireTrust();
+    if (disposed || token !== generation) throw new Error(t('Python 检测已取消，请重试当前操作。'));
     return new Promise((resolve, reject) => {
       let process;
       let buffer = Buffer.alloc(0);
@@ -171,14 +223,14 @@ function createController(vscode, context, dependencies = {}) {
         finish(new Error(t('采集器命令超时；请检查 Python 和 Codex home 设置。')));
       }, 15000);
       try {
-        const args = [...config.pythonArgs, '-u', script, action, '--retention-days', String(config.retentionDays), '--codex-home', config.codexHome];
+        const args = [...runtime.pythonArgs, '-u', script, action, '--retention-days', String(config.retentionDays), '--codex-home', config.codexHome];
         if (action === 'install' && parameters.ifMissing) args.push('--if-missing');
         if (action === 'install' && config.label) args.push('--label', config.label);
         if (parameters.previewToken) args.push('--preview-token', parameters.previewToken);
         if (parameters.sessionIds) for (const id of parameters.sessionIds) args.push('--session-id', id);
-        process = spawn(config.python, args, {
+        process = spawn(runtime.python, args, {
           shell: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'],
-          env: {...global.process.env, PYTHONIOENCODING: 'utf-8'},
+          env: pythonEnvironment(global.process.env),
         });
         operations.add(process);
         process.stdout.on('data', chunk => {
@@ -255,8 +307,8 @@ function createController(vscode, context, dependencies = {}) {
     updateSettings();
     hookState = await readHookState();
     return {
-      source, ...renderedStatus(), codexHome: config.codexHome, python: config.python,
-      pythonArgs: [...config.pythonArgs], enabled: config.enabled,
+      source, ...renderedStatus(), codexHome: config.codexHome, python: runtimeSelection?.value?.python || config.python,
+      pythonArgs: [...(runtimeSelection?.value?.pythonArgs || config.pythonArgs)], pythonVersion: runtimeSelection?.value?.version || '', enabled: config.enabled,
       workspaceTrusted: vscode.workspace.isTrusted, hookConfigured: hookState.configured, hookReadError: hookState.readError,
       hookTrust: 'unknown', uiConnected: bridge.connected, pendingEvents: bridge.queue.length,
       lastHeartbeat: lastHeartbeat || null, collectorPid: child?.pid || null,

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.9
+
+- 启动前实际验证 Python 3.8+ 及标准库，优先使用已安装运行时，候选启动失败（含 101）时自动检测其他安装。
+- 采集与审批 Hook 使用验证后的 Python 绝对路径，保留用户显式配置；隔离错误的 Python 环境变量。
+- 没有可用运行时时显示安装／配置和重启步骤，不再只提示通用退出码；支持取消检测并保留工作区信任与隐私暂停。
+- Verify Python before collection and fall back from unusable launchers; report actionable runtime errors.
+
 ## 0.8.8
 
 - 仪表盘“管理与设置 → 提醒与显示”加入 0–100% 音量滑块，0% 静音，默认 100%。

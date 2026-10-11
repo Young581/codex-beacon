@@ -24,7 +24,7 @@ DEFAULT_OUTPUT = ROOT / "dist"
 NS = "http://schemas.microsoft.com/developer/vsx-schema/2011"
 CONTENT_NS = "http://schemas.openxmlformats.org/package/2006/content-types"
 IDS = {"ui": "codex-beacon", "remote": "codex-beacon-collector"}
-VERSIONS = {"ui": "0.8.8", "remote": "0.5.6"}
+VERSIONS = {"ui": "0.8.9", "remote": "0.5.7"}
 MIMES = {".json": "application/json", ".js": "application/javascript", ".cjs": "application/javascript",
          ".ps1": "text/plain", ".py": "text/plain", ".md": "text/markdown", ".txt": "text/plain",
          ".html": "text/html", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png",
@@ -205,7 +205,7 @@ def build_one(source, output_dir, variant):
     source, output_dir = Path(source), Path(output_dir)
     files = collect_files(source, variant)
     if variant == 'ui' and source.resolve() == (ROOT / 'ui').resolve():
-        for relative in ('src/core.js', 'src/extension.js', 'scripts/collector.py', 'src/task-data.js'):
+        for relative in ('src/core.js', 'src/extension.js', 'scripts/collector.py', 'src/task-data.js', 'src/python-runtime.js'):
             copy = source / 'collector' / relative
             if not copy.is_file() or copy.read_bytes() != (ROOT / 'remote' / relative).read_bytes():
                 raise ValueError('Run packaging/sync-local-collector.py before packaging: ' + relative)

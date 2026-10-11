@@ -29,7 +29,11 @@
 
 本机安装主扩展即可。点击右下角 **Codex** 或运行 **Codex Beacon: 打开仪表盘**，即可打开管理面板。命令面板中的 **测试本机弹窗和声音** 可检查提醒。
 
-Windows 会自动识别 `py` 启动器或用户／系统标准目录及 PATH 中的 Python，无需安装 `py` 启动器或预先添加 PATH。仍无法识别时，在 `codexBeacon.localPythonPath` 设置 Python 可执行文件的绝对路径。默认读取该环境的 `CODEX_HOME` 或 `~/.codex`。完成弹窗和声音默认开启，可在设置中分别关闭；Windows 勿扰模式可能抑制通知。
+Windows 会自动检测用户／系统标准目录、PATH 中的 Python 和 `py` 启动器，实际验证 Python 3.8+ 与所需标准库后才开始采集。优先使用真实安装；候选退出 101、缺失或版本过旧时自动尝试其他候选。无需安装 `py` 启动器或预先添加 PATH。显式配置的路径会被验证并保留。
+
+本机仍需安装 Python 3.8+，扩展不附带 Python，也不会自动下载运行时。若仪表盘提示没有可用运行时，请从 [Python 官网](https://www.python.org/downloads/windows/)安装，或在 `codexBeacon.localPythonPath` 填写有效 Python 可执行文件的绝对路径，然后点击 **管理与设置 → 测试与连接 → 重启当前环境采集器**。101 表示启动失败，不能仅据此认定 Codex Home 有误。
+
+默认读取该环境的 `CODEX_HOME` 或 `~/.codex`。完成弹窗和声音默认开启，可在设置中分别关闭；Windows 勿扰模式可能抑制通知。
 
 SSH／容器项目需要在目标环境安装并启用 **Codex Beacon Collector**（`Young581.codex-beacon-collector`），并在那里安装 Python 3.8+。主扩展的 **检查／安装当前环境的组件** 可定位该组件。Windows 本地音效仍在本机播放。远端集成有自动化检查，本次未进行真实 SSH／容器环境验证。
 

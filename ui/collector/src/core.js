@@ -78,7 +78,7 @@ function settingKey(key, prefix = '') {
   return prefix ? prefix + key[0].toUpperCase() + key.slice(1) : key;
 }
 
-function windowsPython(environment = {}) {
+function windowsPythonCandidates(environment = {}) {
   const files = environment.fs || fs;
   const vars = environment.env || process.env;
   const home = environment.home || os.homedir();
@@ -91,11 +91,14 @@ function windowsPython(environment = {}) {
   const entries = (vars.PATH || vars.Path || '').split(';')
     .map(value => value.trim().replace(/^"(.*)"$/, '$1')).filter(value => paths.isAbsolute(value));
   const local = vars.LOCALAPPDATA || paths.join(home, 'AppData', 'Local');
-  const launchers = entries.map(directory => paths.join(directory, 'py.exe'));
+  const candidates = [];
+  const add = (python, pythonArgs = []) => {
+    if (isFile(python) && !candidates.some(item => item.python.toLowerCase() === python.toLowerCase())) candidates.push({python, pythonArgs});
+  };
+  const safeEntries = entries.filter(directory => !/(?:^|[\\/])WindowsApps(?:[\\/]|$)/i.test(directory));
+  const launchers = safeEntries.map(directory => paths.join(directory, 'py.exe'));
   if (vars.SystemRoot || vars.WINDIR) launchers.push(paths.join(vars.SystemRoot || vars.WINDIR, 'py.exe'));
   launchers.push(paths.join(local, 'Programs', 'Python', 'Launcher', 'py.exe'));
-  for (const file of launchers) if (isFile(file)) return {python: file, pythonArgs: ['-3']};
-
   // python.org's installers can install a runtime without the optional launcher
   // or a PATH entry. Search their standard directories, newest Python 3 first.
   const roots = [paths.join(local, 'Programs', 'Python'), vars.ProgramFiles, vars['ProgramFiles(x86)']]
@@ -109,19 +112,22 @@ function windowsPython(environment = {}) {
     }).sort((left, right) => right.minor - left.minor || left.name.localeCompare(right.name)).slice(0, 32);
     for (const {name} of versions) {
       const file = paths.join(root, name, 'python.exe');
-      if (isFile(file)) return {python: file, pythonArgs: []};
+      add(file);
     }
   }
   for (const executable of ['python.exe', 'python3.exe']) {
-    for (const directory of entries) {
-      // WindowsApps aliases can open the Store instead of starting Python.
-      if (/(?:^|[\\/])WindowsApps(?:[\\/]|$)/i.test(directory)) continue;
+    for (const directory of safeEntries) {
       const file = paths.join(directory, executable);
-      if (isFile(file)) return {python: file, pythonArgs: []};
+      add(file);
     }
   }
-  return {python: 'py', pythonArgs: ['-3']};
+  // Prefer installed runtimes over launchers, which can contain stale targets.
+  // The runtime resolver still validates every candidate before using it.
+  for (const file of launchers) add(file, ['-3']);
+  return [...candidates.slice(0, 31), {python: 'py', pythonArgs: ['-3']}];
 }
+
+function windowsPython(environment = {}) { return windowsPythonCandidates(environment)[0]; }
 
 function settings(configuration, environment = {}, keyPrefix = '') {
   const platform = environment.platform || process.platform;
@@ -237,4 +243,4 @@ class EventBridge {
 }
 
 module.exports = {OWNER, RECEIVE_COMMAND, MAX_LINE_BYTES, clean, normalizeEvent, JsonLines,
-  settings, settingKey, windowsPython, makeSource, hookIsConfigured, restartDelay, EventBridge};
+  settings, settingKey, windowsPython, windowsPythonCandidates, makeSource, hookIsConfigured, restartDelay, EventBridge};

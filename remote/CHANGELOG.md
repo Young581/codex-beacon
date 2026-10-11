@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.7
+
+- 验证 Python 3.8+ 运行时后启动采集与 Hook 操作；Windows 优先使用真实安装，自动回退失败候选。
+- 拒绝过旧或无法运行的 Python，提供明确处理步骤，保留用户显式路径、信任和隐私暂停。
+- Validate Python runtimes and recover from unusable launcher targets before starting collection.
+
 ## 0.5.6
 
 - 同步提示音音量的中文与英文界面资源，本机音量由主扩展控制。

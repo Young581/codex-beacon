@@ -11,4 +11,5 @@
 !src/core.js
 !src/extension.js
 !src/i18n.js
+!src/python-runtime.js
 !src/task-data.js

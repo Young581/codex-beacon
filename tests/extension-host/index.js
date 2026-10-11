@@ -76,6 +76,9 @@ exports.run = async function run() {
         const local = await waitFor(() => command('local.status'), value => value.state === 'connected',
           'Default Python discovery must start collection and receive a real heartbeat');
         assert.ok(path.isAbsolute(local.python) && fs.existsSync(local.python), 'Detected Python must exist');
+        const version = local.pythonVersion.split('.').map(Number);
+        assert.ok(version[0] === 3 && version[1] >= 8, 'Detected Python must satisfy the supported version');
+        assert.deepEqual(local.pythonArgs, ['-I', '-S'], 'Collection must use the verified isolated runtime');
       }
       await config.update('groupBy', 'history', vscode.ConfigurationTarget.Global);
     });

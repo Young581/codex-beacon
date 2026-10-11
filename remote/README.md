@@ -1,5 +1,7 @@
 # Codex Beacon Collector
 
+Python 3.8+ is required in the collection environment. Installed runtimes are validated before use; Windows automatically tries another candidate when a runtime or launcher cannot start. Explicit Python settings remain authoritative. If no runtime works, the collector reports installation/configuration and restart steps. Python is not bundled or automatically downloaded.
+
 [GitHub](https://github.com/Young581/codex-beacon) · [Issues](https://github.com/Young581/codex-beacon/issues)
 
 ## 中文
