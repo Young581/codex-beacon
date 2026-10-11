@@ -37,6 +37,12 @@ class HistoryView {
       const complete = entry.entries.every(row => row.telemetry?.usage?.complete && row.telemetry.usage.segments.length);
       item.description = [entry.current ? t('本窗口') : t('其他窗口'), clean(entry.source.label || entry.source.host, 80),
         ...(running ? [t`${running} 进行中`] : []), ...(waiting ? [t`${waiting} 阻塞`] : [])].join(' · ');
+      if (entry.test) {
+        item.tooltip = `${t('通知测试')}\n${item.description}`;
+        item.iconPath = new vscode.ThemeIcon('beaker');
+        item.contextValue = 'testNotificationGroup';
+        return item;
+      }
       item.tooltip = `${clean(entry.cwd, 2048)}\n${item.description}\n${t('已采集任务合计')}: ${usageDescription({usage: {segments, complete}}, this.options())}`;
       item.iconPath = new vscode.ThemeIcon('folder', new vscode.ThemeColor(waiting ? 'charts.orange' : running ? 'charts.blue' : 'descriptionForeground'));
       item.contextValue = 'projectTaskGroup';
@@ -49,6 +55,17 @@ class HistoryView {
       item.iconPath = new vscode.ThemeIcon(entry.unread ? 'circle-filled' : 'check-all',
         new vscode.ThemeColor(entry.unread ? 'list.warningForeground' : 'descriptionForeground'));
       item.contextValue = entry.unread ? 'unreadNotificationGroup' : 'readNotificationGroup';
+      return item;
+    }
+    if (entry.event.type === 'test') {
+      const label = `${entry.read ? '' : '● '}${t('通知测试')}`;
+      const item = new vscode.TreeItem(entry.read ? label : {label, highlights: [[0, label.length]]}, vscode.TreeItemCollapsibleState.None);
+      item.id = entry.key;
+      item.description = new Date(entry.receivedAt).toLocaleTimeString(getLanguage());
+      item.tooltip = `${entry.read ? t('已读') : t('未读')} · ${eventTitle(entry)}\n${new Date(entry.receivedAt).toLocaleString(getLanguage())}`;
+      item.iconPath = new vscode.ThemeIcon('beaker');
+      item.contextValue = entry.read ? 'readNotification' : 'unreadNotification';
+      item.accessibilityInformation = {label: `${label} · ${item.description}`};
       return item;
     }
     if (entry.taskState) {

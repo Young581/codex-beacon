@@ -1,5 +1,10 @@
 # 0.2.3
 
+## 0.3.5
+
+- 同步测试分组与管理面板入口的中英文提示。
+- Sync translations for test grouping and the dashboard entry point.
+
 ## 0.3.4
 
 - 同步仪表盘中英文翻译；采集与任务统计逻辑保持不变。

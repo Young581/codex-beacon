@@ -10,11 +10,11 @@
 
 **提示语言：** 默认跟随 VS Code，也可通过主扩展语言选项指定中文或英文（`auto`、`zh-CN`、`en`）。提示随选择更新，不重启采集，不改变已读状态；命令面板与设置使用 VS Code 的界面语言。已有日志、会话路径、主机名与原始系统错误保持原样。SSH／容器请同时更新采集器。
 
-版本 0.3.4。配套组件 ID：`lengmo1996.codex-notifier-collector`。
+版本 0.3.5。配套组件 ID：`lengmo1996.codex-notifier-collector`。
 
 仅在 SSH 服务器或容器工作区中采集 VS Code Codex 插件会话，将回复结束、审批和提问交给 Windows 本机组件。Codex App、CLI 和无法确认来源的会话不提醒。
 
-在目标 **Remote SSH 窗口**或**附加容器窗口**中，通过扩展面板 **… → 从 VSIX 安装**选择 `codex-notifier-collector-0.3.4.vsix`，确认安装在服务器或容器中。Windows 本机安装 `codex-notifier-ui-0.5.1.vsix`，它内置本地采集，本机不需要 Remote；Remote 在本地窗口不会启动。此扩展并非 OpenAI 或 Microsoft 官方产品。
+在目标 **Remote SSH 窗口**或**附加容器窗口**中，通过扩展面板 **… → 从 VSIX 安装**选择 `codex-notifier-collector-0.3.5.vsix`，确认安装在服务器或容器中。Windows 本机安装 `codex-notifier-ui-0.6.1.vsix`，它内置本地采集，本机不需要 Remote；Remote 在本地窗口不会启动。此扩展并非 OpenAI 或 Microsoft 官方产品。
 
 两端升级后，等待任务空闲再重载对应窗口。新版 UI 会忽略旧采集器缺少来源标识的事件，因此远端 0.1.0 也必须升级。现有审批 hook 不必重新授权；采集出口会再次验证来源，旧 hook 写入的 App 事件也被忽略。
 
@@ -71,13 +71,13 @@ MIT License。
 
 ## English
 
-Version 0.3.4 · Companion ID: `lengmo1996.codex-notifier-collector`
+Version 0.3.5 · Companion ID: `lengmo1996.codex-notifier-collector`
 
 Collect notification events from **Codex running in VS Code over Remote SSH or inside a container**. Send response-end, approval and structured-question metadata to the Windows notification extension. Codex Desktop App sessions, standalone CLI sessions and unclassified sessions are excluded. This community extension is not an official OpenAI or Microsoft product.
 
 ### Installation and first use
 
-Start with the main extension, **Codex 会话通知** (`lengmo1996.codex-notifier-ui`), on Windows. In the target SSH/container window, run **Check / install components for this environment** and install/enable this companion in that remote environment. For offline use, install `codex-notifier-collector-0.3.4.vsix` there and `codex-notifier-ui-0.5.1.vsix` on Windows.
+Start with the main extension, **Codex 会话通知** (`lengmo1996.codex-notifier-ui`), on Windows. In the target SSH/container window, run **Check / install components for this environment** and install/enable this companion in that remote environment. For offline use, install `codex-notifier-collector-0.3.5.vsix` there and `codex-notifier-ui-0.6.1.vsix` on Windows.
 
 The remote environment requires **Python 3.8+** and a trusted workspace. The extension, Python and Codex Home must belong to the user/environment actually running Codex. The companion does not start collection in local windows: local-folder collection is already included in the main extension.
 

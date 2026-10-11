@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.1
+
+- 右下角 Codex 状态栏按钮直接打开管理面板，保持未读状态；提示文字同步更新。
+- 弹窗与声音测试归入“测试”，显示试管图标与时间，不再显示无项目、无用量或未知任务状态。
+- The Codex status bar opens the dashboard; notification tests have their own labeled group and rows.
+
 ## 0.6.0
 
 - 新增在编辑器中打开的 Codex Beacon 仪表盘，采用独立设计，随 VS Code 主题与窗口宽度调整。

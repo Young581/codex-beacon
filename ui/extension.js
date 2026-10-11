@@ -31,7 +31,7 @@ async function activate(context) {
   const view = vscode.window.createTreeView('codexNotifier.history', {treeDataProvider: history, showCollapseAll: true});
   view.title = t('任务');
   const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 50);
-  statusBar.command = 'codexNotifier.openNext';
+  statusBar.command = 'codexNotifier.dashboard';
   let snapshot = {entries: [], unread: 0};
   let sourceStatus = null;
   let installationState = null;
@@ -113,20 +113,18 @@ async function activate(context) {
     const localCount = pending.local.length;
     windowAttention.update(pending.local, {enabled: config().get('taskbarAttention', true), focused: vscode.window.state.focused,
       blink: config().get('blinkWindowTitle', true)});
-    statusBar.command = collectorError && !localCount ? 'codexNotifier.showStatus' : 'codexNotifier.openNext';
     const icon = collectorError ? 'warning' : paused ? 'bell-slash' : localCount ? 'bell-dot' : 'bell';
     const project = vscode.workspace.name || projectName(sourceStatus?.source?.cwd || '');
     statusBar.text = `$(${icon}) Codex${localCount ? t` · ${clean(project, 24)} · ${localCount} 待处理` : snapshot.unread ? t` · 其他窗口 ${snapshot.unread}` : ''}`;
     statusBar.backgroundColor = collectorError || localCount ? new vscode.ThemeColor(
       pending.needsDecision ? 'statusBarItem.errorBackground' : 'statusBarItem.warningBackground') : undefined;
-    statusBar.tooltip = t`${windowInfo().label}\n本窗口 ${localCount} 条待处理，所有窗口共 ${snapshot.unread} 条未读\n点击打开下一条待处理会话`;
+    statusBar.tooltip = t`${windowInfo().label}\n本窗口 ${localCount} 条待处理，所有窗口共 ${snapshot.unread} 条未读\n点击打开管理面板`;
     if (paused) statusBar.tooltip += t('\n声音和弹窗已暂停，仍记录历史');
     if (snapshot.privacyPaused) {
-      statusBar.tooltip = t`${windowInfo().label}\n隐私清理后已暂停接收，不记录新通知。点击通知菜单 → 隐私与数据清理 → 恢复。`;
+      statusBar.tooltip = t`${windowInfo().label}\n隐私清理后已暂停接收，不记录新通知。点击通知菜单 → 隐私与数据清理 → 恢复。` + '\n' + t('点击打开管理面板');
       statusBar.text = t('$(shield) Codex · 接收已暂停');
-      statusBar.command = 'codexNotifier.privacy';
     }
-    if (collectorError) statusBar.tooltip += localCount ? t('\n当前远端采集异常；可从通知菜单查看状态') : t('\n当前远端采集异常，点击查看状态');
+    if (collectorError) statusBar.tooltip += t('\n当前远端采集异常；可从通知菜单查看状态');
     view.badge = localCount ? {value: localCount, tooltip: t`本窗口 ${localCount} 条待处理通知`} : undefined;
     view.description = t`本窗口 ${localCount} · 全部 ${snapshot.unread}`;
     view.message = snapshot.entries?.length ? undefined : t('新提醒会出现在这里。单击将静默打开对应会话；跳转请求被接受后标为已读。');
@@ -134,9 +132,8 @@ async function activate(context) {
       view.message = t('当前 SSH／容器尚未连接采集组件。打开通知菜单 → 检查／安装当前环境组件。');
       if (!localCount && !snapshot.privacyPaused) {
         statusBar.text = t('$(extensions) Codex · 需安装远端组件');
-        statusBar.command = 'codexNotifier.checkInstallation';
         statusBar.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
-        statusBar.tooltip = t('点击检查并安装当前 SSH／容器的采集组件。');
+        statusBar.tooltip = t('当前 SSH／容器尚未连接采集组件。打开通知菜单 → 检查／安装当前环境组件。') + '\n' + t('点击打开管理面板');
       }
     }
     statusBar.show();
@@ -224,7 +221,8 @@ async function activate(context) {
       ...(TESTING ? {lastNavigation, lastNavigationFailure, language: getLanguage(),
         dashboard: {opened: !!dashboard.panel, ready: dashboard.ready, revision: dashboard.revision, data: dashboard.model},
         groups: history.groups.map(group => ({id: group.id, title: group.title, count: group.entries.length})), statusText: statusBar.text,
-        tasks: history.groups.flatMap(group => group.entries).filter(row => row.taskState).map(row => {
+        statusCommand: statusBar.command, statusTooltip: statusBar.tooltip,
+        tasks: history.groups.flatMap(group => group.entries).filter(row => row.taskState && row.event.type !== 'test').map(row => {
           const item = history.getTreeItem(row);
           return {key: row.key, state: row.taskState, taskId: item.id, description: item.description,
             label: typeof item.label === 'string' ? item.label : item.label.label,

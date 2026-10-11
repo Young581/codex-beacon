@@ -141,6 +141,17 @@ exports.run = async function run() {
       const preview = await command('testSound');
       assert.ok(accepted(preview), 'Sound-only preview must reach the new broker');
       assert.ok(history(await snapshot()).some(entry => entry.key === preview.key && entry.event.type === 'test'));
+      const settings = vscode.workspace.getConfiguration('codexNotifier');
+      await settings.update('groupBy', 'project', vscode.ConfigurationTarget.Global);
+      const grouped = await snapshot();
+      assert.ok(grouped.groups.some(group => group.title === '测试' && group.count >= 2));
+      assert.equal(grouped.tasks.some(row => history(grouped).find(entry => entry.key === row.key)?.event.type === 'test'), false);
+      await settings.update('language', 'en', vscode.ConfigurationTarget.Global);
+      const english = await snapshot();
+      assert.ok(english.groups.some(group => group.title === 'Tests'));
+      assert.match(english.statusTooltip, /Click to open the dashboard/);
+      await settings.update('language', 'zh-CN', vscode.ConfigurationTarget.Global);
+      await settings.update('groupBy', 'history', vscode.ConfigurationTarget.Global);
       await command('showStatus');
     });
 
@@ -222,6 +233,7 @@ exports.run = async function run() {
       assert.ok(value.localUnread >= 2);
       assert.ok(value.groups.some(group => group.id === 'current-unread' && group.count >= 2));
       assert.equal(value.statusColor, 'statusBarItem.errorBackground');
+      assert.equal(value.statusCommand, 'codexNotifier.dashboard');
     });
 
     await test('Default sidebar navigation reads only the clicked reminder and creates no editor tabs', async () => {
@@ -466,16 +478,24 @@ exports.run = async function run() {
       await command('deleteEntry', entry.key);
     });
 
-    await test('Dashboard opens one editor tab, loads its local script and follows history and language live', async () => {
-      const before = (await snapshot()).unread;
-      assert.ok((await command('dashboard')).opened);
+    await test('Status bar opens one dashboard tab, preserves unread and follows history and language live', async () => {
+      const before = await snapshot();
+      assert.equal(before.statusCommand, 'codexNotifier.dashboard');
+      assert.match(before.statusTooltip, /点击打开管理面板/);
+      assert.ok((await vscode.commands.executeCommand(before.statusCommand)).opened);
       const value = await waitFor(snapshot, s => s.dashboard.ready, 'Dashboard webview must acknowledge readiness');
       assert.equal(value.dashboard.data.totals.tasks,
         require(path.join(vscode.extensions.getExtension(UI_ID).extensionPath, 'lib/tasks')).taskRows(history(value).filter(row => row.event.type !== 'test')).length);
-      assert.equal(value.unread, before, 'Opening the dashboard does not mark records read');
+      assert.equal(value.unread, before.unread, 'Opening the dashboard does not mark records read');
+      assert.deepEqual(value.lastNavigation, before.lastNavigation, 'Status bar opens the dashboard without navigating a session');
       const tabs = () => vscode.window.tabGroups.all.flatMap(group => group.tabs).filter(tab => tab.input instanceof vscode.TabInputWebview && tab.input.viewType.includes('codexBeacon.dashboard'));
       assert.equal(tabs().length, 1);
       await command('dashboard'); assert.equal(tabs().length, 1);
+      await command('pause');
+      const paused = await snapshot();
+      assert.equal(paused.statusCommand, 'codexNotifier.dashboard');
+      await vscode.commands.executeCommand(paused.statusCommand); assert.equal(tabs().length, 1);
+      await command('resume');
       const settings = vscode.workspace.getConfiguration('codexNotifier');
       await settings.update('language', 'en', vscode.ConfigurationTarget.Global);
       const english = await waitFor(snapshot, s => s.dashboard.data.language === 'en', 'Dashboard must update language');

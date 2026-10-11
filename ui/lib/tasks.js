@@ -67,10 +67,11 @@ function projectGroups(entries, windowId) {
   const projects = new Map();
   for (const row of taskRows(entries)) {
     const cwd = row.event.cwd || row.source.cwd;
-    const identity = JSON.stringify([row.source.id, pathIdentity(cwd)]);
+    const isTest = row.event.type === 'test';
+    const identity = JSON.stringify([row.source.id, pathIdentity(cwd), ...(isTest ? ['test'] : [])]);
     if (!projects.has(identity)) projects.set(identity, {
       id: 'project-' + crypto.createHash('sha256').update(identity).digest('hex'),
-      title: projectName(cwd), cwd, source: row.source, entries: [], project: true,
+      title: isTest ? t('测试') : projectName(cwd), cwd, source: row.source, entries: [], project: true, test: isTest,
     });
     projects.get(identity).entries.push(row);
   }
