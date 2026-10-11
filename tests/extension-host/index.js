@@ -486,14 +486,14 @@ exports.run = async function run() {
       const append = (type, payload) => fs.appendFileSync(fixturePath, JSON.stringify({
         timestamp: new Date().toISOString(), type, payload}) + '\n');
       append('event_msg', {type: 'task_started', turn_id: turn});
-      await waitFor(snapshot, s => s.tasks?.some(row => row.turnId === turn && row.state === 'running') ||
-        history(s).some(row => row.event.turn_id === turn && row.taskConfirmed), 'Fresh start must confirm activity');
+      await waitFor(snapshot, s => history(s).some(row => row.event.turn_id === turn && row.taskConfirmed &&
+        s.tasks?.some(task => task.relatedKeys.includes(row.key) && task.state === 'running')), 'Fresh start must confirm activity');
       await command('local.restart');
       await waitFor(() => command('local.status'), value => value.state === 'connected', 'Restarted collector must connect');
       const restored = await waitFor(snapshot, s => history(s).some(row => row.event.turn_id === turn && !row.taskConfirmed),
         'Restarted collection must invalidate previous activity evidence');
-      const taskId = require(path.join(vscode.extensions.getExtension(UI_ID).extensionPath, 'lib/tasks'))
-        .taskRows(history(restored)).find(row => row.event.turn_id === turn).taskId;
+      const taskKey = history(restored).find(row => row.event.turn_id === turn).key;
+      const taskId = restored.tasks.find(row => row.relatedKeys.includes(taskKey)).taskId;
       // The UI connection survives a collector restart, so restart alone must
       // invalidate earlier evidence as well as a full VS Code window reload.
       assert.equal(restored.tasks.find(row => row.taskId === taskId).state, 'unknown');
