@@ -412,9 +412,10 @@ exports.run = async function run() {
       const unreadBefore = running.unread;
       append('event_msg', {type: 'token_count', info: {
         total_token_usage: {input_tokens: 1000, cached_input_tokens: 400, output_tokens: 100, reasoning_output_tokens: 40}}});
-      const metered = await waitFor(snapshot, s => s.tasks?.some(row => /1.1K tok/.test(row.label)), 'Token counts should refresh while running');
+      const metered = await waitFor(snapshot, s => s.entries?.some(row => row.event.task?.usage?.segments?.some(
+        segment => segment.input === 1000 && segment.output === 100)), 'Token counts should refresh in task metadata');
       assert.equal(metered.unread, unreadBefore, 'Usage updates must stay silent and read');
-      assert.equal(metered.tasks.find(row => row.taskId === runningRow.taskId).label, '1.1K tok');
+      assert.match(metered.tasks.find(row => row.taskId === runningRow.taskId).label, /第 \d+ 轮/);
       const localCollector = await command('local.status');
       const approval = require('node:child_process').spawnSync(localCollector.python,
         [...localCollector.pythonArgs, path.join(vscode.extensions.getExtension(UI_ID).extensionPath, 'collector/scripts/collector.py'),
@@ -606,12 +607,13 @@ exports.run = async function run() {
           ['design-system', 'waiting_approval', 'gpt-6-astra', 46000, 18000, 1700, true],
           ['design-system', 'waiting_async', 'gpt-6.1-sol', 27300, 13000, 5800, false],
         ];
+        const dashboardChat = require('node:crypto').randomUUID();
         for (const [index, [project, state, model, input, cachedInput, output, complete]] of fixtures.entries()) {
           const event = {version: 1, originator: 'codex_vscode', type: 'task', id: 'dashboard-visual-' + index,
             timestamp: Date.now() / 1000, cwd: path.join(realSource.cwd, 'examples', project),
-            session_id: state === 'waiting_approval' ? process.env.CODEX_NOTIFIER_TEST_SESSION : require('node:crypto').randomUUID(), turn_id: 'dashboard-turn-' + index,
-            session_title: ['Implement checkout notifications', 'Confirm input validation', 'Optimize pipeline cache', 'Fix failed data import', 'Review theme permissions', 'Generate icon variants'][index],
-            task: {sequence: 1, state, model, usage: {complete, segments: model ? [{
+            session_id: state === 'waiting_approval' ? process.env.CODEX_NOTIFIER_TEST_SESSION : index < 2 ? dashboardChat : require('node:crypto').randomUUID(), turn_id: 'dashboard-turn-' + index,
+            session_title: ['Implement checkout notifications', 'Implement checkout notifications', 'Optimize pipeline cache', 'Fix failed data import', 'Review theme permissions', 'Generate icon variants'][index],
+            task: {sequence: index + 1, state, model, usage: {complete, segments: model ? [{
               model, tier: 'standard', input, cachedInput, cacheWrite: 0, output, reasoningOutput: 800}] : []}}};
           await command('internal.receive', {version: 1, kind: 'event', source: realSource, event});
           if (['waiting_input', 'waiting_approval', 'completed'].includes(state)) await command('internal.receive', {

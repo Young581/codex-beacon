@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.5
+
+- 任务卡片右上角直接提供打开会话、标为已读和删除，无需展开详情。
+- 原生侧栏按项目 → 对话 → 轮次分组；仪表盘加入对话筛选，显示第几轮，隐藏短编号和侧栏 token 数。
+- 轮次按当前保留记录编号，状态优先排序和筛选保持轮次；完整编号及用量仍可在详情查看。
+- 管理与设置改为左侧分类导航、右侧单列内容，每行一个操作，适配窄窗口。
+- Promote read/delete actions, group conversations with numbered rounds, and simplify settings with category navigation and one control per row.
+
 ## 0.8.4
 
 - 审批 Hook 在采集器正常启动后自动注册，保留已有定义、其他 Hook 和隐私暂停；信任仍由用户在 Codex 中完成。

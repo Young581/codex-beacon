@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.4
+
+- Synchronize localized conversation and round labels for the redesigned Beacon dashboard and sidebar.
+
 ## 0.5.3
 
 - Register the approval hook after healthy collection starts, preserving existing definitions and unrelated hooks under concurrent installs.

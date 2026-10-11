@@ -63,6 +63,40 @@ function taskRows(entries) {
   });
 }
 
+function roundLabel(row) { return t`第 ${row.turnNumber || 1} 轮`; }
+function conversationGroups(rows) {
+  const groups = new Map();
+  for (const row of rows) {
+    const identity = JSON.stringify([row.source.id, pathIdentity(row.event.cwd || row.source.cwd), row.event.session_id || row.taskId]);
+    if (!groups.has(identity)) groups.set(identity, {
+      id: 'conversation-' + crypto.createHash('sha256').update(identity).digest('hex'), conversation: true, entries: [],
+    });
+    groups.get(identity).entries.push(row);
+  }
+  const order = row => {
+    const sequences = row.records.filter(record => record.event.task).map(record => record.event.task.sequence);
+    return {sequence: sequences.length ? Math.min(...sequences) : null,
+      time: Math.min(...row.records.map(record => record.event.timestamp))};
+  };
+  return [...groups.values()].map(group => {
+    // Numbers describe retained rounds, not the lifetime count of a Codex chat.
+    // Rollout sequence is a file position, so state updates preserve turn order.
+    const useSequences = group.entries.every(row => order(row).sequence !== null);
+    const chronological = [...group.entries].sort((a, b) => {
+      const left = order(a), right = order(b);
+      return (useSequences ? left.sequence - right.sequence : left.time - right.time) ||
+        a.taskId.localeCompare(b.taskId);
+    });
+    chronological.forEach((row, index) => {row.turnNumber = index + 1; row.conversationId = group.id;});
+    const named = [...group.entries].sort((a, b) => b.receivedAt - a.receivedAt).find(row => row.event.session_title);
+    group.title = clean(named?.event.session_title, 160) || t('未命名对话');
+    group.unread = group.entries.some(row => !row.read);
+    group.active = group.entries.some(row => ['running', 'waiting_input', 'waiting_async', 'waiting_approval'].includes(row.taskState));
+    group.receivedAt = Math.max(...group.entries.map(row => row.receivedAt));
+    return group;
+  }).sort((a, b) => Number(b.active) - Number(a.active) || Number(b.unread) - Number(a.unread) || b.receivedAt - a.receivedAt);
+}
+
 function projectGroups(entries, windowId) {
   const projects = new Map();
   for (const row of taskRows(entries)) {
@@ -81,6 +115,7 @@ function projectGroups(entries, windowId) {
     group.unread = group.entries.some(row => !row.read);
     group.current = group.entries.some(row => row.targetWindowId === windowId);
     group.active = group.entries.some(row => ['running', 'waiting_input', 'waiting_async', 'waiting_approval'].includes(row.taskState));
+    group.conversations = group.test ? [] : conversationGroups(group.entries);
     return group;
   }).sort((a, b) => Number(b.current) - Number(a.current) || Number(b.active) - Number(a.active) ||
     Number(b.unread) - Number(a.unread) || a.title.localeCompare(b.title));
@@ -145,4 +180,5 @@ function taskTooltip(row, options) {
     t('金额为 API 估算，不是实际账单；不包含后台任务和其他会话。'),
     t('完成表示本轮回复结束。'), date].join('\n');
 }
-module.exports = {STATES, DEFAULT_PRICES, taskIdentity, taskRows, projectGroups, estimateCost, usageDescription, compactUsage, taskTooltip};
+module.exports = {STATES, DEFAULT_PRICES, taskIdentity, taskRows, projectGroups, conversationGroups, roundLabel,
+  estimateCost, usageDescription, compactUsage, taskTooltip};

@@ -56,6 +56,13 @@ button.metric:hover { background: var(--vscode-toolbar-hoverBackground); }
 .project-button.selected { background: color-mix(in srgb, var(--accent) 9%, var(--canvas)); border-color: color-mix(in srgb, var(--accent) 20%, var(--border)); }
 .project-button.selected > svg { color: var(--accent); }
 .project-count { font-size: 10px; color: var(--muted); padding-top: 3px; font-weight: 500; }
+.conversation-nav { display: flex; flex-direction: column; gap: 3px; margin: 0 0 8px 17px; padding-left: 9px; border-left: 1px solid var(--border); min-width: 0; }
+.conversation-button { display: flex; align-items: flex-start; gap: 7px; padding: 7px; border: 1px solid transparent; border-radius: 6px; background: transparent; text-align: left; min-width: 0; }
+.conversation-button > span { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+.conversation-button small { display: block; color: var(--muted); font-size: 10px; margin-top: 4px; }
+.conversation-button svg { width: 14px; height: 14px; color: var(--muted); }
+.conversation-button:hover { background: var(--vscode-list-hoverBackground); }
+.conversation-button.selected { color: var(--accent); background: var(--surface); border-color: var(--border); }
 .main { min-width: 0; }
 .toolbar { display: flex; gap: 8px; margin-bottom: 13px; }
 .search { flex: 1; display: flex; align-items: center; gap: 9px; padding: 0 10px; background: var(--vscode-input-background, var(--surface)); border: 1px solid var(--border); border-radius: 7px; min-width: 0; }
@@ -103,7 +110,7 @@ button.metric:hover { background: var(--vscode-toolbar-hoverBackground); }
 .task-usage > div { min-width: 0; }
 .field-label { display: block; font-size: 10px; color: var(--muted); margin-bottom: 5px; }
 .task-usage strong { display: block; font-size: clamp(18px, 1.8vw, 24px); font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: -.5px; overflow-wrap: anywhere; }
-.task-actions { display: flex; align-items: center; gap: 6px; padding-top: 12px; border-top: 1px solid var(--border); }
+.task-actions { display: flex; align-items: center; flex: 0 0 auto; gap: 4px; }
 .task-actions .button { min-height: 29px; height: 29px; font-size: 11px; background: transparent; }
 .task-actions .icon-button { width: 29px; }
 .task-actions svg { width: 14px; height: 14px; }
@@ -128,18 +135,27 @@ button.metric:hover { background: var(--vscode-toolbar-hoverBackground); }
 .hook-banner { border: 1px solid var(--border); border-radius: 7px; padding: 12px 15px; margin-bottom: 20px; color: var(--muted); }
 .hook-banner summary { cursor: pointer; }
 .hook-banner .button { margin-top: 10px; }
-.management-panel { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; padding: 6px 0 12px; }
+.management-panel { display: grid; grid-template-columns: 196px minmax(0, 1fr); gap: 28px; padding: 6px 0 12px; align-items: start; }
+.management-nav { display: flex; flex-direction: column; gap: 7px; }
+.management-tab { display: flex; align-items: center; gap: 9px; text-align: left; padding: 12px; border: 1px solid transparent; border-radius: 7px; background: transparent; }
+.management-tab:hover { background: var(--vscode-list-hoverBackground); }
+.management-tab.selected { color: var(--accent); border-color: var(--border); background: var(--surface); }
+.management-content { min-width: 0; }
 .management-card { min-width: 0; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); padding: 20px; }
 .management-card h2 { display: flex; align-items: center; gap: 9px; font-size: 15px; margin-bottom: 17px; }
 .management-card h2 svg { color: var(--accent); }
-.management-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
-.management-actions .button { max-width: 100%; white-space: normal; text-align: left; justify-content: flex-start; }
+.management-actions { display: flex; flex-direction: column; gap: 9px; margin-top: 18px; }
+.management-actions .button { width: 100%; min-height: 40px; white-space: normal; text-align: left; justify-content: flex-start; padding: 10px 12px; }
 .management-field { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin: 14px 0; }
 .management-field select { color: var(--vscode-dropdown-foreground, var(--ink)); background: var(--vscode-dropdown-background, var(--canvas)); border: 1px solid var(--border); border-radius: 6px; padding: 7px 9px; max-width: 100%; }
 .management-note { color: var(--muted); line-height: 1.7; overflow-wrap: anywhere; margin-top: 10px; font-size: 12px; }
 .hook-status { color: var(--accent); font-weight: 600; }
 .management-toggle { display: flex; align-items: center; gap: 8px; margin-top: 16px; }
-@media (max-width: 760px) { .management-panel { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 760px) {
+  .management-panel { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .management-nav { display: grid; grid-template-columns: minmax(0, 1fr); gap: 5px; }
+  .management-tab { padding: 10px 12px; }
+}
 @keyframes breathe { 50% { opacity: .4; } }
 @media (max-width: 1000px) {
   .shell { padding: 21px 23px; }

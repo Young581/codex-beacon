@@ -1,6 +1,12 @@
 'use strict';
 // Only extension-owned templates are translated. Substitutions are opaque data.
 const MESSAGES = {
+  "对话": "Conversations",
+  "全部对话": "All conversations",
+  "未命名对话": "Untitled conversation",
+  "第 {0} 轮": "Round {0}",
+  "{0} 轮": "{0} rounds",
+  "轮次按当前保留的对话记录排序，筛选不会改变轮次。": "Rounds are numbered within retained conversation records; filters keep the same numbers.",
   "已恢复当前环境采集和本机通知接收。清理前的事件不会补回；启用自动添加时会注册缺失的审批 Hook，请在 Codex 中核对信任。": "Collection and receiving resumed. Earlier events will not be replayed. Automatic setup registers missing approval hooks; check their trust in Codex.",
   "管理与设置": "Management and settings",
   "提醒与显示": "Alerts and display",

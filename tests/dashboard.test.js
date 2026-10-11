@@ -65,6 +65,23 @@ test('webview projection omits raw sources, prompts and histories while retainin
   assert.equal(model.projects[0].tasks[0].turn, 'turn-1');
 });
 
+test('dashboard projects expose named conversations and numeric retained rounds without UUID titles', () => {
+  const first = entry('1', 'completed'); first.event.session_title = 'Checkout'; first.event.task.sequence = 10;
+  const second = entry('2', 'waiting_input'); second.event.task.sequence = 20;
+  const other = entry('3'); other.event.session_id = '649aac2c-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  const result = dashboardData({entries: [second, other, first]}, {windowId: 'window'});
+  const group = result.projects[0];
+  assert.equal(group.conversations.length, 2);
+  const task = group.tasks.find(row => row.key === second.key);
+  assert.equal(task.title, 'Checkout'); assert.equal(task.turnNumber, 2); assert.equal(task.roundLabel, '第 2 轮');
+  assert.equal(group.conversations.find(chat => chat.id === task.conversationId).rounds, '2 轮');
+  assert.equal(group.tasks.find(row => row.key === other.key).title, '未命名对话');
+  configureLanguage(() => 'en');
+  const english = dashboardData({entries: [first, second]}, {windowId: 'window'});
+  assert.equal(english.projects[0].tasks.find(row => row.key === second.key).roundLabel, 'Round 2');
+  assert.equal(english.projects[0].conversations[0].rounds, '2 rounds');
+});
+
 test('dashboard labels follow one language and privacy-paused receiving stays explicit', () => {
   configureLanguage(() => 'en');
   const model = dashboardData({entries: [], privacyPaused: true}, {connected: true});

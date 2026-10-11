@@ -3,13 +3,17 @@
   const vscode = acquireVsCodeApi();
   const app = document.getElementById('app');
   let data, revision = -1, request = 0, pending = 0, error = '';
-  let project = 'all', filter = 'all', query = '';
-  let page = vscode.getState()?.page === 'management' ? 'management' : 'tasks';
+  let project = 'all', conversation = 'all', filter = 'all', query = '';
+  const saved = vscode.getState();
+  let page = saved?.page === 'management' ? 'management' : 'tasks';
+  let management = ['alerts', 'approval', 'tools', 'records'].includes(saved?.management) ? saved.management : 'alerts';
+  function saveView() {vscode.setState({page, management});}
   const expanded = new Set();
   const icons = {
     beacon: '<path d="M12 3v18m-4 0h8M8 8a6 6 0 0 0 0 8m8-8a6 6 0 0 1 0 8M5 5a10 10 0 0 0 0 14m14-14a10 10 0 0 1 0 14"/>',
     grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
     folder: '<path d="M3 7V5h6l2 2h10v13H3z"/>',
+    chat: '<path d="M4 4h16v12H9l-5 4zM8 8h8m-8 4h5"/>',
     refresh: '<path d="M20 7a9 9 0 1 0 1 8M20 3v5h-5"/>',
     sound: '<path d="M4 9h4l5-4v14l-5-4H4zM17 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/>',
     settings: '<path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="16" cy="17" r="3"/>',
@@ -67,6 +71,7 @@
     return node;
   }
   function matches(task, group) {
+    if (conversation !== 'all' && task.conversationId !== conversation) return false;
     const states = {running: ['running', 'waiting_async'], blocked: ['waiting_input', 'waiting_approval', 'waiting_async'],
       completed: ['completed'], failed: ['failed', 'cancelled']};
     if (filter === 'unread' && !task.unread) return false;
@@ -80,12 +85,16 @@
     card.dataset.key = task.key;
     const heading = el('div', 'task-heading');
     const title = el('h3', '', task.title); title.title = task.title;
-    heading.append(title, action(text.open, 'arrow', 'open', task.key, 'button open-button'));
+    const actions = el('div', 'task-actions');
+    actions.append(action(text.open, 'arrow', 'open', task.key, 'button open-button'));
+    if (task.unread) actions.append(action(text.read, 'check', 'read', task.key, 'button icon-button'));
+    actions.append(action(text.delete, 'trash', 'delete', task.key, 'button icon-button danger'));
+    heading.append(title, actions);
     const meta = el('div', 'task-meta');
     const model = el('span', 'task-model', task.model || text.unknown); model.title = text.model + ': ' + (task.model || text.unknown);
     const state = el('span', 'state-badge'); state.append(el('i', 'state-dot'), el('span', '', task.stateLabel));
     meta.append(model, state);
-    if (task.turn) {const turn = el('span', 'task-turn', text.turn + ' ' + task.turn.slice(-8)); turn.title = task.turn; meta.append(turn);}
+    const turn = el('span', 'task-turn', task.roundLabel); turn.title = text.roundHint; meta.append(turn);
     meta.append(el('span', 'task-time', time(task.time)));
     const usage = el('div', 'task-usage');
     const tokens = el('div');
@@ -93,12 +102,9 @@
     tokens.title = task.tokens === null ? text.noUsage : exact(task.tokens) + ' tokens';
     const cost = el('div'); cost.append(el('span', 'field-label', text.cost), el('strong', '', dollars(task.cost)));
     usage.append(tokens, cost);
-    const actions = el('div', 'task-actions');
-    if (task.unread) actions.append(action(text.read, 'check', 'read', task.key, 'button icon-button'));
-    actions.append(action(text.delete, 'trash', 'delete', task.key, 'button icon-button danger'));
     const details = el('details', 'task-details');
     details.open = expanded.has(task.key);
-    details.append(el('summary', '', text.details), usage, el('pre', '', task.details), actions);
+    details.append(el('summary', '', text.details), usage, el('pre', '', task.details));
     details.addEventListener('toggle', () => {if (details.isConnected) details.open ? expanded.add(task.key) : expanded.delete(task.key);});
     if (task.unread) {
       const unread = el('span', 'unread-marker'); unread.title = text.unread;
@@ -163,7 +169,19 @@
       actions(action(text.privacyPolicy, 'shield', 'privacyPolicy'), action(text.clearPrivateData, 'trash', 'clearPrivateData', undefined, 'button danger'),
         action(text.clearLocalPrivateData, 'trash', 'clearLocalPrivateData', undefined, 'button danger'),
         action(text.resumePrivateData, 'play', 'resumePrivateData')));
-    panel.append(alerts, hooks, tools, records); return panel;
+    const nav = el('nav', 'management-nav'); nav.setAttribute('aria-label', text.management);
+    const content = el('div', 'management-content');
+    for (const [id, label, name, section] of [['alerts', text.alerts, 'sound', alerts], ['approval', text.approval, 'shield', hooks],
+      ['tools', text.tools, 'test', tools], ['records', text.records, 'folder', records]]) {
+      const tab = button(label, name, () => {management = id; saveView(); render();},
+        'management-tab' + (management === id ? ' selected' : ''));
+      tab.dataset.management = id; tab.dataset.focus = 'management-' + id;
+      tab.setAttribute('aria-pressed', String(management === id));
+      nav.append(tab);
+      section.dataset.category = id;
+      if (management === id) content.append(section);
+    }
+    panel.append(nav, content); return panel;
   }
   function render() {
     if (!data) return;
@@ -172,6 +190,7 @@
     const selection = focus === 'search' ? document.activeElement.selectionStart : null;
     const scroll = window.scrollY;
     if (project !== 'all' && !data.projects.some(item => item.id === project)) project = 'all';
+    if (conversation !== 'all' && !data.projects.some(item => item.conversations.some(chat => chat.id === conversation))) conversation = 'all';
     for (const key of expanded) if (!data.projects.some(item => item.tasks.some(task => task.key === key))) expanded.delete(key);
     document.documentElement.lang = data.language;
     app.replaceChildren(); app.setAttribute('aria-busy', 'false'); app.dataset.view = 'dashboard';
@@ -181,11 +200,11 @@
     const tools = el('div', 'header-tools');
     tools.append(action(text.refresh, 'refresh', 'refresh', undefined, 'button icon-button'),
       action(text.language, 'language', 'language', undefined, 'button icon-button'),
-      button(text.management, 'settings', () => {page = 'management'; vscode.setState({page}); render();}, 'button icon-button'));
+      button(text.management, 'settings', () => {page = 'management'; saveView(); render();}, 'button icon-button'));
     header.append(brand, tools);
     const pages = el('nav', 'page-tabs'); pages.setAttribute('aria-label', text.management);
     for (const [value, label, name] of [['tasks', text.title, 'grid'], ['management', text.management, 'settings']]) {
-      const tab = button(label, name, () => {page = value; vscode.setState({page}); render();}, 'page-tab' + (page === value ? ' active' : ''));
+      const tab = button(label, name, () => {page = value; saveView(); render();}, 'page-tab' + (page === value ? ' active' : ''));
       tab.dataset.page = value; tab.dataset.focus = 'page-' + value;
       tab.setAttribute('aria-pressed', String(page === value)); pages.append(tab);
     }
@@ -204,24 +223,36 @@
     const summary = el('section', 'metrics');
     summary.setAttribute('aria-label', text.title);
     const total = data.totals;
-    summary.append(metric(text.projects, String(total.projects), total.tasks + ' ' + text.tasks, '', () => {project = 'all'; filter = 'all'; render();}),
+    summary.append(metric(text.projects, String(total.projects), total.tasks + ' ' + text.tasks, '', () => {project = 'all'; conversation = 'all'; filter = 'all'; render();}),
       metric(text.running, String(total.running), text.showAll, 'metric-running', () => {filter = 'running'; render();}),
       metric(text.blocked, String(total.blocked), total.unread + ' ' + text.unread, 'metric-blocked', () => {filter = 'blocked'; render();}));
     const workspace = el('div', 'workspace');
     const nav = el('aside', 'project-nav');
-    nav.append(el('h2', 'section-label', text.projects));
+    nav.append(el('h2', 'section-label', text.projects + ' · ' + text.conversations));
     const projectButton = (id, title, note, amount, name) => {
-      const node = button(title, name, () => {project = id; render();}, 'project-button' + (project === id ? ' selected' : ''));
+      const selected = project === id && conversation === 'all';
+      const node = button(title, name, () => {project = id; conversation = 'all'; render();}, 'project-button' + (selected ? ' selected' : ''));
       const content = node.querySelector('span'); content.append(el('small', '', note));
       node.append(el('b', 'project-count', String(amount)));
-      node.setAttribute('aria-pressed', String(project === id));
+      node.setAttribute('aria-pressed', String(selected));
       node.dataset.project = id;
       node.dataset.focus = 'project-' + id;
       return node;
     };
     nav.append(projectButton('all', text.allProjects, text.title, total.tasks, 'grid'));
-    for (const group of data.projects) nav.append(projectButton(group.id, group.title,
-      (group.current ? text.current + ' · ' : '') + group.source, group.tasks.length, 'folder'));
+    for (const group of data.projects) {
+      nav.append(projectButton(group.id, group.title, (group.current ? text.current + ' · ' : '') + group.source, group.tasks.length, 'folder'));
+      const chats = el('div', 'conversation-nav');
+      for (const chat of group.conversations) {
+        const node = button(chat.title, 'chat', () => {project = group.id; conversation = chat.id; render();},
+          'conversation-button' + (conversation === chat.id ? ' selected' : ''));
+        node.dataset.conversation = chat.id; node.dataset.focus = chat.id;
+        node.setAttribute('aria-pressed', String(conversation === chat.id));
+        node.title = chat.title + ' · ' + chat.rounds + '\n' + text.roundHint;
+        node.querySelector('span').append(el('small', '', chat.rounds)); chats.append(node);
+      }
+      nav.append(chats);
+    }
     const main = el('main', 'main');
     const toolbar = el('div', 'toolbar');
     const search = el('label', 'search'); search.append(icon('search'));
@@ -236,14 +267,24 @@
       const option = el('option', '', group.title + (group.source ? ' · ' + group.source : ''));
       option.value = group.id; option.selected = group.id === project; mobile.append(option);
     }
-    mobile.addEventListener('change', () => {project = mobile.value; render();});
+    mobile.addEventListener('change', () => {project = mobile.value; conversation = 'all'; render();});
+    const mobileChats = el('select', 'project-select conversation-select'); mobileChats.setAttribute('aria-label', text.conversations);
+    const allChats = el('option', '', text.allConversations); allChats.value = 'all'; mobileChats.append(allChats);
+    for (const group of data.projects) {
+      if (project !== 'all' && group.id !== project) continue;
+      for (const chat of group.conversations) {
+        const option = el('option', '', chat.title + ' · ' + chat.rounds + (project === 'all' ? ' · ' + group.title : ''));
+        option.value = chat.id; option.selected = chat.id === conversation; mobileChats.append(option);
+      }
+    }
+    mobileChats.addEventListener('change', () => {conversation = mobileChats.value; render();});
     const tabs = el('div', 'filters'); tabs.setAttribute('role', 'group'); tabs.setAttribute('aria-label', text.tasks);
     for (const value of ['all', 'running', 'blocked', 'completed', 'failed', 'unread']) {
       const node = button(text[value], '', () => {filter = value; render();}, 'filter' + (filter === value ? ' active' : ''));
       node.setAttribute('aria-pressed', String(filter === value)); node.dataset.filter = value; tabs.append(node);
       node.dataset.focus = 'filter-' + value;
     }
-    main.append(toolbar, mobile, tabs);
+    main.append(toolbar, mobile, mobileChats, tabs);
     if (error) {const notice = el('div', 'notice', error); notice.setAttribute('role', 'alert'); main.append(notice);}
     let shown = 0;
     const list = el('div', 'project-sections');
@@ -265,7 +306,7 @@
     if (!shown) {
       const empty = el('section', 'empty'); empty.append(icon('beacon'),
         el('h2', '', total.tasks ? text.noMatches : text.emptyTitle), el('p', '', total.tasks ? text.search : text.emptyText));
-      if (total.tasks) empty.append(button(text.reset, 'refresh', () => {project = 'all'; filter = 'all'; query = ''; render();}));
+      if (total.tasks) empty.append(button(text.reset, 'refresh', () => {project = 'all'; conversation = 'all'; filter = 'all'; query = ''; render();}));
       list.append(empty);
     }
     main.append(list); workspace.append(nav, main);
@@ -298,7 +339,7 @@
       pending = 0; error = message.error || ''; render();
     }
     if (message?.type === 'view' && ['tasks', 'management'].includes(message.page)) {
-      page = message.page; vscode.setState({page}); render();
+      page = message.page; saveView(); render();
     }
   });
   vscode.postMessage({type: 'ready'});

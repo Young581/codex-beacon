@@ -40,10 +40,11 @@ test('a turn is one row, read state stays independent of progress and state colo
   const done = row('done', 20, 'completed', {read: false, event: event('done', 'done', 20, 'completed')});
   const view = new HistoryView(mock, 'this-window');
   view.update([running]);
-  const live = view.getChildren(view.groups[0])[0];
+  const chat = view.getChildren(view.groups[0])[0];
+  const live = view.getChildren(chat)[0];
   const runningItem = view.getTreeItem(live);
   assert.equal(runningItem.iconPath.color.id, 'charts.blue');
-  assert.equal(runningItem.label, '1.1K tok');
+  assert.equal(runningItem.label, '第 1 轮');
   assert.match(runningItem.tooltip, /1,100 tokens.*\$0\.0023/);
   view.update([running, done]);
   assert.equal(view.groups[0].entries.length, 1);
@@ -63,12 +64,38 @@ test('a turn is one row, read state stays independent of progress and state colo
   assert.equal(view.getTreeItem(view.groups[0].entries[0]).iconPath.color.id, 'charts.green');
 });
 
-test('compact rows show only tokens while exact usage and cost remain available in details', () => {
+test('compact usage remains available for detail summaries', () => {
   const usage = {complete: false, segments: [{...segment(), input: 4475490}]};
   assert.equal(compactUsage({usage}, {}), '4.48M* tok');
   assert.match(usageDescription({usage}, {}), /4,475,590 tokens.*部分统计/);
   assert.equal(compactUsage(undefined, {}), '无用量');
   assert.equal(compactUsage({usage: {complete: true, segments: [segment('unknown')]}}, {}), '1.1K tok');
+});
+
+test('sidebar groups named conversations and numbers rounds before state sorting', () => {
+  const first = row('first', 10, 'completed'); first.event.turn_id = 'first-turn'; first.event.session_title = 'Checkout';
+  const second = row('second', 20, 'waiting_input', {read: false}); second.event.turn_id = 'second-turn'; second.event.type = 'question';
+  const other = row('other', 30); other.event.session_id = 'different-chat';
+  const foreign = {...first, key: 'foreign', source: {...source, id: 'other-source'}};
+  const view = new HistoryView(mock, 'this-window'); view.update([second, other, first, foreign]);
+  const project = view.groups.find(group => group.source.id === source.id);
+  const chat = view.getChildren(project).find(group => group.title === 'Checkout');
+  assert.equal(view.getChildren(project).length, 2);
+  assert.equal(view.getTreeItem(chat).description, '2 轮');
+  assert.equal(view.getParent(chat), project);
+  assert.equal(view.getParent(chat.entries[0]), chat);
+  assert.deepEqual(chat.entries.map(row => row.turnNumber), [2, 1], 'Blocked rounds may display first without renumbering');
+  assert.equal(view.getTreeItem(chat.entries[0]).label.label, '● 第 2 轮');
+  assert.equal(view.getTreeItem(view.getChildren(project).find(group => group !== chat)).label, '未命名对话');
+  assert.equal(view.groups.find(group => group.source.id === 'other-source').entries[0].turnNumber, 1);
+  const updated = {...second, event: {...second.event, timestamp: second.event.timestamp + 100,
+    task: {...second.event.task, sequence: 40, state: 'completed'}}};
+  view.update([updated, first, other]);
+  assert.equal(view.groups[0].entries.find(row => row.key === updated.key).turnNumber, 2);
+  view.update([first]);
+  assert.equal(view.groups[0].conversations.length, 1);
+  assert.equal(view.getParent(updated), undefined);
+  assert.equal(view.getTreeItem(view.groups[0].entries[0]).label, '第 1 轮');
 });
 test('active unconnected tasks are explicitly unconfirmed; hook approval overrides older telemetry', () => {
   const running = row('live', 10);

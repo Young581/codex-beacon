@@ -10,12 +10,14 @@
 
 ### 功能
 
-- 按项目和环境分组，显示 Codex 聊天名称、模型、任务状态和时间。
+- 按项目、对话和环境分组，显示 Codex 聊天名称、轮次、模型、任务状态和时间。
 - 单列紧凑任务卡片；每条详情独立展开，查看每轮 token、API 费用估算和完整编号。
 - 彩色状态：运行、等待回答／审批、本轮完成、失败、取消和状态未确认。
 - 异步提问允许任务继续执行，同时计入“进行中”和“等待处理”；收到用户答复后退出等待。
 - 打开对应 Codex 会话，切换到对应项目窗口或恢复已关闭的项目窗口。
-- 任务右上角直接打开会话；项目名称旁打开项目窗口。标读后隐藏按钮和圆点，历史保留在“全部”，也可用“清空已读”移除已读历史。
+- 任务右上角直接打开会话、标为已读和删除；项目名称旁打开项目窗口。标读后隐藏按钮和圆点，历史保留在“全部”，也可用“清空已读”移除已读历史。
+- 左侧按对话筛选，原生侧栏显示“项目 → 对话名称 → 第几轮”；窄窗口提供项目和对话下拉列表。轮次按当前保留记录编号，删除或过期后会重新编号。
+- 管理与设置使用分类导航和单列内容，每行一个操作。
 - Windows 桌面通知、任务栏和窗口标题标记，支持本机 WAV／MP3 自定义音效及试听。
 - 中文和英文界面随 VS Code 切换，也可手动选择语言。
 - 本机采集内置；SSH／容器通过独立配套组件采集事件。
@@ -62,7 +64,7 @@ SSH／容器项目需要在目标环境安装并启用 **Codex Beacon Collector*
 
 ## English
 
-Track Codex tasks by project in VS Code and get alerts when a response ends or input is needed. Compact, single-column cards show the chat title, model, state and time. Open the session from the card header or its project window beside the project name. Expand each card independently for per-turn tokens, estimated API costs and record actions. Marking read hides the unread dot and mark-read button; history remains under All and leaves the Unread filter.
+Track Codex tasks by project and conversation in VS Code and get alerts when a response ends or input is needed. Compact cards show the chat title, numbered round, model, state and time. Open the session, mark read or delete from the card header; open the project window beside its name. Expand each card independently for tokens, estimated API costs and full identifiers. Marking read hides the unread dot and mark-read button; history remains under All and leaves the Unread filter. The native sidebar groups project → conversation → round, with no token count in row labels. Round numbers refer to retained records and are recalculated after deletion or expiry. Management uses category navigation and one control per row.
 
 ### Getting started
 

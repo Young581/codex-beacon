@@ -2,7 +2,7 @@
 const crypto = require('node:crypto');
 const {t, getLanguage} = require('./i18n');
 const {clean, projectName, eventTitle, historyGroups} = require('./presentation');
-const {STATES, projectGroups, usageDescription, compactUsage, taskTooltip} = require('./tasks');
+const {STATES, projectGroups, usageDescription, roundLabel, taskTooltip} = require('./tasks');
 
 class HistoryView {
   constructor(vscode, windowId, options = {}) {
@@ -19,8 +19,16 @@ class HistoryView {
     this.groups = this.options().groupBy === 'history' ? historyGroups(entries, this.windowId) : projectGroups(entries, this.windowId);
     this.changed.fire();
   }
-  getChildren(element) { return element?.entries || this.groups; }
-  getParent(entry) { return this.groups.find(group => group.entries.some(item => item.key === entry.key)); }
+  getChildren(element) { return element?.project && !element.test ? element.conversations : element?.entries || this.groups; }
+  getParent(entry) {
+    if (entry.project) return undefined;
+    if (entry.conversation) return this.groups.find(group => group.conversations?.some(item => item.id === entry.id));
+    for (const group of this.groups) {
+      const conversation = group.conversations?.find(item => item.entries.some(row => row.key === entry.key));
+      if (conversation) return conversation;
+      if (group.entries.some(item => item.key === entry.key)) return group;
+    }
+  }
   keysFor(key) {
     const row = this.groups.flatMap(group => group.entries).find(row => row.key === key || row.relatedKeys?.includes(key));
     return row?.relatedKeys || [key];
@@ -48,6 +56,16 @@ class HistoryView {
       item.contextValue = 'projectTaskGroup';
       return item;
     }
+    if (entry.conversation) {
+      const item = new vscode.TreeItem(entry.title, entry.active || entry.unread ?
+        vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed);
+      item.id = entry.id;
+      item.description = t`${entry.entries.length} 轮`;
+      item.tooltip = `${entry.title}\n${t('轮次按当前保留的对话记录排序，筛选不会改变轮次。')}`;
+      item.iconPath = new vscode.ThemeIcon('comment-discussion');
+      item.contextValue = 'conversationTaskGroup';
+      return item;
+    }
     if (entry.entries) {
       const item = new vscode.TreeItem(`${entry.title} (${entry.entries.length})`, entry.unread ?
         vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed);
@@ -70,7 +88,7 @@ class HistoryView {
     }
     if (entry.taskState) {
       const [state, icon, color] = STATES[entry.taskState] || STATES.unknown;
-      const label = `${entry.read ? '' : '● '}${compactUsage(entry.telemetry, this.options())}`;
+      const label = `${entry.read ? '' : '● '}${roundLabel(entry)}`;
       const item = new vscode.TreeItem(entry.read ? label : {label, highlights: [[0, label.length]]}, vscode.TreeItemCollapsibleState.None);
       item.id = 'task-' + crypto.createHash('sha256').update(entry.taskId).digest('hex');
       item.description = t({completed: '完成', running: '运行', waiting_input: '等回答',
@@ -79,7 +97,7 @@ class HistoryView {
       item.iconPath = new vscode.ThemeIcon(icon, new vscode.ThemeColor(color));
       item.command = {command: 'codexBeacon.showEntry', title: t('打开对应会话并标为已读'), arguments: [entry.key]};
       item.contextValue = entry.read ? 'readNotification' : 'unreadNotification';
-      item.accessibilityInformation = {label: `${t(state)} · ${usageDescription(entry.telemetry, this.options())}`};
+      item.accessibilityInformation = {label: `${roundLabel(entry)} · ${t(state)}`};
       return item;
     }
     const project = projectName(entry.event.cwd);

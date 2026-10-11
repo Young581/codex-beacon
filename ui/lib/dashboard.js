@@ -3,7 +3,7 @@ const crypto = require('node:crypto');
 const path = require('node:path');
 const {t, getLanguage} = require('./i18n');
 const {clean} = require('./presentation');
-const {STATES, projectGroups, estimateCost, taskTooltip} = require('./tasks');
+const {STATES, projectGroups, estimateCost, roundLabel, taskTooltip} = require('./tasks');
 
 const ROW_ACTIONS = new Set(['open', 'window', 'read', 'delete']);
 const GLOBAL_ACTIONS = new Set(['refresh', 'sound', 'soundFile', 'resetSound', 'preview', 'language', 'settings', 'status', 'pause', 'resume', 'privacy', 'clearRead',
@@ -12,7 +12,8 @@ const GLOBAL_ACTIONS = new Set(['refresh', 'sound', 'soundFile', 'resetSound', '
 const SETTING_ACTIONS = {setLanguage: ['auto', 'zh-CN', 'en'], setOpenLocation: ['sidebar', 'editor'], setAutoHook: [true, false]};
 const LABELS = {
   eyebrow: '工作空间动态', title: '项目任务总览', subtitle: '查看任务名称、模型与进度，展开查看用量和详情。',
-  projects: '项目', allProjects: '全部项目', current: '本窗口', other: '其他窗口',
+  projects: '项目', conversations: '对话', allConversations: '全部对话', roundHint: '轮次按当前保留的对话记录排序，筛选不会改变轮次。',
+  allProjects: '全部项目', current: '本窗口', other: '其他窗口',
   tasks: '任务', running: '进行中', blocked: '等待处理', completed: '本轮完成', failed: '失败或取消',
   tokens: '已采集 Token', cost: 'API 费用估算', metered: '有用量记录', unpriced: '任务费用未知', partial: '含部分统计',
   unread: '未读', all: '全部', search: '搜索任务名称、项目或模型', searchLabel: '搜索任务',
@@ -67,6 +68,8 @@ function dashboardData(snapshot, {windowId, options = {}, paused = false, connec
   const rows = groups.flatMap(group => group.entries);
   const projects = groups.map(group => ({id: group.id, title: clean(group.title, 200), cwd: clean(group.cwd, 2048),
     source: clean(group.source.label || group.source.host, 200), current: group.current,
+    conversations: group.conversations.map(chat => ({id: chat.id, title: chat.title, rounds: t`${chat.entries.length} 轮`,
+      unread: chat.unread, active: chat.active})),
     totals: usageTotals(group.entries, options), tasks: group.entries.map((row, index) => {
       const usage = row.telemetry?.usage;
       const segments = usage?.segments || [];
@@ -76,7 +79,8 @@ function dashboardData(snapshot, {windowId, options = {}, paused = false, connec
       return {key: row.key, index: index + 1, state: row.taskState,
         stateLabel: t((STATES[row.taskState] || STATES.unknown)[0]), unread: !row.read,
         model: clean([...new Set(segments.map(segment => segment.model).filter(Boolean))].join(', ') || row.telemetry?.model, 200),
-        title: clean(row.event.session_title, 160) || `${t('会话')} ${clean(row.event.session_id, 8) || t('未提供')}`,
+        title: group.conversations.find(chat => chat.id === row.conversationId)?.title || t('未命名对话'),
+        conversationId: row.conversationId, turnNumber: row.turnNumber, roundLabel: roundLabel(row),
         turn: clean(row.event.turn_id, 256),
         session: clean(row.event.session_id, 256), time: row.receivedAt,
         tokens: segments.length ? sums.input + sums.output : null, cost: cost.amount,
