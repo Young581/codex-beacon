@@ -10,6 +10,18 @@ const {validateSoundFile, checkSoundFile, SoundSettings} = require('../ui/lib/so
 const {formatBatch, validateOptions} = require('../ui/lib/broker-core');
 const {WindowRegistry} = require('../ui/lib/routing');
 const {powershell} = require('../ui/lib/ipc-security');
+let audioDeviceAvailable;
+function hasAudioDevice() {
+  if (audioDeviceAvailable !== undefined) return audioDeviceAvailable;
+  const probe = `Add-Type -TypeDefinition 'using System.Runtime.InteropServices; public static class BeaconAudioProbe {
+    [DllImport("winmm.dll")] public static extern uint waveOutGetNumDevs(); }';
+    [Console]::Write([BeaconAudioProbe]::waveOutGetNumDevs())`;
+  const result = spawnSync(powershell(), ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', probe],
+    {windowsHide: true, encoding: 'utf8', timeout: 10000});
+  assert.ifError(result.error); assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout.trim(), /^\d+$/);
+  return audioDeviceAvailable = Number(result.stdout.trim()) > 0;
+}
 
 function fixture(t) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'beacon-sound-'));
@@ -109,7 +121,10 @@ test('real Windows helper decodes WAV and MP3 locally and rejects missing/corrup
     const mp3 = path.join(dir, 'silent.mp3'); fs.writeFileSync(mp3, Buffer.concat(Array(12).fill(frame)));
     const corrupt = path.join(dir, 'corrupt.wav'); fs.writeFileSync(corrupt, 'invalid audio');
     const helper = path.resolve(__dirname, '../ui/assets/show-notification.ps1');
+    const audioAvailable = hasAudioDevice();
+    if (!audioAvailable) t.diagnostic('No Windows audio output device; valid-file decoding is verified on a desktop. Invalid files are still checked here.');
     for (const [file, valid] of [[wav, true], [mp3, true], [corrupt, false], [path.join(dir, 'missing.wav'), false]]) {
+      if (valid && !audioAvailable) continue;
       const result = spawnSync(powershell(), ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
         '-File', helper, '-CheckSoundFile', file], {windowsHide: true, encoding: 'utf8', timeout: 10000});
       assert.ifError(result.error);
@@ -123,14 +138,16 @@ test('native sound delivery plays WAV, skips invalid muted audio and acknowledge
     const {NativeNotifier} = require('../ui/lib/broker');
     const {dir, wav} = fixture(t);
     const native = new NativeNotifier();
+    const audioAvailable = hasAudioDevice();
     const fallbacks = []; native.on('soundFallback', detail => fallbacks.push(detail));
     try {
       await native.deliver({title: 'Audio fixture', body: '', desktop: false, sound: true, soundFile: wav});
       await native.deliver({title: 'Muted fixture', body: '', desktop: false, sound: false, soundFile: 'invalid'});
-      assert.equal(fallbacks.length, 0);
+      if (audioAvailable) assert.deepEqual(fallbacks, []);
+      else assert.deepEqual(fallbacks, [{soundFile: wav}], 'Without an audio device, custom audio gracefully falls back');
       const missing = path.join(dir, 'missing.wav');
       await native.deliver({title: 'Fallback fixture', body: '', desktop: false, sound: true, soundFile: missing});
-      assert.deepEqual(fallbacks, [{soundFile: missing}]);
+      assert.deepEqual(fallbacks, [...(audioAvailable ? [] : [{soundFile: wav}]), {soundFile: missing}]);
       assert.equal(native.clicks.size, 0);
     } finally {
       const exited = native.child ? once(native.child, 'exit') : Promise.resolve();
