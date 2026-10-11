@@ -13,6 +13,8 @@ const {ReadTracker} = require('./lib/read-tracking');
 const {PrivacyActions} = require('./lib/privacy');
 const {inspectInstallation, showInstallation} = require('./lib/installation');
 const {SoundSettings, validateSoundFile} = require('./lib/sound');
+const {Dashboard, dashboardData} = require('./lib/dashboard');
+const {projectGroups} = require('./lib/tasks');
 const TESTING = process.env.CODEX_NOTIFIER_TEST_MODE === '1';
 let current;
 
@@ -48,6 +50,33 @@ async function activate(context) {
   const config = () => vscode.workspace.getConfiguration('codexNotifier');
   const log = message => output.appendLine(`${new Date().toLocaleTimeString(getLanguage())} ${diagnostic(message)}`);
   const windowAttention = new WindowAttention(vscode, client, {log, testing: TESTING});
+  const dashboard = new Dashboard(vscode, context, {
+    data: () => dashboardData(snapshot, {windowId: client.clientId, options: history.options(),
+      paused: !config().get('notificationsEnabled', true), connected: !!client.authenticated,
+      collectionState: sourceStatus?.status?.state || ''}),
+    action: async (action, key) => {
+      const generation = privacyGeneration;
+      await refresh();
+      if (disposed || generation !== privacyGeneration) return;
+      const commands = {sound: 'chooseSound', preview: 'testSound', language: 'chooseLanguage', settings: 'settings',
+        status: 'showStatus', pause: 'pause', resume: 'resume', privacy: 'privacy', clearRead: 'clearRead'};
+      if (action === 'refresh') return;
+      if (commands[action]) return vscode.commands.executeCommand('codexNotifier.' + commands[action]);
+      const row = projectGroups(snapshot.entries || [], client.clientId).flatMap(group => group.entries).find(row => row.key === key);
+      if (!row) return;
+      if (action === 'open' || action === 'window') return vscode.commands.executeCommand(
+        action === 'open' ? 'codexNotifier.showEntry' : 'codexNotifier.openProjectWindow', row.key);
+      if (action === 'read') await client.request('markRead', {keys: row.relatedKeys});
+      if (action === 'delete') {
+        for (const related of row.relatedKeys) {
+          if (disposed || generation !== privacyGeneration) return;
+          await client.request('deleteEntry', {key: related});
+        }
+      }
+      await refresh();
+    }, log,
+  });
+  context.subscriptions.push(dashboard);
   function windowInfo() {
     const folders = (vscode.workspace.workspaceFolders || []).map(folder => folder.uri);
     const folder = folders[0];
@@ -111,6 +140,7 @@ async function activate(context) {
       }
     }
     statusBar.show();
+    dashboard.update();
   }
   async function refresh() {
     if (disposed) return snapshot;
@@ -161,6 +191,10 @@ async function activate(context) {
     const result = await checkInstallation();
     return TESTING ? result : showInstallation(vscode, result);
   });
+  register('codexNotifier.dashboard', async () => {
+    await refresh(); dashboard.open();
+    return {opened: !!dashboard.panel};
+  });
 
   register('codexNotifier.internal.receive', async payload => {
     if (!validEnvelope(payload)) return {accepted: false, error: 'Invalid event envelope'};
@@ -187,7 +221,9 @@ async function activate(context) {
     return {...data, history: data.entries || [], paused: data.privacyPaused || !config().get('notificationsEnabled', true), status: sourceStatus,
       windowId: client.clientId, localUnread: attention(data.entries || [], client.clientId).local.length,
       windowAttention: {...windowAttention.state},
-      ...(TESTING ? {lastNavigation, lastNavigationFailure, language: getLanguage(), groups: history.groups.map(group => ({id: group.id, title: group.title, count: group.entries.length})), statusText: statusBar.text,
+      ...(TESTING ? {lastNavigation, lastNavigationFailure, language: getLanguage(),
+        dashboard: {opened: !!dashboard.panel, ready: dashboard.ready, revision: dashboard.revision, data: dashboard.model},
+        groups: history.groups.map(group => ({id: group.id, title: group.title, count: group.entries.length})), statusText: statusBar.text,
         tasks: history.groups.flatMap(group => group.entries).filter(row => row.taskState).map(row => {
           const item = history.getTreeItem(row);
           return {key: row.key, state: row.taskState, taskId: item.id, description: item.description,
@@ -383,6 +419,7 @@ async function activate(context) {
     await client.request('interact');
     const paused = !config().get('notificationsEnabled', true);
     const items = [
+      {label: t('$(dashboard) 打开仪表盘'), command: 'codexNotifier.dashboard'},
       {label: t('$(globe) 语言'), command: 'codexNotifier.chooseLanguage'},
       {label: t('$(unmute) 自定义提示音'), command: 'codexNotifier.chooseSound'},
       {label: t('$(layout-sidebar-right) 选择会话打开位置'), command: 'codexNotifier.chooseOpenLocation'},
@@ -422,7 +459,7 @@ async function activate(context) {
     }).catch(error => log(error.message));
   });
   client.on('connected', () => { log(t('本机通知组件已连接')); lastRegistration = ''; windowAttention.reset(); syncWindow().catch(error => log(error.message)); });
-  client.on('disconnected', () => { lastRegistration = ''; log(t('本机通知组件断开，将自动重连')); });
+  client.on('disconnected', () => { lastRegistration = ''; dashboard.update(); log(t('本机通知组件断开，将自动重连')); });
   client.on('openEntry', message => {
     if (!message.entry || message.entry.key !== message.key) return;
     const generation = privacyGeneration;

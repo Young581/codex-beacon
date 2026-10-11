@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.0
+
+- 新增在编辑器中打开的 Codex Beacon 仪表盘，采用独立设计，随 VS Code 主题与窗口宽度调整。
+- 项目导航、状态筛选、搜索、任务卡片、精确用量详情、token／估算费用汇总和实时更新。
+- 卡片可打开会话、打开项目窗口、标读与删除整轮记录；接入提示音、试听、暂停及设置。
+- 中英文即时切换；不复制会话正文，不请求外部资源或账号接口。
+- Added a responsive editor dashboard for projects, task states, usage, estimated costs and notification controls.
+
 ## 0.5.4
 
 - 增加“自定义提示音”：选择本机 WAV／MP3 文件，单独试听或恢复系统默认提示音。

@@ -10,6 +10,7 @@ const UI_ID = 'lengmo1996.codex-notifier-ui';
 const REMOTE_ID = 'lengmo1996.codex-notifier-collector';
 const REQUIRED = ['testNotification', 'showHistory', 'pause', 'resume',
   'chooseSound', 'testSound',
+  'dashboard',
   'openProjectWindow',
   'configureApprovalHook', 'showStatus', 'internal.receive', 'internal.snapshot',
   'privacy', 'clearPrivateData', 'clearLocalPrivateData', 'resumePrivateData', 'checkInstallation', 'chooseLanguage'];
@@ -369,7 +370,10 @@ exports.run = async function run() {
       const paused = await command('local.privacyStatus');
       assert.equal(paused.paused, true);
       assert.equal((await command('local.resumePrivateData')).resumed, true);
-      const resumed = await command('local.privacyStatus');
+      // Resume starts the live collector. Its first atomic cache writes can
+      // briefly race this read-only inventory, so wait for a settled snapshot.
+      const resumed = await waitFor(() => command('local.privacyStatus'), value => value.paused === false,
+        'Resumed collector privacy status must settle');
       assert.equal(resumed.paused, false, JSON.stringify(resumed));
     });
 
@@ -462,6 +466,26 @@ exports.run = async function run() {
       await command('deleteEntry', entry.key);
     });
 
+    await test('Dashboard opens one editor tab, loads its local script and follows history and language live', async () => {
+      const before = (await snapshot()).unread;
+      assert.ok((await command('dashboard')).opened);
+      const value = await waitFor(snapshot, s => s.dashboard.ready, 'Dashboard webview must acknowledge readiness');
+      assert.equal(value.dashboard.data.totals.tasks,
+        require(path.join(vscode.extensions.getExtension(UI_ID).extensionPath, 'lib/tasks')).taskRows(history(value).filter(row => row.event.type !== 'test')).length);
+      assert.equal(value.unread, before, 'Opening the dashboard does not mark records read');
+      const tabs = () => vscode.window.tabGroups.all.flatMap(group => group.tabs).filter(tab => tab.input instanceof vscode.TabInputWebview && tab.input.viewType.includes('codexBeacon.dashboard'));
+      assert.equal(tabs().length, 1);
+      await command('dashboard'); assert.equal(tabs().length, 1);
+      const settings = vscode.workspace.getConfiguration('codexNotifier');
+      await settings.update('language', 'en', vscode.ConfigurationTarget.Global);
+      const english = await waitFor(snapshot, s => s.dashboard.data.language === 'en', 'Dashboard must update language');
+      assert.equal(english.dashboard.data.text.title, 'Project overview');
+      await settings.update('language', 'zh-CN', vscode.ConfigurationTarget.Global);
+      await waitFor(snapshot, s => s.dashboard.data.language === 'zh-CN', 'Dashboard must restore Chinese');
+      assert.ok(await vscode.window.tabGroups.close(tabs()[0]));
+      assert.equal((await snapshot()).dashboard.opened, false);
+    });
+
     const report = { passed: results.length, failed: 0, results,
       vscodeVersion: vscode.version, ui: UI_ID, remote: REMOTE_ID,
       nativeAttention: process.env.CODEX_NOTIFIER_ATTENTION_TEST === '1',
@@ -485,11 +509,35 @@ exports.run = async function run() {
             model: 'gpt-6.1-sol', tier: 'standard', input: 4450490, cachedInput: 4445621, cacheWrite: 0,
             output: 25100, reasoningOutput: 1000}]}}}});
       }
-      await command('showHistory');
+      if (process.env.CODEX_NOTIFIER_DASHBOARD_REVIEW === '1') {
+        await command('clearHistory');
+        const fixtures = [
+          ['web-store', 'running', 'gpt-6.1-sol', 184000, 120000, 9100, true],
+          ['web-store', 'waiting_input', 'gpt-6-luna', 12800, 7300, 2430, false],
+          ['data-pipeline', 'completed', 'gpt-6.1-sol', 4450490, 4445621, 25100, true],
+          ['data-pipeline', 'failed', '', 0, 0, 0, false],
+          ['design-system', 'waiting_approval', 'gpt-6-astra', 46000, 18000, 1700, true],
+          ['design-system', 'waiting_async', 'gpt-6.1-sol', 27300, 13000, 5800, false],
+        ];
+        for (const [index, [project, state, model, input, cachedInput, output, complete]] of fixtures.entries()) {
+          const event = {version: 1, originator: 'codex_vscode', type: 'task', id: 'dashboard-visual-' + index,
+            timestamp: Date.now() / 1000, cwd: path.join(realSource.cwd, 'examples', project),
+            session_id: process.env.CODEX_NOTIFIER_TEST_SESSION, turn_id: 'dashboard-turn-' + index,
+            task: {sequence: 1, state, model, usage: {complete, segments: model ? [{
+              model, tier: 'standard', input, cachedInput, cacheWrite: 0, output, reasoningOutput: 800}] : []}}};
+          await command('internal.receive', {version: 1, kind: 'event', source: realSource, event});
+          if (['waiting_input', 'waiting_approval', 'completed'].includes(state)) await command('internal.receive', {
+            version: 1, kind: 'event', source: realSource, event: {...event,
+              type: {waiting_input: 'question', waiting_approval: 'approval', completed: 'done'}[state],
+              id: 'dashboard-alert-' + index}});
+        }
+        await command('dashboard');
+        await waitFor(snapshot, s => s.dashboard.ready, 'Visual dashboard must load');
+      } else await command('showHistory');
       await vscode.commands.executeCommand('workbench.action.closePanel');
       fs.writeFileSync(path.join(path.dirname(process.env.CODEX_NOTIFIER_TEST_REPORT), 'visual-ready'), 'ready');
       const release = path.join(path.dirname(process.env.CODEX_NOTIFIER_TEST_REPORT), 'visual-done');
-      const deadline = Date.now() + 120000;
+      const deadline = Date.now() + 300000;
       while (!fs.existsSync(release) && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 250));
     }
   } catch (error) {

@@ -1,5 +1,10 @@
 # 0.2.3
 
+## 0.3.4
+
+- 同步仪表盘中英文翻译；采集与任务统计逻辑保持不变。
+- Sync dashboard translations; collection behavior is unchanged.
+
 ## 0.3.3
 
 - 同步自定义提示音相关翻译，采集行为保持不变。音频仅在 Windows 主扩展本机播放。

@@ -1,4 +1,5 @@
 {
+  "command.codexNotifier.dashboard": "打开仪表盘",
   "command.codexNotifier.chooseSound": "自定义提示音",
   "command.codexNotifier.testSound": "试听提示音",
   "setting.codexNotifier.soundFile": "当前 Windows 电脑上 WAV 或 MP3 文件的绝对路径，SSH／容器项目也使用本机文件。可通过“自定义提示音”命令选择文件。留空使用系统提示音；无法读取或播放时自动回退。用于回复完成、审批与提问提醒。升级旧版通知后台后需重启一次 VS Code。",

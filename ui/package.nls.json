@@ -1,4 +1,5 @@
 {
+  "command.codexNotifier.dashboard": "Open dashboard",
   "command.codexNotifier.chooseSound": "Customize notification sound",
   "command.codexNotifier.testSound": "Preview notification sound",
   "setting.codexNotifier.soundFile": "Absolute path to a local WAV or MP3 file on this Windows computer, including for SSH/container projects. Use Customize notification sound to choose a file. Empty uses the system sound; unreadable or unsupported audio falls back to it. Applies to response, approval and question alerts. Restart VS Code once after upgrading an older notification broker.",

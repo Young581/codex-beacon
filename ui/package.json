@@ -2,7 +2,7 @@
   "name": "codex-notifier-ui",
   "displayName": "Codex Beacon",
   "description": "按项目管理 Codex 任务、状态灯、token 与费用估算，以及完成提醒。Project tasks, status, token usage, cost estimates and alerts for Codex.",
-  "version": "0.5.4",
+  "version": "0.6.0",
   "publisher": "lengmo1996",
   "license": "MIT",
   "engines": {
@@ -33,6 +33,22 @@
   },
   "contributes": {
     "commands": [
+      {
+        "command": "codexNotifier.dashboard",
+        "title": "%command.codexNotifier.dashboard%",
+        "icon": "$(dashboard)",
+        "category": "Codex Beacon"
+      },
+      {
+        "command": "codexNotifier.dashboard.zhCN",
+        "title": "打开 Codex Beacon 仪表盘",
+        "icon": "$(dashboard)"
+      },
+      {
+        "command": "codexNotifier.dashboard.en",
+        "title": "Open Codex Beacon dashboard",
+        "icon": "$(dashboard)"
+      },
       {
         "command": "codexNotifier.chooseSound",
         "title": "%command.codexNotifier.chooseSound%",
@@ -308,6 +324,16 @@
     "menus": {
       "view/title": [
         {
+          "command": "codexNotifier.dashboard.en",
+          "when": "(view == codexNotifier.history) && codexNotifier.menuLanguage == en",
+          "group": "navigation@-1"
+        },
+        {
+          "command": "codexNotifier.dashboard.zhCN",
+          "when": "(view == codexNotifier.history) && codexNotifier.menuLanguage == zh-CN",
+          "group": "navigation@-1"
+        },
+        {
           "command": "codexNotifier.toggleGrouping.zhCN",
           "when": "(view == codexNotifier.history) && codexNotifier.menuLanguage == zh-CN",
           "group": "navigation@0"
@@ -529,6 +555,14 @@
         },
         {
           "command": "codexNotifier.toggleGrouping.en",
+          "when": "false"
+        },
+        {
+          "command": "codexNotifier.dashboard.zhCN",
+          "when": "false"
+        },
+        {
+          "command": "codexNotifier.dashboard.en",
           "when": "false"
         }
       ]

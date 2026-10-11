@@ -2,7 +2,7 @@
 
 为 VS Code 中的 Codex 提供按项目分组的任务列表、状态灯、token 与费用估算，以及完成提醒。
 
-基于 [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier) 的 MIT 开源项目，包含 Windows PowerShell 路径修复和安装辅助脚本。当前版本为主扩展 **0.5.4**、采集器 **0.3.3**。
+基于 [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier) 的 MIT 开源项目，包含 Windows PowerShell 路径修复和安装辅助脚本。当前版本为主扩展 **0.6.0**、采集器 **0.3.4**。
 
 ## 当前功能
 
@@ -51,6 +51,20 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 在任务空闲时运行“开发人员：重新加载窗口”。升级后若共享通知后台仍使用旧代码，可在任务空闲时关闭所有 VS Code 窗口，等待 10 秒后再打开。验证提醒可运行 **Codex 通知：测试本机弹窗和声音**。
 
 Windows 勿扰模式、通知权限和静音设置可能影响实际提醒。首次启用任务栏状态时，扩展会在原 `window.title` 模板前加入 `${codexNotification}${separator}`。
+
+## 仪表盘
+
+点击侧栏任务面板顶部的 **仪表盘图标**，或在命令面板运行 **Codex Beacon: 打开仪表盘**。独立页面在主编辑器区域打开，重复点击复用同一个标签。
+
+![Codex Beacon 仪表盘，合成任务示例](docs/dashboard.png)
+
+- 左侧切换项目；窄窗口改为项目下拉列表。
+- 查看项目数、运行／等待处理任务、保留记录的 token 和 API 费用估算。
+- 按运行、等待处理、完成、失败／取消和未读筛选，搜索项目、模型或会话。
+- 任务卡片展开完整用量和会话详情；可打开会话、打开项目窗口、静默标读或删除该轮记录。
+- 提示音选择、试听、暂停、语言和设置入口集中在页面里。状态与数据实时更新。
+
+仪表盘和侧栏使用同一组任务、价格和通知数据，打开页面保持未读状态。未知用量不显示为零，汇总会注明有用量记录与费用未知的任务数；`*` 表示含部分统计，金额仍是 API 估算。截图来自真实隔离 VS Code，使用合成数据。当前版本安装后，在任务空闲时重新加载相关窗口即可启用页面。
 
 ## 自定义提示音
 
