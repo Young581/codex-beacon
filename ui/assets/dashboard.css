@@ -74,6 +74,7 @@ button.metric:hover { background: var(--vscode-toolbar-hoverBackground); }
 .group-identity { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .group-identity svg { width: 16px; color: var(--muted); }
 .group-identity h2 { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.project-window-button { width: 27px; min-height: 27px; padding: 5px; background: transparent; }
 .group-source { font-size: 10px; color: var(--muted); max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .count-badge { font-size: 10px; line-height: 16px; border-radius: 4px; padding: 0 5px; background: var(--surface); color: var(--muted); }
 .group-usage { font-size: 10px; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--muted); }
@@ -90,6 +91,7 @@ button.metric:hover { background: var(--vscode-toolbar-hoverBackground); }
 .state-dot { width: 5px; height: 5px; flex-shrink: 0; border-radius: 50%; background: var(--state); }
 .state-running .state-dot { animation: breathe 2s infinite; }
 .task-time { font-size: 10px; color: var(--muted); white-space: nowrap; }
+.task-meta .task-time { margin-left: auto; }
 .task-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
 .task-heading h3 { flex: 1; font-size: 13px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .task-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; line-height: 1.5; }
@@ -105,7 +107,8 @@ button.metric:hover { background: var(--vscode-toolbar-hoverBackground); }
 .task-actions .button { min-height: 29px; height: 29px; font-size: 11px; background: transparent; }
 .task-actions .icon-button { width: 29px; }
 .task-actions svg { width: 14px; height: 14px; }
-.open-button { margin-right: auto; }
+.open-button { min-height: 27px; height: 27px; padding: 4px 8px; font-size: 11px; flex-shrink: 0; background: transparent; }
+.open-button svg { width: 14px; height: 14px; }
 .danger:hover:not(:disabled) { color: var(--vscode-errorForeground); }
 .task-details { margin-top: 6px; }
 .task-details:not([open]) > :not(summary) { display: none; }
@@ -157,6 +160,8 @@ button.metric:hover { background: var(--vscode-toolbar-hoverBackground); }
   .group-usage { margin-left: 24px; }
   .task-usage strong { font-size: clamp(18px, 5vw, 22px); white-space: nowrap; }
   .task-top { flex-wrap: wrap; }
+  .open-button { width: 27px; padding: 5px; }
+  .open-button span { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 body.vscode-high-contrast .task-card, body.vscode-high-contrast .button, body.vscode-high-contrast .metrics,

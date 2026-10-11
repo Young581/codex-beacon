@@ -77,12 +77,13 @@
     card.dataset.key = task.key;
     const heading = el('div', 'task-heading');
     const title = el('h3', '', task.title); title.title = task.title;
-    heading.append(title, el('span', 'task-time', time(task.time)));
+    heading.append(title, action(text.open, 'arrow', 'open', task.key, 'button open-button'));
     const meta = el('div', 'task-meta');
     const model = el('span', 'task-model', task.model || text.unknown); model.title = text.model + ': ' + (task.model || text.unknown);
     const state = el('span', 'state-badge'); state.append(el('i', 'state-dot'), el('span', '', task.stateLabel));
     meta.append(model, state);
     if (task.turn) {const turn = el('span', 'task-turn', text.turn + ' ' + task.turn.slice(-8)); turn.title = task.turn; meta.append(turn);}
+    meta.append(el('span', 'task-time', time(task.time)));
     const usage = el('div', 'task-usage');
     const tokens = el('div');
     tokens.append(el('span', 'field-label', 'Token'), el('strong', '', task.tokens === null ? '—' : count(task.tokens) + (task.complete ? '' : '*')));
@@ -90,10 +91,8 @@
     const cost = el('div'); cost.append(el('span', 'field-label', text.cost), el('strong', '', dollars(task.cost)));
     usage.append(tokens, cost);
     const actions = el('div', 'task-actions');
-    actions.append(action(text.open, 'arrow', 'open', task.key, 'button open-button'),
-      action(text.window, 'window', 'window', task.key, 'button icon-button'),
-      action(text.read, 'check', 'read', task.key, 'button icon-button'),
-      action(text.delete, 'trash', 'delete', task.key, 'button icon-button danger'));
+    if (task.unread) actions.append(action(text.read, 'check', 'read', task.key, 'button icon-button'));
+    actions.append(action(text.delete, 'trash', 'delete', task.key, 'button icon-button danger'));
     const details = el('details', 'task-details');
     details.open = expanded.has(task.key);
     details.append(el('summary', '', text.details), usage, el('pre', '', task.details), actions);
@@ -188,8 +187,9 @@
       shown += tasks.length;
       const section = el('section', 'project-section');
       const groupHeader = el('div', 'group-header');
-      const identity = el('div', 'group-identity'); identity.append(icon('folder'), el('h2', '', group.title),
-        el('span', 'group-source', group.source), el('span', 'count-badge', String(tasks.length)));
+      const identity = el('div', 'group-identity'); identity.append(icon('folder'), el('h2', '', group.title));
+      if (group.cwd) identity.append(action(text.window, 'window', 'window', group.tasks[0].key, 'button icon-button project-window-button'));
+      identity.append(el('span', 'group-source', group.source), el('span', 'count-badge', String(tasks.length)));
       identity.title = group.cwd;
       groupHeader.append(identity);
       const cards = el('div', 'task-grid'); tasks.forEach(task => cards.append(taskCard(task)));

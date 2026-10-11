@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.2
+
+- 已读任务隐藏“标为已读”按钮和未读圆点；全部列表保留历史，未读筛选移除已读任务。
+- “打开会话”移到任务卡片右上角，无需展开详情。
+- “打开项目窗口”移到项目名称旁，保持未读与独立任务详情。
+- Hide the mark-read action after reading, promote session navigation to each card header, and place project-window navigation beside the project name.
+
 ## 0.8.1
 
 - Fix fresh Windows installs when Python is installed without the optional `py` launcher or a PATH entry.

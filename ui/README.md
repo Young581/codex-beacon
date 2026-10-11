@@ -14,6 +14,7 @@
 - 单列紧凑任务卡片；每条详情独立展开，查看每轮 token、API 费用估算和完整编号。
 - 彩色状态：运行、等待回答／审批、本轮完成、失败、取消和状态未确认。
 - 打开对应 Codex 会话，切换到对应项目窗口或恢复已关闭的项目窗口。
+- 任务右上角直接打开会话；项目名称旁打开项目窗口。标读后隐藏按钮和圆点，历史保留在“全部”，也可用“清空已读”移除已读历史。
 - Windows 桌面通知、任务栏和窗口标题标记，支持本机 WAV／MP3 自定义音效及试听。
 - 中文和英文界面随 VS Code 切换，也可手动选择语言。
 - 本机采集内置；SSH／容器通过独立配套组件采集事件。
@@ -56,7 +57,7 @@ SSH／容器项目需要在目标环境安装并启用 **Codex Beacon Collector*
 
 ## English
 
-Track Codex tasks by project in VS Code and get alerts when a response ends or input is needed. Compact, single-column cards show the chat title, model, state and time. Expand each card independently for per-turn tokens, estimated API costs and session/window actions.
+Track Codex tasks by project in VS Code and get alerts when a response ends or input is needed. Compact, single-column cards show the chat title, model, state and time. Open the session from the card header or its project window beside the project name. Expand each card independently for per-turn tokens, estimated API costs and record actions. Marking read hides the unread dot and mark-read button; history remains under All and leaves the Unread filter.
 
 ### Getting started
 
