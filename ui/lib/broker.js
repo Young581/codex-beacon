@@ -142,7 +142,7 @@ class NativeNotifier extends EventEmitter {
   }
 }
 
-function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNotifier, attentionNotifier, batchOptions = {}, now = Date.now }) {
+function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNotifier, attentionNotifier, batchOptions = {}, approvalDelayMs = 12000, now = Date.now }) {
   if (!path.isAbsolute(storage)) throw new Error('--storage must be an absolute path');
   if (typeof pipe !== 'string' || !pipe || (process.platform === 'win32' ? !pipe.startsWith('\\\\.\\pipe\\') : !path.isAbsolute(pipe))) {
     throw new Error('--pipe must be a local named pipe or absolute Unix socket path');
@@ -162,6 +162,7 @@ function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNo
   // A retry or a long batch delay must not revive them when the window mute expires.
   const silencedKeys = new Set();
   const forcedTests = new Set();
+  const approvalTimers = new Map();
   let idleTimer = null;
   let stopping = false;
   const targetFor = record => windows.select(record, observedBy.get(record.key));
@@ -232,6 +233,7 @@ function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNo
     scheduler.cancel(record => removed.has(record.key));
     native.cancel?.(keys);
     for (const key of keys) {
+      clearTimeout(approvalTimers.get(key)); approvalTimers.delete(key);
       observedBy.delete(key); deliveryOptions.delete(key); forcedTests.delete(key); silencedKeys.delete(key);
     }
   });
@@ -240,13 +242,25 @@ function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNo
     const read = new Set(keys);
     scheduler.cancel(record => read.has(record.key));
     native.cancel?.(keys);
-    for (const key of keys) silencedKeys.add(key);
+    for (const key of keys) {
+      clearTimeout(approvalTimers.get(key)); approvalTimers.delete(key);
+      silencedKeys.add(key);
+    }
   });
   store.on('event', (record, options) => {
     deliveryOptions.set(record.key, options);
     const target = targetFor(record);
     if (!forcedTests.has(record.key) && target && (mutedUntil.get(target.id) || 0) > now()) silencedKeys.add(record.key);
-    if (!silencedKeys.has(record.key)) scheduler.add(record, effectiveOptions(record, options));
+    const enqueue = () => {
+      approvalTimers.delete(record.key);
+      const current = store.entries.find(entry => entry.key === record.key);
+      if (current && !current.read && !silencedKeys.has(record.key)) scheduler.add(current, effectiveOptions(current, options));
+    };
+    // PermissionRequest precedes approval review; rapid resolution should not
+    // produce a stale popup. This timer never participates in Codex approval.
+    if (record.event.type === 'approval' && record.event.session_id && record.event.turn_id && approvalDelayMs > 0) {
+      approvalTimers.set(record.key, setTimeout(enqueue, approvalDelayMs));
+    } else enqueue();
   });
   scheduler.on('deliveryError', (entries, error) => broadcast({ type: 'deliveryError', entries, error }));
   function silenceKey(key) {
@@ -315,6 +329,8 @@ function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNo
     stopping = true;
     clearTimeout(idleTimer);
     clearInterval(expiryTimer);
+    for (const timer of approvalTimers.values()) clearTimeout(timer);
+    approvalTimers.clear();
     scheduler.close();
     native.close();
     if (attention) attention.close();
@@ -468,7 +484,7 @@ function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNo
   server.on('listening', () => {
     if (stopping) return;
     try {
-      const legacyFileName = ['broker-state-v10.json', 'broker-state-v9.json', 'broker-state-v8.json', 'broker-state-v7.json', 'broker-state-v6.json', 'broker-state-v5.json', 'broker-state-v4.json', 'broker-state-v3.json', 'broker-state-v2.json', 'broker-state.json']
+      const legacyFileName = ['broker-state-v11.json', 'broker-state-v10.json', 'broker-state-v9.json', 'broker-state-v8.json', 'broker-state-v7.json', 'broker-state-v6.json', 'broker-state-v5.json', 'broker-state-v4.json', 'broker-state-v3.json', 'broker-state-v2.json', 'broker-state.json']
         .find(file => fs.existsSync(path.join(storage, file)));
       store.reload({legacyFileName});
       if (store.needsMigration) { store.save(); store.needsMigration = false; }

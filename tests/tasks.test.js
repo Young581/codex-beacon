@@ -105,6 +105,86 @@ test('active unconnected tasks are explicitly unconfirmed; hook approval overrid
   assert.equal(taskRows([running, approval])[0].taskState, 'waiting_approval');
 });
 
+test('async delivery remains nonblocking without telemetry; counters do not resolve approvals', () => {
+  const async = row('async', 10, 'running'); async.event.type = 'question';
+  async.event.question_mode = 'async'; delete async.event.task;
+  assert.equal(taskRows([async])[0].taskState, 'waiting_async');
+  const running = row('live', 10);
+  const approval = {...row('approve', 20), read: false, event: {...event('approve', 'approval'), timestamp: running.event.timestamp + 1}};
+  delete approval.event.task;
+  const counters = row('counters', 30); counters.event.timestamp = approval.event.timestamp + 1;
+  assert.equal(taskRows([running, approval, counters])[0].taskState, 'waiting_approval');
+  const delayed = {...counters, event: {...counters.event, task: {...counters.event.task, continuedAt: approval.event.timestamp - 1}}};
+  assert.equal(taskRows([running, approval, delayed])[0].taskState, 'waiting_approval');
+  counters.event.task.continuedAt = approval.event.timestamp + 0.5;
+  assert.equal(taskRows([running, approval, counters])[0].taskState, 'running');
+});
+
+test('collector bridge and broker preserve and validate continuation and question metadata', () => {
+  const question = {...event('async-mode', 'question'), question_mode: 'async'};
+  question.task.continuedAt = question.timestamp - 1;
+  const bridged = normalizeEvent(question);
+  assert.equal(bridged.question_mode, 'async');
+  assert.equal(validateEvent(bridged).task.continuedAt, question.task.continuedAt);
+  for (const mode of [false, 'unknown', {}, null]) {
+    assert.equal(normalizeEvent({...question, question_mode: mode}), null);
+    assert.throws(() => validateEvent({...question, question_mode: mode}), /question mode/);
+  }
+  for (const continuedAt of [-1, Infinity, NaN, '200', true, 4102444801]) {
+    const invalid = {...question, task: {...question.task, continuedAt}};
+    assert.equal(normalizeEvent(invalid), null);
+    assert.throws(() => validateEvent(invalid), /continuation time/);
+  }
+});
+
+test('continuation automatically reads only resolved approvals in its exact round', () => {
+  const store = new NotificationStore(path.join(__dirname, '.broker-test-data', crypto.randomUUID()));
+  const base = Date.now() / 1000;
+  const approval = {...event('approval', 'approval'), timestamp: base}; delete approval.task;
+  store.add(source, approval, {});
+  store.add(source, {...approval, id: 'other-turn', turn_id: 'other'}, {});
+  store.add({...source, id: 'foreign'}, {...approval, id: 'foreign'}, {});
+  store.add(source, {...approval, id: 'other-project', cwd: '/other'}, {});
+  const question = {...approval, id: 'question', type: 'question', question_mode: 'async'};
+  store.add(source, question, {});
+  const progress = {...event('progress', 'task', 30), timestamp: base + 2};
+  store.add(source, progress, {});
+  assert.equal(store.history().unread, 5, 'Counters alone preserve all reminders');
+  progress.task.continuedAt = base + 1; progress.task.sequence = 40;
+  store.add(source, progress, {});
+  assert.equal(store.history().unread, 4);
+  assert.equal(store.history().entries.find(r => r.event.id === 'approval').read, true);
+  assert.equal(store.history().entries.find(r => r.event.id === 'question').read, false);
+  store.add(source, {...approval, id: 'late-approval'}, {});
+  assert.equal(store.history().entries.find(r => r.event.id === 'late-approval').read, true, 'Late delivery cannot revive a resolved approval');
+});
+
+test('tool resolution clears its matching approval but preserves parallel and repeated approvals', () => {
+  const store = new NotificationStore(path.join(__dirname, '.broker-test-data', crypto.randomUUID()));
+  const stamp = Date.now() / 1000;
+  const approval = {...event('one', 'approval'), timestamp: stamp, action_key: 'a'.repeat(64)}; delete approval.task;
+  const second = {...approval, id: 'two', action_key: 'b'.repeat(64)};
+  store.add(source, event('running'), {}); store.add(source, approval, {}); store.add(source, second, {});
+  const resolution = {...approval, type: 'approval_resolved', id: 'resolved', timestamp: stamp + 1};
+  store.add(source, resolution, {sound: true, desktop: true});
+  assert.equal(store.history().unread, 1);
+  const records = store.history().entries.map(record => ({...record, targetWindowId: 'fixture'}));
+  assert.equal(taskRows(records)[0].taskState, 'waiting_approval', 'The other parallel approval remains pending');
+  store.add(source, {...resolution, id: 'second-resolved', action_key: second.action_key}, {});
+  assert.equal(taskRows(store.history().entries.map(record => ({...record, targetWindowId: 'fixture'})))[0].taskState, 'running');
+  store.add(source, {...approval, id: 'repeated', timestamp: stamp + 2}, {});
+  assert.equal(store.history().unread, 1, 'An old resolution cannot clear a newer identical command');
+  store.add(source, {...approval, id: 'same-command-parallel', timestamp: stamp + 2.1}, {});
+  store.add(source, {...resolution, id: 'one-of-two-resolved', timestamp: stamp + 3}, {});
+  assert.equal(store.history().unread, 1, 'One result resolves only one of two identical pending operations');
+  const onlyResolution = {...records.at(-1), event: resolution};
+  assert.deepEqual(taskRows([onlyResolution]), [], 'Internal lifecycle records never create task cards');
+  assert.equal(normalizeEvent({...resolution, action_key: 'bad'}), null);
+  assert.throws(() => validateEvent({...resolution, action_key: 'bad'}));
+  assert.equal(require('../ui/lib/presentation').validEnvelope({version: 1, kind: 'event', source, event: resolution}), true);
+  assert.deepEqual(notificationOptions({get: () => true}, false, 'approval_resolved'), {sound: false, desktop: false});
+});
+
 test('reconnected project windows do not confirm saved activity; terminal results stay final', () => {
   for (const state of ['running', 'waiting_input', 'waiting_async', 'waiting_approval']) {
     assert.equal(taskRows([{...row(state, 10, state), taskConfirmed: false}])[0].taskState, 'unknown');

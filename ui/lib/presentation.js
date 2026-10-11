@@ -21,7 +21,7 @@ function attention(entries, windowId) {
 }
 
 function historyGroups(entries, windowId) {
-  const ordered = [...entries].sort((a, b) => b.receivedAt - a.receivedAt);
+  const ordered = entries.filter(entry => entry.event.type !== 'approval_resolved').sort((a, b) => b.receivedAt - a.receivedAt);
   return [
     {id: 'current-unread', title: t('本窗口待处理'), unread: true, entries: ordered.filter(entry => !entry.read && entry.targetWindowId === windowId)},
     {id: 'other-unread', title: t('其他窗口／未连接的待处理'), unread: true, entries: ordered.filter(entry => !entry.read && entry.targetWindowId !== windowId)},
@@ -30,7 +30,7 @@ function historyGroups(entries, windowId) {
 }
 
 function notificationOptions(config, focused, type) {
-  if (type === 'task') return {desktop: false, sound: false};
+  if (['task', 'approval_resolved'].includes(type)) return {desktop: false, sound: false};
   const enabled = config.get('notificationsEnabled', true);
   const filter = {done: 'notifyOnDone', approval: 'notifyOnApproval', question: 'notifyOnQuestion'}[type];
   const active = enabled && (!filter || config.get(filter, true)) && (!config.get('onlyWhenUnfocused', false) || !focused);
@@ -44,7 +44,7 @@ function validEnvelope(payload) {
   if (payload.kind === 'status') return payload.status && typeof payload.status.state === 'string';
   const event = payload.event;
   return event && event.version === 1 && typeof event.id === 'string' && event.id.length > 0 && event.id.length <= 256 &&
-    ['done', 'approval', 'question', 'test', 'task'].includes(event.type);
+    ['done', 'approval', 'approval_resolved', 'question', 'test', 'task'].includes(event.type);
 }
 
 async function showWindowAlert(vscode, message, {open, history, cancelled = () => false}) {

@@ -8,6 +8,10 @@ function normalizeTask(value) {
     return input;
   };
   const result = {state: value.state, sequence: value.sequence, model: text(value.model || '')};
+  if (value.continuedAt !== undefined) {
+    if (!Number.isFinite(value.continuedAt) || value.continuedAt < 0 || value.continuedAt > 4102444800) throw new Error('Invalid task continuation time');
+    result.continuedAt = value.continuedAt;
+  }
   if (value.startedAt !== undefined) {
     if (!Number.isFinite(value.startedAt) || value.startedAt < 0 || value.startedAt > 4102444800) throw new Error('Invalid task start time');
     result.startedAt = value.startedAt;

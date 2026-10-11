@@ -11,20 +11,39 @@ const {destination} = require('./project-window');
 const {validateSoundFile, validateSoundVolume} = require('./sound');
 const {normalizePath} = require('./routing');
 
-const TYPES = new Set(['done', 'approval', 'question', 'test', 'task']);
+const TYPES = new Set(['done', 'approval', 'approval_resolved', 'question', 'test', 'task']);
 const TITLES = { done: 'Codex 本轮已回复', approval: 'Codex 等待审批', question: 'Codex 等待回答', test: 'Codex 通知测试' };
 const MAX_HISTORY = 200;
 const MAX_SEEN = 5000;
-const BROKER_PROTOCOL_VERSION = 11;
+const BROKER_PROTOCOL_VERSION = 12;
 
 function conversationKey(record) {
   return JSON.stringify([record.source.id, normalizePath(record.event.cwd || record.source.cwd || ''), record.event.session_id]);
 }
 function turnKey(record) { return JSON.stringify([conversationKey(record), record.event.turn_id]); }
+function resolvedApprovalKeys(entries) {
+  const pending = new Map(), resolved = new Set();
+  for (const record of [...entries].sort((a, b) => a.event.timestamp - b.event.timestamp)) {
+    if (!record.event.action_key || !['approval', 'approval_resolved'].includes(record.event.type)) continue;
+    const key = JSON.stringify([turnKey(record), record.event.action_key]);
+    if (!pending.has(key)) pending.set(key, []);
+    const queue = pending.get(key);
+    if (record.event.type === 'approval') queue.push(record);
+    else if (queue.length && queue[0].event.timestamp < record.event.timestamp) resolved.add(queue.shift().key);
+  }
+  return resolved;
+}
 function readEarlierRounds(entries) {
   const starts = new Map();
   const turnStarts = new Map();
+  const continuations = new Map();
+  const resolved = resolvedApprovalKeys(entries);
   for (const record of entries) {
+    if (record.event.session_id && record.event.turn_id && record.event.task) {
+      const task = record.event.task;
+      const time = ['completed', 'cancelled', 'failed'].includes(task.state) ? record.event.timestamp : task.continuedAt;
+      if (time !== undefined) continuations.set(turnKey(record), Math.max(continuations.get(turnKey(record)) || 0, time));
+    }
     const startedAt = record.event.task?.startedAt;
     if (!record.event.session_id || !record.event.turn_id || startedAt === undefined) continue;
     const key = conversationKey(record);
@@ -36,6 +55,14 @@ function readEarlierRounds(entries) {
   }
   const readKeys = [];
   const records = entries.map(record => {
+    // Resolution belongs to this exact source/project/conversation/round.
+    // Counters and unrelated parallel tool outputs cannot acknowledge approval.
+    if (!record.read && record.event.type === 'approval' &&
+        ((continuations.get(turnKey(record)) || 0) > record.event.timestamp ||
+         resolved.has(record.key))) {
+      readKeys.push(record.key);
+      return {...record, read: true};
+    }
     const latest = starts.get(conversationKey(record));
     if (record.read || record.event.type === 'test' || !latest || record.event.turn_id === latest.turn) return record;
     const start = turnStarts.get(turnKey(record));
@@ -90,6 +117,15 @@ function validateEvent(event) {
     originator: field(event.originator, 'event.originator', 64),
   };
   if (event.task !== undefined) result.task = normalizeTask(event.task);
+  if (event.question_mode !== undefined) {
+    if (event.type !== 'question' || !['async', 'blocking'].includes(event.question_mode)) throw new Error('Invalid question mode');
+    result.question_mode = event.question_mode;
+  }
+  if (event.action_key !== undefined) {
+    if (!['approval', 'approval_resolved'].includes(event.type) || typeof event.action_key !== 'string' || !/^[a-f0-9]{64}$/.test(event.action_key)) throw new Error('Invalid approval action key');
+    result.action_key = event.action_key;
+  }
+  if (event.type === 'approval_resolved' && (!result.action_key || !result.session_id || !result.turn_id)) throw new Error('Invalid approval resolution');
   if (event.replayed !== undefined) {
     if (typeof event.replayed !== 'boolean') throw new Error('Invalid event replay flag');
     result.replayed = event.replayed;
@@ -276,7 +312,8 @@ class NotificationStore extends EventEmitter {
       return {accepted: true, ignored: true, reason: this.control.paused ? 'privacy-paused' : 'expired'};
     }
     const key = `${source.id}:${event.id}`;
-    if (event.type === 'task') {
+    if (event.type === 'task' || event.type === 'approval_resolved') {
+      if (event.type === 'approval_resolved' && this.seen.has(key)) return {accepted: true, duplicate: true, key};
       const index = this.entries.findIndex(record => record.key === key);
       const existing = this.entries[index];
       if (existing && (existing.event.session_id !== event.session_id || existing.event.turn_id !== event.turn_id || existing.event.cwd !== event.cwd)) throw new Error('Task identity changed');
@@ -494,4 +531,4 @@ class BatchScheduler extends EventEmitter {
   }
 }
 
-module.exports = { NotificationStore, BatchScheduler, validateSource, validateEvent, validateOptions, formatBatch, MAX_HISTORY, MAX_SEEN, BROKER_PROTOCOL_VERSION, turnKey };
+module.exports = { NotificationStore, BatchScheduler, validateSource, validateEvent, validateOptions, formatBatch, MAX_HISTORY, MAX_SEEN, BROKER_PROTOCOL_VERSION, turnKey, resolvedApprovalKeys };

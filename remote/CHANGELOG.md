@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.10
+
+- Add preserving PostToolUse lifecycle upgrades and match resolved approvals by opaque operation digest; store no arguments or tool results.
+- 从当前 Codex `item_completed` 元数据恢复日志尾部缺失的轮次归属；缺少完整历史时仍标记为部分用量。
+- 转发异步或阻塞提问类型及模型继续工作时间，不转发对话或命令内容。
+- Recover round identity from current Codex item metadata when a large transcript tail lacks its start record. Keep partial usage explicit.
+- Preserve question delivery mode and verified model continuation timestamps without forwarding conversation text or command arguments.
+
 ## 0.5.9
 
 - 同步跨平台共享翻译与平台说明；Linux／macOS 本机采集仍由主扩展内置，此组件只在远端窗口启动。

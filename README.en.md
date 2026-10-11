@@ -6,7 +6,7 @@ Track Codex tasks by project in VS Code with colored status lights, token usage,
 
 为 VS Code 中的 Codex 提供按项目分组的任务列表、状态灯、token 与费用估算，以及完成提醒。[阅读完整中文说明 →](README.md)
 
-Based on the MIT-licensed [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier), with Windows PowerShell path fixes and installation helpers. The current code versions are **Codex Beacon 0.9.0** and **Collector 0.5.9**. Features include sound volume, sounds for different events, conversation grouping, numbered rounds and a dashboard with common management controls. Check the installed extension's details for its Marketplace version; the latest fixes are available from Releases.
+Based on the MIT-licensed [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier), with Windows PowerShell path fixes and installation helpers. The current code versions are **Codex Beacon 0.9.1** and **Collector 0.5.10**. Features include sound volume, sounds for different events, conversation grouping, numbered rounds and a dashboard with common management controls. Check the installed extension's details for its Marketplace version; the latest fixes are available from Releases.
 
 ## Features
 
@@ -177,3 +177,5 @@ These are plans and are not implemented in the current version.
 Based on upstream commit `4fa74775c65980a5015e0515b5877bc4ebe51e45`, with original copyright notices and the [MIT license](LICENSE) retained. [UPSTREAM.md](UPSTREAM.md) preserves the original project introduction.
 
 This is an independently maintained derivative with two separate Marketplace listings: `Young581.codex-beacon` and `Young581.codex-beacon-collector`. Commands, settings, caches and hook ownership use independent identifiers. See [Marketplace and migration notes](docs/marketplace.md). Old notification history is not imported. Disable the old notifier when tasks are idle before enabling Beacon, and reapply your custom settings.
+
+Approval alerts wait 12 seconds and are cancelled on matching tool results or confirmed model continuation. Asynchronous questions remain nonblocking. Token updates alone do not resolve approvals. After upgrading, review and trust the new PostToolUse hook under Codex settings → Hooks.

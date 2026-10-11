@@ -2,6 +2,7 @@
 const crypto = require('node:crypto');
 const {t, getLanguage} = require('./i18n');
 const {clean, projectName} = require('./presentation');
+const {resolvedApprovalKeys} = require('./broker-core');
 
 const STATES = {
   running: ['进行中', 'sync~spin', 'charts.blue'],
@@ -34,6 +35,7 @@ function taskIdentity(entry) {
     event.turn_id || event.id]);
 }
 function inferredState(event) {
+  if (event.type === 'question' && event.question_mode === 'async') return 'waiting_async';
   return {done: 'completed', question: 'waiting_input', approval: 'waiting_approval'}[event.type] || 'unknown';
 }
 function taskRows(entries) {
@@ -44,17 +46,22 @@ function taskRows(entries) {
     if (!row) { row = {id, records: []}; tasks.set(id, row); }
     row.records.push(entry);
   }
-  return [...tasks.values()].map(row => {
+  return [...tasks.values()].filter(row => row.records.some(entry => entry.event.type !== 'approval_resolved')).map(row => {
     const ordered = row.records;
-    const alerts = ordered.filter(entry => entry.event.type !== 'task');
+    const alerts = ordered.filter(entry => !['task', 'approval_resolved'].includes(entry.event.type));
     const unread = alerts.filter(entry => !entry.read);
     const representative = unread.at(-1) || alerts.at(-1) || ordered.at(-1);
     const telemetry = ordered.filter(entry => entry.event.task).sort((a, b) =>
       a.event.task.sequence - b.event.task.sequence || a.receivedAt - b.receivedAt).at(-1);
-    const latest = ordered.at(-1);
+    const latest = ordered.filter(entry => entry.event.type !== 'approval_resolved').at(-1);
+    const resolved = resolvedApprovalKeys(ordered);
     let state = telemetry?.event.task.state || inferredState(latest.event);
     // Hook approval can arrive after the most recent rollout snapshot.
-    if (latest.event.type !== 'task' && latest.event.timestamp > (telemetry?.event.timestamp || 0)) state = inferredState(latest.event);
+    const pendingApproval = [...ordered].reverse().find(entry => entry.event.type === 'approval' &&
+      entry.event.timestamp > (telemetry?.event.task.continuedAt || 0) && !resolved.has(entry.key));
+    if (pendingApproval && !['completed', 'cancelled', 'failed'].includes(state)) state = 'waiting_approval';
+    else if (latest.event.type === 'approval' && resolved.has(latest.key)) state = telemetry?.event.task.state || 'running';
+    else if (latest.event.type !== 'task' && latest.event.timestamp > (telemetry?.event.timestamp || 0)) state = inferredState(latest.event);
     const target = latest.targetWindowId || representative.targetWindowId;
     if ((!target || latest.taskConfirmed === false) && ['running', 'waiting_input', 'waiting_async', 'waiting_approval'].includes(state)) state = 'unknown';
     return {...representative, taskId: row.id, records: ordered, relatedKeys: ordered.map(entry => entry.key),

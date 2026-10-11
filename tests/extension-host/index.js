@@ -427,10 +427,19 @@ exports.run = async function run() {
         [...localCollector.pythonArgs, path.join(vscode.extensions.getExtension(UI_ID).extensionPath, 'collector/scripts/collector.py'),
           'hook', '--event', 'approval', '--codex-home', testHome],
         {input: JSON.stringify({session_id: process.env.CODEX_NOTIFIER_TEST_SESSION, turn_id: turn,
-          cwd: vscode.workspace.workspaceFolders[0].uri.fsPath}), encoding: 'utf8', timeout: 15000, windowsHide: true});
+          cwd: vscode.workspace.workspaceFolders[0].uri.fsPath, tool_name: 'Bash', tool_input: {command: 'fixture-operation'}}), encoding: 'utf8', timeout: 15000, windowsHide: true});
       assert.equal(approval.status, 0, approval.stderr);
       await waitFor(snapshot, s => s.tasks?.some(row => row.taskId === runningRow.taskId && row.state === 'waiting_approval' && row.color === 'charts.orange'),
         'Verified PermissionRequest metadata must make the task orange');
+      const resolution = require('node:child_process').spawnSync(localCollector.python,
+        [...localCollector.pythonArgs, path.join(vscode.extensions.getExtension(UI_ID).extensionPath, 'collector/scripts/collector.py'),
+          'hook', '--event', 'approval_resolved', '--codex-home', testHome],
+        {input: JSON.stringify({session_id: process.env.CODEX_NOTIFIER_TEST_SESSION, turn_id: turn,
+          cwd: vscode.workspace.workspaceFolders[0].uri.fsPath, tool_name: 'Bash', tool_input: {command: 'fixture-operation'}}),
+          encoding: 'utf8', timeout: 15000, windowsHide: true});
+      assert.equal(resolution.status, 0, resolution.stderr);
+      await waitFor(snapshot, s => s.tasks?.some(row => row.taskId === runningRow.taskId && row.state === 'running'),
+        'Matching PostToolUse restores running without waiting for model output');
       append('response_item', {type: 'function_call', name: 'request_user_input', call_id: 'metrics-question', arguments: 'PRIVATE'});
       await waitFor(snapshot, s => s.tasks?.some(row => row.state === 'waiting_input' && row.color === 'charts.yellow'), 'Structured question should block the task');
       append('response_item', {type: 'function_call_output', call_id: 'metrics-question', output: 'PRIVATE'});

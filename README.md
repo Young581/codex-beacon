@@ -6,7 +6,7 @@
 
 Track Codex tasks by project in VS Code with colored status lights, token usage, estimated API costs and completion alerts. [Read the full English guide →](README.en.md)
 
-基于 [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier) 的 MIT 开源项目，包含 Windows PowerShell 路径修复和安装辅助脚本。当前代码版本为主扩展 **0.9.0**、采集器 **0.5.9**，支持音量调节、分场景音效、对话分组与轮次显示，并将常用操作集中到仪表盘“管理与设置”。市场安装版本请以扩展详情为准，最新修复版可从 Releases 获取。
+基于 [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier) 的 MIT 开源项目，包含 Windows PowerShell 路径修复和安装辅助脚本。当前代码版本为主扩展 **0.9.1**、采集器 **0.5.10**，支持音量调节、分场景音效、对话分组与轮次显示，并将常用操作集中到仪表盘“管理与设置”。市场安装版本请以扩展详情为准，最新修复版可从 Releases 获取。
 
 ## 当前功能
 
@@ -177,3 +177,5 @@ python -B build.py --output dist
 源代码基于上游提交 `4fa74775c65980a5015e0515b5877bc4ebe51e45`，保留原版权声明及 [MIT 许可证](LICENSE)。[UPSTREAM.md](UPSTREAM.md) 保存原项目介绍。
 
 这是独立维护的衍生项目，已在扩展市场发布 `Young581.codex-beacon` 与 `Young581.codex-beacon-collector` 两个独立条目。命令、设置、缓存与 Hook 所有者均使用独立标识。迁移及发布说明见 [docs/marketplace.md](docs/marketplace.md)。旧版通知历史不自动迁移；启用新版前，在任务空闲时停用旧通知扩展并重新配置自定义设置。
+
+审批通知会等待 12 秒；确认同一操作已返回结果或模型已继续工作后，会取消旧提醒。异步提问显示“等待回答 · 继续运行”。Token 增长本身不代表审批已解决。升级后请在 Codex 设置 → Hooks 中核对并信任新增的 PostToolUse hook。

@@ -4,7 +4,7 @@
 
 ## 中文
 
-适用版本：主扩展 0.8.0–0.9.0、远端采集器 0.5.0–0.5.9。社区扩展，非 OpenAI 或 Microsoft 官方产品。
+适用版本：主扩展 0.8.0–0.9.1、远端采集器 0.5.0–0.5.10。社区扩展，非 OpenAI 或 Microsoft 官方产品。
 
 ## 数据去向与隔离
 
@@ -69,7 +69,7 @@ Custom notification sounds read only the selected local WAV/MP3 file. Its path i
 
 Project recovery retains validated folder/workspace URIs and window labels with their notifications, including SSH/container authority identifiers. They follow the same retention/deletion policy; no connection passwords or private keys are stored. Legacy recovery reads VS Code's recent-project list only.
 
-Applies to main-extension versions 0.8.0–0.9.0 and remote-collector versions 0.5.0–0.5.9. This is a community extension, not an official OpenAI or Microsoft product.
+Applies to main-extension versions 0.8.0–0.9.1 and remote-collector versions 0.5.0–0.5.10. This is a community extension, not an official OpenAI or Microsoft product.
 
 ### Data destinations and isolation
 
@@ -122,3 +122,6 @@ Cleanup preserves original Codex conversations, credentials, project files and u
 ### Publication packages
 
 Only VSIX files reviewed against an exact file allowlist, sensitive-content checks and SHA-256 verification are intended for publication. Runtime caches, generated test directories, account files, developer-machine paths and troubleshooting exports are excluded. Publisher identity, extension names, versions and packaged source code are visible to installers.
+
+审批生命周期使用同一操作的 SHA-256 摘要匹配 PermissionRequest 与 PostToolUse；摘要包含会话和轮次作为作用域，原始命令、参数与工具结果不会写入通知缓存或转发。
+Approval lifecycle metadata uses a scoped SHA-256 operation digest to match PermissionRequest with PostToolUse. Raw commands, arguments and tool results are not stored in the notification cache or forwarded.

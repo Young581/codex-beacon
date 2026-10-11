@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.1
+
+- 审批请求与 PostToolUse 工具结果通过操作摘要配对；升级时保留已有 hook，自动补齐结果 hook。
+- 修复 SSH 长会话中异步提问被误标为阻塞；保留问题投递类型。
+- 审批提醒缓冲 12 秒，同一操作返回结果、模型恢复执行或本轮结束后自动已读并取消待发及重试通知。Token 更新和无关并行工具返回不会单独清除待审批。
+- Fix nonblocking questions being shown as blocked in long SSH conversations.
+- Buffer approval alerts for 12 seconds and cancel resolved reminders on verified model continuation or a terminal round result. Preserve genuine waits across usage-only updates and unrelated parallel tool results.
+
 ## 0.9.0
 
 - 新增 Linux 桌面通知，复用 libnotify；“打开对话”沿用原有窗口路由，已读／删除后不再响应旧通知按钮。

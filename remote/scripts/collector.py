@@ -43,7 +43,7 @@ SOURCE_FILTER_VERSION = 1
 # launchers both set CODEX_INTERNAL_ORIGINATOR_OVERRIDE to this exact value.
 # Desktop sessions also use source="vscode", so that field is not sufficient.
 VSCODE_ORIGINATORS = frozenset(("codex_vscode",))
-EVENT_TYPES = {"done", "approval", "question", "test", "heartbeat", "task"}
+EVENT_TYPES = {"done", "approval", "approval_resolved", "question", "test", "heartbeat", "task"}
 DEFAULT_RETENTION_DAYS = 7
 PRIVACY_FILE = "privacy-reset.json"
 PRIVACY_LOCK = ".privacy.lock"
@@ -286,7 +286,7 @@ def configured_hooks(home):
     command = (subprocess.list2cmdline(arguments) if os.name == "nt"
                else " ".join(shlex.quote(argument) for argument in arguments))
     events = {}
-    for event, event_type in (("PermissionRequest", "approval"),):
+    for event, event_type in (("PermissionRequest", "approval"), ("PostToolUse", "approval_resolved")):
         entry = {"hooks": [{"type": "command", "command": command + " --event " + event_type,
                             "timeout": 3, "async": True}]}
         if os.name == "nt":
@@ -317,17 +317,23 @@ def install(args):
             raise ValueError("hooks.json must be a JSON object; no files were changed")
         updated = json.loads(json.dumps(original))
         remove_owned_hooks(updated)
+        definitions = configured_hooks(home)
         if automatic:
-            permission_entries = original.get("hooks", {}).get("PermissionRequest", [])
-            if any(isinstance(entry, dict) and isinstance(entry.get("hooks"), list) and
-                   any(is_owned_hook(hook) for hook in entry["hooks"]) for entry in permission_entries):
+            definitions = {event: entry for event, entry in definitions.items()
+                           if not any(isinstance(existing, dict) and isinstance(existing.get("hooks"), list) and
+                                      any(is_owned_hook(hook) for hook in existing["hooks"])
+                                      for existing in original.get("hooks", {}).get(event, []))}
+            if not definitions:
+                source, target = Path(__file__).resolve(), directory / "remote_notifier.py"
+                if source != target.resolve() and (not target.exists() or target.read_bytes() != source.read_bytes()):
+                    atomic_write(target, source.read_bytes())
                 print(json.dumps({"installed": False, "already_configured": True}))
                 return
-            # Automatic setup appends only the missing approval definition.
-            # Leave existing Beacon definitions for other events untouched too.
+            # Append only missing lifecycle definitions. Existing definitions,
+            # including user adjustments to Beacon hooks, remain untouched.
             updated = json.loads(json.dumps(original))
         events = updated.setdefault("hooks", {})
-        for event, entry in configured_hooks(home).items():
+        for event, entry in definitions.items():
             events.setdefault(event, []).append(entry)
         old_config = read_json(directory / "config.json", {})
         if not isinstance(old_config, dict):
@@ -352,7 +358,7 @@ def install(args):
                 saved_backup = backup(hooks_path)
             atomic_write(hooks_path, json_bytes(updated))
     print(json.dumps({"installed": True, "codex_home": str(home),
-                      "installed_script": str(script_target), "hook_count": 1,
+                      "installed_script": str(script_target), "hook_count": len(configured_hooks(home)),
                       "label": configuration["label"], "hooks_backup": saved_backup}, ensure_ascii=False))
 
 
@@ -383,6 +389,41 @@ def clean_text(value, limit):
     return "".join(character for character in str(value) if character.isprintable())[:limit]
 
 
+def approval_action_key(payload):
+    """Correlate one tool's lifecycle; never persist its arguments/response."""
+    tool = payload.get("tool_name")
+    inputs = payload.get("tool_input")
+    session = payload.get("session_id", payload.get("thread_id"))
+    turn = payload.get("turn_id")
+    if not all(isinstance(v, str) and v for v in (tool, session, turn)) or not isinstance(inputs, dict):
+        return None
+    operation = inputs.get("command") if isinstance(inputs.get("command"), str) else {k: v for k, v in inputs.items() if k != "description"}
+    if not operation:
+        return None
+    encoded = json.dumps([session, turn, tool, operation], sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def matching_approval(home, action):
+    path = home / DIRECTORY_NAME / "events.jsonl"
+    if not path.exists():
+        return False
+    rows = []
+    with path.open("rb") as stream:
+        stream.seek(max(0, path.stat().st_size - REPLAY_BYTES))
+        for line in stream:
+            row = valid_line(line)
+            if row and row.get("action_key") == action:
+                rows.append(row)
+    pending = 0
+    for row in sorted(rows, key=lambda r: r["timestamp"]):
+        if row["type"] == "approval":
+            pending += 1
+        elif row["type"] == "approval_resolved" and pending:
+            pending -= 1
+    return pending > 0
+
+
 def event_record(home, event_type, payload=None, *, verified_originator=None):
     if event_type not in EVENT_TYPES:
         raise ValueError("unsupported notification event")
@@ -403,6 +444,10 @@ def event_record(home, event_type, payload=None, *, verified_originator=None):
     }
     if event_type not in ("test", "heartbeat") and verified_originator == "codex_vscode":
         record["originator"] = verified_originator
+    if event_type in ("approval", "approval_resolved"):
+        action = approval_action_key(payload)
+        if action:
+            record["action_key"] = action
     encoded = (json.dumps(record, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
     # Worst-case multi-byte strings are clipped further to keep each record bounded.
     if len(encoded) > MAX_EVENT_BYTES:
@@ -460,6 +505,10 @@ def hook(args):
                 "request_user_input", "request_user_input_async"):
             return
         home = codex_home(args.codex_home)
+        if event_type == "approval_resolved":
+            action = approval_action_key(payload)
+            if not action or not matching_approval(home, action):
+                return
         if SessionSources(home).allows(event_type, payload):
             append_event(home, event_type, payload, verified_originator="codex_vscode")
     except Exception as error:
@@ -487,11 +536,19 @@ def valid_line(line, cutoff=None):
         if cutoff is not None and timestamp < cutoff:
             return None
         # Reconstruct a metadata-only record; do not relay unexpected private fields.
-        return {"version": 1, "type": record["type"], "id": clean_text(record["id"], 128),
+        result = {"version": 1, "type": record["type"], "id": clean_text(record["id"], 128),
                 "timestamp": timestamp,
                 **{key: clean_text(record.get(key, ""), limit) for key, limit in (
                     ("host", 128), ("label", 200), ("cwd", 512),
                     ("session_id", 128), ("turn_id", 128))}}
+        action = record.get("action_key")
+        if action is not None:
+            if record["type"] not in ("approval", "approval_resolved") or not isinstance(action, str) or not re.fullmatch(r"[0-9a-f]{64}", action):
+                return None
+            result["action_key"] = action
+        if record["type"] == "approval_resolved" and not action:
+            return None
+        return result
     except (ValueError, UnicodeDecodeError, TypeError):
         return None
 
@@ -1037,6 +1094,16 @@ class RolloutObserver:
             return False
         kind, subtype = outer.get("type"), payload.get("type")
         changed = False
+        # Recent large transcripts may no longer contain task_started/context.
+        # Current item records carry the authoritative round, without its start
+        # time or complete usage. Never invent those missing values.
+        if kind == "event_msg" and subtype == "item_completed":
+            turn = clean_text(payload.get("turn_id", ""), 128)
+            item = payload.get("item")
+            if turn and isinstance(item, dict) and not state.get("turn_id"):
+                state["turn_id"] = turn
+                state["task"] = {"state": "unknown", "sequence": 0, "model": state.get("model", ""),
+                                 "usage": {"complete": False, "segments": []}}
         if kind == "turn_context":
             state["model"] = clean_text(payload.get("model", ""), 128)
             state["tier"] = clean_text(payload.get("service_tier") or "standard", 128)
@@ -1059,6 +1126,23 @@ class RolloutObserver:
                              "startSequence": state.get("line_position", 0), "model": state.get("model", ""),
                              "usage": {"complete": state.get("previous_usage") is not None or state.get("history_complete", False), "segments": []}}
             changed = True
+        if state.get("task") and state["task"]["state"] not in ("completed", "cancelled", "failed"):
+            continued = None
+            # New model output proves continuation. Unrelated tool results or
+            # token counters alone do not resolve an outstanding approval.
+            if kind == "response_item" and subtype in ("function_call", "custom_tool_call"):
+                continued = rollout_timestamp(outer.get("timestamp"))
+            elif kind == "event_msg" and subtype == "item_completed" and payload.get("turn_id") == state.get("turn_id"):
+                item = payload.get("item", {})
+                if isinstance(item, dict) and item.get("type") in ("Reasoning", "AgentMessage") and not item.get("questions"):
+                    started = payload.get("started_at_ms")
+                    if isinstance(started, (int, float)) and not isinstance(started, bool) and 0 <= started <= 4102444800000:
+                        continued = started / 1000
+            if continued is not None and continued > state["task"].get("continuedAt", 0):
+                state["task"]["continuedAt"] = continued
+                if state["task"]["state"] == "unknown":
+                    state["task"]["state"] = "running"
+                changed = True
         if kind == "event_msg" and subtype == "token_count":
             info = payload.get("info")
             if not isinstance(info, dict):
@@ -1191,6 +1275,8 @@ class RolloutObserver:
             record["timestamp"] = timestamp
             record["id"] = uuid.uuid5(uuid.NAMESPACE_URL,
                 "codex-beacon:{}:{}:{}".format(event_type, state["session_id"], stable_part)).hex
+            if event_type == "question":
+                record["question_mode"] = "async" if input_tool_name(payload.get("name")) == "request_user_input_async" else "blocking"
             if state.get("task"):
                 # Deep copy counters: later updates must not rewrite earlier events.
                 record["task"] = json.loads(json.dumps(state["task"]))
@@ -1429,7 +1515,7 @@ def main(argv=None):
             subparser.add_argument("--no-rollouts", action="store_true",
                                    help="Disable version-sensitive rollout observations")
         elif name == "hook":
-            subparser.add_argument("--event", required=True, choices=("done", "approval", "question"))
+            subparser.add_argument("--event", required=True, choices=("done", "approval", "approval_resolved", "question"))
             subparser.add_argument("--owner", default=OWNER, choices=(OWNER,))
         elif name == "clear-private-data":
             subparser.add_argument("--preview-token", required=True)

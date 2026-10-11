@@ -40,7 +40,7 @@ const LABELS = {
   autoHook: '自动添加审批 Hook', configureHook: '重新配置审批提醒', removeHook: '移除审批提醒', openCodex: '打开 Codex',
   hookConfigured: '审批 Hook 已注册', hookMissing: '审批 Hook 尚未注册', hookChecking: '正在检查审批 Hook',
   hookInstalling: '正在添加审批 Hook', hookError: '审批 Hook 配置异常',
-  hookTrustHint: '请打开 Codex 设置 → Hooks → PermissionRequest，核对 Beacon 脚本并点击信任。已信任的无需重复操作。',
+  hookTrustHint: '请打开 Codex 设置 → Hooks → PermissionRequest 和 PostToolUse，核对 Beacon 脚本并点击信任。已信任的无需重复操作。',
   hookUnknown: '插件无法确认 Codex 中的信任状态，请在 Hooks 页面核对。',
   hookAutoHint: '采集器正常启动后自动添加。移除 Hook 时会关闭自动添加，避免重新出现。',
   environment: '当前环境', collection: '采集器', privacyPolicy: '阅读隐私说明',

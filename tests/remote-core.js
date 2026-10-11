@@ -426,12 +426,20 @@ test('automatic setup keeps a registered definition intact and skips privacy-pau
   const state = fixture(true, true, {values: {codexHome: home, autoConfigureApprovalHook: true}});
   try {
     state.children[0].process.stdout.write(JSON.stringify(event('hb', 'heartbeat')) + '\n');
-    for (let index = 0; index < 30; index++) await tick();
-    assert.equal(state.children.length, 1); assert.equal(fs.readFileSync(path.join(home, 'hooks.json'), 'utf8'), definition);
+    for (let index = 0; index < 100 && state.children.length < 2; index++) await new Promise(resolve => setTimeout(resolve, 5));
+    assert.equal(state.children.length, 2, 'Existing installations run the preserving lifecycle upgrade once');
+    assert.ok(state.children[1].args.includes('--if-missing'));
+    state.children[1].process.stdout.write(JSON.stringify({installed: false, already_configured: true}));
+    state.children[1].process.emit('close', 0);
+    for (let index = 0; index < 100 && state.messages.at(-1)?.status?.approvalHook?.setup !== 'configured'; index++) {
+      await new Promise(resolve => setTimeout(resolve, 5));
+    }
+    assert.equal(state.messages.at(-1)?.status?.approvalHook?.setup, 'configured');
+    assert.equal(fs.readFileSync(path.join(home, 'hooks.json'), 'utf8'), definition);
     state.children[0].process.stdout.write(JSON.stringify({...event('paused', 'heartbeat'), privacyPaused: true}) + '\n');
-    await tick(); assert.equal(state.children.length, 1);
+    await tick(); assert.equal(state.children.length, 2);
     assert.equal((await state.controller.status()).privacyPaused, true);
-  } finally {state.controller.dispose(); fs.rmSync(home, {recursive: true, force: true});}
+  } finally {state.controller.dispose(); await require('node:fs/promises').rm(home, {recursive: true, force: true, maxRetries: 3});}
 });
 
 test('removing approval reminders turns off automatic setup even with a workspace override', async () => {

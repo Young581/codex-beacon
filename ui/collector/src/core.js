@@ -11,7 +11,7 @@ const { StringDecoder } = require('node:string_decoder');
 const RECEIVE_COMMAND = 'codexBeacon.internal.receive';
 const MAX_LINE_BYTES = 16 * 1024;
 const OWNER = 'codex-beacon-v1';
-const TYPES = new Set(['done', 'approval', 'question', 'test', 'heartbeat', 'task']);
+const TYPES = new Set(['done', 'approval', 'approval_resolved', 'question', 'test', 'heartbeat', 'task']);
 
 function clean(value, limit) {
   if (typeof value !== 'string') return '';
@@ -29,6 +29,15 @@ function normalizeEvent(value) {
     record.originator = value.originator;
   }
   if (value.type === 'heartbeat' && typeof value.privacyPaused === 'boolean') record.privacyPaused = value.privacyPaused;
+  if (value.question_mode !== undefined) {
+    if (value.type !== 'question' || !['async', 'blocking'].includes(value.question_mode)) return null;
+    record.question_mode = value.question_mode;
+  }
+  if (value.action_key !== undefined) {
+    if (!['approval', 'approval_resolved'].includes(value.type) || typeof value.action_key !== 'string' || !/^[a-f0-9]{64}$/.test(value.action_key)) return null;
+    record.action_key = value.action_key;
+  }
+  if (value.type === 'approval_resolved' && (!record.action_key || !record.session_id || !record.turn_id)) return null;
   if (value.replayed !== undefined) {
     if (typeof value.replayed !== 'boolean') return null;
     record.replayed = value.replayed;

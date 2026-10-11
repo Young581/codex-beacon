@@ -274,7 +274,7 @@ function createController(vscode, context, dependencies = {}) {
       const state = await readHookState(home);
       if (disposed || token !== generation) return;
       hookState = state;
-      if (!state.configured && !state.readError && config.autoConfigureApprovalHook &&
+      if (!state.readError && config.autoConfigureApprovalHook &&
           vscode.workspace.isTrusted && config.enabled && !privacyPaused && !cleanupInProgress) {
         hookState.setup = 'installing';
         bridge.status(source, renderedStatus());
@@ -320,7 +320,7 @@ function createController(vscode, context, dependencies = {}) {
     try {
       const result = await runAction(action, parameters);
       if (action === 'install') {
-        void vscode.window.showInformationMessage(t('审批提醒 Hook 已配置。请在 Codex 设置 → Hooks → PermissionRequest 中核对 codex-beacon/remote_notifier.py，然后点击 Trust。扩展无法代替你信任 Hook。'));
+        void vscode.window.showInformationMessage(t('审批提醒 Hook 已配置。请在 Codex 设置 → Hooks → PermissionRequest 和 PostToolUse 中核对 codex-beacon/remote_notifier.py，然后点击 Trust。扩展无法代替你信任 Hook。'));
       } else if (action === 'uninstall') {
         void vscode.window.showInformationMessage(t('已移除此扩展管理的审批提醒 Hook；其他配置和备份已保留。'));
       }

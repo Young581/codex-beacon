@@ -483,7 +483,7 @@ class RemoteTests(unittest.TestCase):
         self.assertEqual(first["hooks"]["SessionStart"], original["hooks"]["SessionStart"])
         self.assertEqual(len(first["hooks"]["Stop"]), 1)
         self.assertEqual(len(first["hooks"]["PermissionRequest"]), 1)
-        self.assertEqual(json.loads(installed.stdout)["hook_count"], 1)
+        self.assertEqual(json.loads(installed.stdout)["hook_count"], 2)
         self.assertEqual(len(list(self.home.glob("hooks.json.bak-*"))), 1)
         self.assertEqual(next(self.home.glob("hooks.json.bak-*")).read_bytes(), original_bytes)
         second = self.run_cli("install")
@@ -620,7 +620,7 @@ class RemoteTests(unittest.TestCase):
         path.write_bytes(metadata + stale + done + question + ignored)
         observer = REMOTE.RolloutObserver(self.home, 300)
         first = observer.poll(force=True)
-        self.assertEqual([record["type"] for record in first], ["done", "question"])
+        self.assertEqual([record["type"] for record in first], ["done", "question", "task"])
         self.assertTrue(all(record["cwd"] == "/training/project" for record in first))
         self.assertEqual(first[0]["turn_id"], "turn-1")
         self.assertNotIn("PRIVATE", json.dumps(first))
@@ -636,7 +636,7 @@ class RemoteTests(unittest.TestCase):
         replay = self.run_cli("follow", "--once")
         self.assertEqual(replay.returncode, 0, replay.stderr)
         self.assertEqual([json.loads(line)["type"] for line in replay.stdout.splitlines()],
-                         ["heartbeat", "done", "question", "done"])
+                         ["heartbeat", "done", "question", "task", "done"])
 
     def test_task_lifecycle_counts_turn_deltas_models_and_duplicate_usage(self):
         def usage(inp, cached, out, reasoning=0):
@@ -797,6 +797,94 @@ class RemoteTests(unittest.TestCase):
         self.assertEqual(convert({"type": "task_complete", "turn_id": "mixed-turn"}, "event_msg")["task"]["state"], "completed")
         self.assertIsNone(convert({"type": "function_call_output", "call_id": "async", "output": '{"answers":{}}'}))
         self.assertEqual(state["task"]["state"], "completed")
+
+    def test_large_transcript_tail_recovers_round_and_preserves_async_question(self):
+        self.write_session("large-tail", records=[
+            ("event_msg", {"type": "item_completed", "turn_id": "tail-round", "started_at_ms": int(time.time() * 1000),
+                           "item": {"type": "Reasoning", "raw_content": "PRIVATE_REASONING"}}),
+            ("response_item", {"type": "function_call", "name": "request_user_input_async", "call_id": "async-tail"}),
+            ("response_item", {"type": "function_call_output", "call_id": "async-tail", "output": {"accepted": True}}),
+            ("response_item", {"type": "custom_tool_call", "name": "exec", "input": "PRIVATE_COMMAND"}),
+        ])
+        rows = REMOTE.RolloutObserver(self.home, 300).poll(force=True)
+        self.assertEqual([r["task"]["state"] for r in rows], ["running", "waiting_async"])
+        self.assertTrue(all(r["turn_id"] == "tail-round" for r in rows))
+        self.assertEqual(rows[1]["question_mode"], "async")
+        self.assertFalse(rows[-1]["task"]["usage"]["complete"])
+        self.assertNotIn("startedAt", rows[-1]["task"])
+        self.assertNotIn("PRIVATE", json.dumps(rows))
+
+    def test_continuation_requires_model_activity_not_parallel_outputs_or_counters(self):
+        observer = REMOTE.RolloutObserver(self.home, 300)
+        state = {"originator": "codex_vscode", "subagent": False, "session_id": "fixture", "cwd": "/fixture", "line_position": 0}
+        def convert(kind, payload, timestamp=200):
+            state["line_position"] += 100
+            stamp = datetime.datetime.fromtimestamp(timestamp, datetime.timezone.utc).isoformat()
+            return observer.convert(json.dumps({"timestamp": stamp, "type": kind, "payload": payload}).encode(), state, 0)
+        convert("event_msg", {"type": "task_started", "turn_id": "round"})
+        for kind, payload in [
+            ("response_item", {"type": "custom_tool_call_output", "call_id": "parallel"}),
+            ("event_msg", {"type": "item_completed", "turn_id": "round", "started_at_ms": 201000, "item": {"type": "CommandExecution"}}),
+            ("event_msg", {"type": "token_count", "info": {"total_token_usage": {"input_tokens": 10, "output_tokens": 1}}}),
+            ("event_msg", {"type": "item_completed", "turn_id": "other-round", "started_at_ms": 201000, "item": {"type": "Reasoning"}}),
+        ]:
+            convert(kind, payload)
+            self.assertNotIn("continuedAt", state["task"])
+        progress = convert("event_msg", {"type": "item_completed", "turn_id": "round", "started_at_ms": 150000, "item": {"type": "Reasoning"}})
+        self.assertEqual(progress["task"]["continuedAt"], 150, "Delayed completion uses the actual model activity start")
+        convert("response_item", {"type": "function_call", "name": "request_user_input", "call_id": "blocking"})
+        continued = convert("response_item", {"type": "custom_tool_call", "name": "exec"}, 202)
+        self.assertEqual(continued["task"]["continuedAt"], 202)
+        self.assertEqual(continued["task"]["state"], "waiting_input", "Parallel activity must not resolve a blocking question")
+        convert("event_msg", {"type": "task_complete", "turn_id": "round"})
+        self.assertIsNone(convert("response_item", {"type": "custom_tool_call", "name": "exec"}, 203))
+
+    def test_approval_lifecycle_pairs_only_the_same_tool_and_omits_private_data(self):
+        self.write_session("approval-session")
+        payload = {"session_id": "approval-session", "turn_id": "round", "tool_name": "Bash",
+                   "tool_input": {"command": "PRIVATE_COMMAND", "description": "PRIVATE_REASON"}, "tool_response": "PRIVATE_OUTPUT"}
+        def hook(kind, data=payload):
+            result = self.run_cli("hook", "--event", kind, payload=json.dumps(data).encode())
+            self.assertEqual(result.stdout.strip(), b"{}")
+            self.assertEqual(result.returncode, 0)
+        hook("approval_resolved")
+        self.assertEqual(self.read_events(), [], "Ordinary tools do not create lifecycle history")
+        hook("approval")
+        for wrong in [dict(payload, turn_id="other"), dict(payload, tool_name="apply_patch"),
+                      dict(payload, tool_input={"command": "OTHER_COMMAND"})]:
+            hook("approval_resolved", wrong)
+        self.assertEqual(len(self.read_events()), 1)
+        hook("approval_resolved", dict(payload, tool_input={"command": "PRIVATE_COMMAND"}))
+        rows = self.read_events()
+        self.assertEqual([r["type"] for r in rows], ["approval", "approval_resolved"])
+        self.assertEqual(rows[0]["action_key"], rows[1]["action_key"])
+        self.assertNotIn("PRIVATE", json.dumps(rows))
+        self.assertEqual(REMOTE.valid_line(json.dumps(rows[1]).encode())["action_key"], rows[1]["action_key"])
+        hook("approval_resolved")
+        self.assertEqual(len(self.read_events()), 2, "Duplicate tool completion stays silent")
+        hook("approval"); hook("approval_resolved")
+        self.assertEqual(len(self.read_events()), 4, "A repeated operation in this round remains a new approval")
+
+    def test_lifecycle_upgrade_preserves_custom_permission_definition_and_refreshes_script(self):
+        hooks = self.home / "hooks.json"
+        existing = {"matcher": "custom", "hooks": [{"type": "command", "command": "custom --owner codex-beacon-v1", "timeout": 42}]}
+        hooks.write_text(json.dumps({"hooks": {"PermissionRequest": [existing]}}))
+        self.assertEqual(self.run_cli("install", "--if-missing").returncode, 0)
+        configured = json.loads(hooks.read_bytes())
+        self.assertEqual(configured["hooks"]["PermissionRequest"], [existing])
+        self.assertEqual(len(configured["hooks"]["PostToolUse"]), 1)
+        target = self.home / "codex-beacon" / "remote_notifier.py"
+        target.write_bytes(b"OLD COLLECTOR")
+        self.assertEqual(self.run_cli("install", "--if-missing").returncode, 0)
+        self.assertEqual(target.read_bytes(), SCRIPT.read_bytes())
+        self.assertEqual(json.loads(hooks.read_bytes()), configured)
+
+    def test_unscoped_async_question_still_carries_delivery_mode(self):
+        self.write_session("unscoped-question", records=[("response_item", {
+            "type": "function_call", "name": "request_user_input_async", "call_id": "question"})])
+        rows = REMOTE.RolloutObserver(self.home, 300).poll(force=True)
+        self.assertEqual(rows[0]["question_mode"], "async")
+        self.assertNotIn("task", rows[0])
 
     def test_installed_script_follows_its_own_home(self):
         self.assertEqual(self.run_cli("install").returncode, 0)
