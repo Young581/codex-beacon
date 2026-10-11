@@ -1,4 +1,5 @@
 {
+  "setting.codexBeacon.localAutoConfigureApprovalHook": "本地采集器正常启动后自动注册审批提醒 Hook。请在 Codex 设置 → Hooks 中核对并信任。关闭此设置会保留已有 Hook。",
   "command.codexBeacon.dashboard": "打开仪表盘",
   "command.codexBeacon.chooseSound": "自定义提示音",
   "command.codexBeacon.testSound": "试听提示音",

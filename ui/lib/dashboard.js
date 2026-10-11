@@ -6,7 +6,10 @@ const {clean} = require('./presentation');
 const {STATES, projectGroups, estimateCost, taskTooltip} = require('./tasks');
 
 const ROW_ACTIONS = new Set(['open', 'window', 'read', 'delete']);
-const GLOBAL_ACTIONS = new Set(['refresh', 'sound', 'preview', 'language', 'settings', 'status', 'pause', 'resume', 'privacy', 'clearRead']);
+const GLOBAL_ACTIONS = new Set(['refresh', 'sound', 'soundFile', 'resetSound', 'preview', 'language', 'settings', 'status', 'pause', 'resume', 'privacy', 'clearRead',
+  'openLocation', 'installation', 'history', 'clearHistory', 'markRead', 'testNotification', 'testCollector', 'restartCollector',
+  'configureHook', 'removeHook', 'openCodex', 'privacyPolicy', 'clearPrivateData', 'clearLocalPrivateData', 'resumePrivateData']);
+const SETTING_ACTIONS = {setLanguage: ['auto', 'zh-CN', 'en'], setOpenLocation: ['sidebar', 'editor'], setAutoHook: [true, false]};
 const LABELS = {
   eyebrow: '工作空间动态', title: '项目任务总览', subtitle: '查看任务名称、模型与进度，展开查看用量和详情。',
   projects: '项目', allProjects: '全部项目', current: '本窗口', other: '其他窗口',
@@ -23,6 +26,21 @@ const LABELS = {
   noMatches: '没有匹配的任务', reset: '重置筛选', footer: '完成表示本轮回复结束；用量与估算费用见任务详情。',
   input: '输入', output: '输出', cached: '缓存命中', reasoning: '其中推理',
   updated: '最近更新', showAll: '查看全部任务',
+  management: '管理与设置', alerts: '提醒与显示', tools: '测试与连接', records: '通知与数据', approval: '审批提醒',
+  openLocation: '会话打开位置', sidebar: 'Codex 会话侧栏', editor: '主编辑器', autoLanguage: '跟随 VS Code',
+  soundFile: '选择音频文件（WAV／MP3）', resetSound: '恢复系统默认提示音', defaultSound: 'Windows 系统默认提示音',
+  installation: '检查／安装当前环境组件', history: '查看通知历史', clearHistory: '清空全部通知', markRead: '全部标为已读',
+  testNotification: '测试本机弹窗和声音', testCollector: '测试当前窗口采集链路', restartCollector: '重启当前环境采集器',
+  autoHook: '自动添加审批 Hook', configureHook: '重新配置审批提醒', removeHook: '移除审批提醒', openCodex: '打开 Codex',
+  hookConfigured: '审批 Hook 已注册', hookMissing: '审批 Hook 尚未注册', hookChecking: '正在检查审批 Hook',
+  hookInstalling: '正在添加审批 Hook', hookError: '审批 Hook 配置异常',
+  hookTrustHint: '请打开 Codex 设置 → Hooks → PermissionRequest，核对 Beacon 脚本并点击信任。已信任的无需重复操作。',
+  hookUnknown: '插件无法确认 Codex 中的信任状态，请在 Hooks 页面核对。',
+  hookAutoHint: '采集器正常启动后自动添加。移除 Hook 时会关闭自动添加，避免重新出现。',
+  environment: '当前环境', collection: '采集器', privacyPolicy: '阅读隐私说明',
+  clearPrivateData: '清理当前环境及本机通知数据', clearLocalPrivateData: '仅清理本机全部通知缓存',
+  resumePrivateData: '恢复当前环境采集和本机接收', privacyHint: '隐私清理会先展示范围并确认，清理后暂停采集和接收。',
+  removeHookConfirm: '移除当前环境的审批提醒并关闭自动添加？', clearHistoryConfirm: '清空全部通知记录？',
 };
 
 function usageTotals(rows, options) {
@@ -41,7 +59,8 @@ function usageTotals(rows, options) {
   return {tokens: metered ? tokens : null, amount: unpriced === rows.length ? null : amount, metered, unpriced, partial};
 }
 
-function dashboardData(snapshot, {windowId, options = {}, paused = false, connected = false, collectionState = ''} = {}) {
+function dashboardData(snapshot, {windowId, options = {}, paused = false, connected = false, collectionState = '',
+  collectionMessage = '', environment = '', approvalHook = {}, preferences = {}} = {}) {
   // Project tasks use the same grouping and price calculation as the sidebar.
   // Synthetic notification tests are not project work.
   const groups = projectGroups((snapshot.entries || []).filter(row => row.event.type !== 'test'), windowId);
@@ -65,6 +84,12 @@ function dashboardData(snapshot, {windowId, options = {}, paused = false, connec
     })}));
   return {language: getLanguage(), text: Object.fromEntries(Object.entries(LABELS).map(([key, label]) => [key, t(label)])),
     connected, collectionState, paused: paused || !!snapshot.privacyPaused, privacyPaused: !!snapshot.privacyPaused,
+    management: {environment: clean(environment, 200), collectionMessage: clean(collectionMessage, 1000),
+      hook: {configured: approvalHook.configured === true, setup: clean(approvalHook.setup || 'checking', 40),
+        autoEnabled: approvalHook.autoEnabled !== false, trust: 'unknown'},
+      language: ['auto', 'zh-CN', 'en'].includes(preferences.language) ? preferences.language : 'auto',
+      openLocation: preferences.openLocation === 'editor' ? 'editor' : 'sidebar',
+      soundName: clean(path.basename(preferences.soundFile || ''), 200)},
     totals: {...usageTotals(rows, options), projects: groups.length, tasks: rows.length,
       running: rows.filter(row => ['running', 'waiting_async'].includes(row.taskState)).length,
       blocked: rows.filter(row => ['waiting_input', 'waiting_approval', 'waiting_async'].includes(row.taskState)).length,
@@ -93,9 +118,11 @@ class Dashboard {
     this.busy = false;
     this.disposed = false;
     this.revision = 0;
+    this.requestedPage = null;
   }
-  open() {
+  open(page) {
     if (this.disposed) return;
+    if (['tasks', 'management'].includes(page)) this.requestedPage = page;
     if (this.panel) {this.panel.reveal(this.vscode.ViewColumn.One); this.update(); return;}
     const panel = this.vscode.window.createWebviewPanel('codexBeacon.dashboard', t('Codex Beacon · 仪表盘'),
       this.vscode.ViewColumn.One, {enableScripts: true, retainContextWhenHidden: true,
@@ -114,7 +141,13 @@ class Dashboard {
     if (!this.panel || this.disposed) return;
     this.model = this.data(); this.revision++;
     this.panel.title = t('Codex Beacon · 仪表盘');
-    if (this.ready) this.post(this.panel, {type: 'data', revision: this.revision, data: this.model});
+    if (this.ready) {
+      this.post(this.panel, {type: 'data', revision: this.revision, data: this.model});
+      if (this.requestedPage) {
+        this.post(this.panel, {type: 'view', page: this.requestedPage});
+        this.requestedPage = null;
+      }
+    }
   }
   post(panel, value) {
     if (this.panel !== panel || this.disposed) return;
@@ -126,7 +159,9 @@ class Dashboard {
     if (message.type !== 'action' || !Number.isSafeInteger(message.id) || message.id <= this.lastRequest ||
         typeof message.action !== 'string') return;
     const rowAction = ROW_ACTIONS.has(message.action);
-    if (!rowAction && !GLOBAL_ACTIONS.has(message.action)) return;
+    const settingAction = Object.hasOwn(SETTING_ACTIONS, message.action);
+    if (!rowAction && !GLOBAL_ACTIONS.has(message.action) && !settingAction) return;
+    if (settingAction ? !SETTING_ACTIONS[message.action].includes(message.value) : message.value !== undefined) return;
     if (rowAction && (typeof message.key !== 'string' || !this.model?.projects.some(project =>
       project.tasks.some(task => task.key === message.key)))) return;
     if (!rowAction && message.key !== undefined) return;
@@ -134,7 +169,9 @@ class Dashboard {
     if (this.busy) {this.post(panel, {type: 'result', id: message.id, busy: true}); return;}
     this.busy = true;
     try {
-      await this.action(message.action, rowAction ? message.key : undefined);
+      const result = settingAction ? await this.action(message.action, undefined, message.value)
+        : await this.action(message.action, rowAction ? message.key : undefined);
+      if (result?.error) throw new Error(result.error);
       this.update();
       this.post(panel, {type: 'result', id: message.id});
     } catch (error) {

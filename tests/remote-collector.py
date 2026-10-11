@@ -45,6 +45,37 @@ class RemoteTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         return json.loads(result.stdout)
 
+    def test_automatic_install_is_concurrent_safe_and_preserves_existing_definitions(self):
+        hooks = self.home / 'hooks.json'
+        unrelated = {'hooks': {'PermissionRequest': [{'hooks': [{'type': 'command', 'command': 'echo unrelated'}]}]}}
+        unrelated['hooks']['Stop'] = [{'hooks': [{'type': 'command', 'command': 'echo keep --owner codex-beacon-v1'}]}]
+        hooks.write_text(json.dumps(unrelated), encoding='utf-8')
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+            results = list(pool.map(lambda unused: self.run_cli('install', '--if-missing'), range(4)))
+        self.assertTrue(all(result.returncode == 0 for result in results))
+        outcomes = [json.loads(result.stdout) for result in results]
+        self.assertEqual(sum(result['installed'] for result in outcomes), 1)
+        registered = json.loads(hooks.read_text('utf-8'))
+        self.assertEqual(len(registered['hooks']['PermissionRequest']), 2)
+        self.assertEqual(registered['hooks']['Stop'], unrelated['hooks']['Stop'])
+        registered['hooks']['PermissionRequest'][1]['hooks'][0]['timeout'] = 42
+        definition = json.dumps(registered)
+        hooks.write_text(definition, encoding='utf-8')
+        result = self.run_cli('install', '--if-missing')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(json.loads(result.stdout)['already_configured'])
+        self.assertEqual(hooks.read_text('utf-8'), definition)
+
+    def test_automatic_install_respects_persistent_privacy_pause(self):
+        directory = self.home / REMOTE.DIRECTORY_NAME
+        directory.mkdir()
+        (directory / REMOTE.PRIVACY_FILE).write_text(json.dumps({'version': 1, 'paused': True, 'cutoff': time.time()}), encoding='utf-8')
+        result = self.run_cli('install', '--if-missing')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(json.loads(result.stdout)['paused'])
+        self.assertFalse((self.home / 'hooks.json').exists())
+        self.assertFalse((directory / 'remote_notifier.py').exists())
+
     def test_session_titles_use_live_wal_names_and_never_return_message_columns(self):
         session, other = str(uuid.uuid4()), str(uuid.uuid4())
         (self.home / 'session_index.jsonl').write_text(json.dumps({'id': session, 'thread_name': 'older index name'}) + '\n', encoding='utf-8')

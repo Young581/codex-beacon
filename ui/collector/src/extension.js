@@ -27,8 +27,12 @@ function createController(vscode, context, dependencies = {}) {
   let lastHeartbeat = 0;
   let privacyPaused = false;
   let cleanupInProgress = false;
+  let hookState = {configured: null, readError: false, setup: 'checking', trust: 'unknown'};
+  let autoHookPromise = null;
+  const hookAttempts = new Set();
   let currentStatus = {state: 'stopped', messageSpec: describe('Collector is not started.')};
-  const renderedStatus = () => ({...currentStatus, message: renderMessage(currentStatus.messageSpec)});
+  const renderedStatus = () => ({...currentStatus, message: renderMessage(currentStatus.messageSpec),
+    approvalHook: {...hookState, autoEnabled: config?.autoConfigureApprovalHook !== false}});
   const operations = new Set();
   const log = message => output.appendLine(`${new Date().toISOString()} ${message}`);
   const bridge = new EventBridge((...args) => vscode.commands.executeCommand(...args), log);
@@ -109,6 +113,7 @@ function createController(vscode, context, dependencies = {}) {
         if (Date.now() - startedAt >= 30000) failureCount = 0;
         if (currentStatus.state !== 'connected') setStatus('connected', describe('Collector is reading Codex event metadata.'));
         else bridge.status(source, renderedStatus());
+        void ensureApprovalHook(token);
       } else bridge.event(source, event);
     });
     const startedAt = Date.now();
@@ -167,6 +172,7 @@ function createController(vscode, context, dependencies = {}) {
       }, 15000);
       try {
         const args = [...config.pythonArgs, '-u', script, action, '--retention-days', String(config.retentionDays), '--codex-home', config.codexHome];
+        if (action === 'install' && parameters.ifMissing) args.push('--if-missing');
         if (action === 'install' && config.label) args.push('--label', config.label);
         if (parameters.previewToken) args.push('--preview-token', parameters.previewToken);
         if (parameters.sessionIds) for (const id of parameters.sessionIds) args.push('--session-id', id);
@@ -194,21 +200,64 @@ function createController(vscode, context, dependencies = {}) {
     });
   }
 
-  async function status() {
-    updateSettings();
+  async function readHookState(home = config.codexHome) {
     let hookConfigured = false;
     let hookReadError = false;
     try {
-      const hooks = path.join(config.codexHome, 'hooks.json');
+      const hooks = path.join(home, 'hooks.json');
       if ((await fs.stat(hooks)).size > 1024 * 1024) hookReadError = true;
       else hookConfigured = hookIsConfigured(JSON.parse((await fs.readFile(hooks, 'utf8')).replace(/^\uFEFF/, '')));
     } catch (error) {
       hookReadError = error.code !== 'ENOENT';
     }
+    return {configured: hookConfigured, readError: hookReadError,
+      setup: hookReadError ? 'error' : hookConfigured ? 'configured' : 'missing', trust: 'unknown'};
+  }
+
+  async function ensureApprovalHook(token) {
+    if (disposed || token !== generation || autoHookPromise || hookAttempts.has(config.codexHome)) return;
+    const home = config.codexHome;
+    hookAttempts.add(home);
+    autoHookPromise = (async () => {
+      const state = await readHookState(home);
+      if (disposed || token !== generation) return;
+      hookState = state;
+      if (!state.configured && !state.readError && config.autoConfigureApprovalHook &&
+          vscode.workspace.isTrusted && config.enabled && !privacyPaused && !cleanupInProgress) {
+        hookState.setup = 'installing';
+        bridge.status(source, renderedStatus());
+        const result = await runAction('install', {ifMissing: true});
+        if (disposed || token !== generation) return;
+        const installedState = await readHookState(home);
+        if (disposed || token !== generation) return;
+        hookState = installedState;
+        if (result.installed) {
+          const message = t('已自动添加审批提醒 Hook。请在 Codex 设置 → Hooks 中核对并信任；仪表盘提供操作入口。');
+          log(message);
+          const label = t('管理与设置');
+          Promise.resolve(vscode.window.showInformationMessage(message, label)).then(choice => {
+            if (choice === label && !disposed) return vscode.commands.executeCommand('codexBeacon.menu');
+          }).catch(error => log(error.message));
+        }
+      }
+    })().catch(error => {
+      if (disposed || token !== generation) return;
+      hookState = {...hookState, setup: 'error'};
+      log(error.message);
+    }).finally(() => {
+      autoHookPromise = null;
+      if (!disposed) bridge.status(source, renderedStatus());
+    });
+    await autoHookPromise;
+  }
+
+  async function status() {
+    updateSettings();
+    hookState = await readHookState();
     return {
       source, ...renderedStatus(), codexHome: config.codexHome, python: config.python,
       pythonArgs: [...config.pythonArgs], enabled: config.enabled,
-      workspaceTrusted: vscode.workspace.isTrusted, hookConfigured, hookReadError,
+      workspaceTrusted: vscode.workspace.isTrusted, hookConfigured: hookState.configured, hookReadError: hookState.readError,
       hookTrust: 'unknown', uiConnected: bridge.connected, pendingEvents: bridge.queue.length,
       lastHeartbeat: lastHeartbeat || null, collectorPid: child?.pid || null,
       retentionDays: config.retentionDays, privacyPaused,
@@ -222,6 +271,10 @@ function createController(vscode, context, dependencies = {}) {
         void vscode.window.showInformationMessage(t('审批提醒 Hook 已配置。请在 Codex 设置 → Hooks → PermissionRequest 中核对 codex-beacon/remote_notifier.py，然后点击 Trust。扩展无法代替你信任 Hook。'));
       } else if (action === 'uninstall') {
         void vscode.window.showInformationMessage(t('已移除此扩展管理的审批提醒 Hook；其他配置和备份已保留。'));
+      }
+      if (action === 'install' || action === 'uninstall') {
+        hookState = await readHookState();
+        bridge.status(source, renderedStatus());
       }
       return result;
     } catch (error) {
@@ -281,12 +334,23 @@ function createController(vscode, context, dependencies = {}) {
       await setCollectorEnabled(true);
       const result = await runAction('resume-private-data');
       privacyPaused = false;
+      hookAttempts.delete(config.codexHome);
       restart();
       return result;
     } catch (error) {
       void vscode.window.showErrorMessage(error.message);
       return {ok: false, error: error.message, paused: privacyPaused};
     }
+  }
+
+  async function setAutoApprovalHook(enabled) {
+    requireTrust();
+    const configuration = vscode.workspace.getConfiguration('codexBeacon');
+    const key = configKey('autoConfigureApprovalHook');
+    const inspected = configuration.inspect?.(key);
+    const target = inspected?.workspaceFolderValue !== undefined ? 3 : inspected?.workspaceValue !== undefined ? 2 : 1;
+    await configuration.update(key, enabled, target);
+    updateSettings();
   }
 
   updateSettings();
@@ -306,7 +370,19 @@ function createController(vscode, context, dependencies = {}) {
       return {accepted: true, language: getLanguage()};
     }),
     vscode.commands.registerCommand(`${commandPrefix}.configureApprovalHook`, () => reportAction('install')),
-    vscode.commands.registerCommand(`${commandPrefix}.removeApprovalHook`, () => reportAction('uninstall')),
+    vscode.commands.registerCommand(`${commandPrefix}.setAutoApprovalHook`, async enabled => {
+      if (typeof enabled !== 'boolean') throw new Error('Invalid auto-hook setting');
+      await setAutoApprovalHook(enabled);
+      hookAttempts.delete(config.codexHome);
+      if (enabled && currentStatus.state === 'connected') await ensureApprovalHook(generation);
+      bridge.status(source, renderedStatus());
+      return {autoEnabled: enabled};
+    }),
+    vscode.commands.registerCommand(`${commandPrefix}.removeApprovalHook`, async () => {
+      await setAutoApprovalHook(false);
+      if (autoHookPromise) await autoHookPromise;
+      return reportAction('uninstall');
+    }),
     vscode.commands.registerCommand(`${commandPrefix}.test`, async () => {
       if (!config.enabled) {
         const error = t`采集器已暂停。请启用 codexBeacon.${configKey('collectorEnabled')} 后测试采集链路。`;
@@ -321,6 +397,10 @@ function createController(vscode, context, dependencies = {}) {
     vscode.commands.registerCommand(`${commandPrefix}.clearPrivateData`, clearPrivateData),
     vscode.commands.registerCommand(`${commandPrefix}.resumePrivateData`, resumePrivateData),
     vscode.workspace.onDidChangeConfiguration(event => {
+      if (event.affectsConfiguration(`codexBeacon.${configKey('autoConfigureApprovalHook')}`)) {
+        updateSettings(); hookAttempts.delete(config.codexHome);
+        if (currentStatus.state === 'connected') void ensureApprovalHook(generation);
+      }
       if (['codexHome', 'pythonPath', 'sourceLabel', 'collectorEnabled', 'cacheRetentionDays'].some(key => event.affectsConfiguration(`codexBeacon.${configKey(key)}`))) restart();
     }),
     vscode.workspace.onDidGrantWorkspaceTrust(restart),

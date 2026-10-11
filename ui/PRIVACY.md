@@ -4,7 +4,7 @@
 
 ## 中文
 
-适用版本：主扩展 0.8.0–0.8.3、远端采集器 0.5.0–0.5.2。社区扩展，非 OpenAI 或 Microsoft 官方产品。
+适用版本：主扩展 0.8.0–0.8.4、远端采集器 0.5.0–0.5.3。社区扩展，非 OpenAI 或 Microsoft 官方产品。
 
 ## 数据去向与隔离
 
@@ -37,7 +37,7 @@
 | --- | --- | --- |
 | VS Code 当前用户的扩展 globalStorage | 当前通知历史、去重记录、旧版本缓存 | 默认 7 天；可设置 1–30 天；最多 200 条历史、5000 条去重记录；运行时及重新启动时清理过期记录 |
 | Codex Home 下 vscode-notifier 目录 | 审批通知队列及轮转文件、扩展配置和复制的 Hook 脚本 | 通知缓存默认 7 天，可设置 1–30 天；采集器运行时执行保留策略 |
-| Codex Home 下 hooks.json | 扩展管理的审批提醒 Hook 与原有无关 Hook | 只在用户选择配置或移除时改动 |
+| Codex Home 下 hooks.json | 扩展管理的审批提醒 Hook 与原有无关 Hook | 采集器正常启动后自动添加缺失的 Beacon Hook，保留已有定义与其他 Hook；可关闭自动添加或手动移除，信任由用户在 Codex 中操作 |
 | Hook 配置备份 | 修改前的完整 Hook 配置，可能包含无关私密参数 | 新版记录自己创建的备份归属；无法确认归属的历史备份不会自动删除 |
 | 本机通信身份及隐私暂停控制 | 本机专用证书/私钥、保留期、暂停状态、清理时间 | 维持通信和阻止旧事件重放所需；不含会话正文或会话标识 |
 
@@ -53,7 +53,7 @@
 
 - **清理当前环境及本机通知数据**：先展示范围，确认后清理所有本机窗口共享的通知历史、旧版缓存和去重记录，以及当前环境能够确认归属的采集缓存、复制脚本和审批提醒 Hook。清理后暂停当前环境采集和本机接收。
 - **仅清理本机全部通知缓存**：可在远端未连接时使用；不会删除服务器或容器中的文件。
-- **恢复当前环境采集和本机接收**：用户显式恢复后只接收清理后的事件。已删除的审批提醒 Hook 需要重新配置，并在 Codex 中再次核对及信任。
+- **恢复当前环境采集和本机接收**：用户显式恢复后只接收清理后的事件。启用自动添加时会重新注册缺失的审批提醒 Hook，请到 Codex 中核对及信任；关闭自动添加时可在仪表盘重新配置。
 
 其他 SSH 服务器／容器需分别连接后清理。无法确认归属的旧 Hook 备份会在预览或状态中说明并保留；系统日志、终端历史、Windows 已显示通知、磁盘快照与外部备份不属于本扩展可保证清除的范围。旧版本窗口应升级并重载，否则仍可能写入旧缓存。
 
@@ -97,7 +97,7 @@ Only sessions confirmed to originate in the VS Code Codex extension are collecte
 | --- | --- |
 | The current OS user's VS Code extension globalStorage | Notification history, deduplication records and legacy caches. Default retention: 7 days; configurable 1–30 days. Up to 200 history entries and 5,000 deduplication records. Expiry runs while active and on restart. |
 | `vscode-notifier` under Codex Home | Approval-event queue and rotated files, extension configuration and copied hook scripts. Notification caches default to 7 days, configurable 1–30; retention runs during collection. |
-| `hooks.json` under Codex Home | Managed approval hook and existing unrelated hooks. Modified only when the user chooses configuration, removal or relevant cleanup. |
+| `hooks.json` under Codex Home | Automatically register a missing Beacon approval hook after healthy collection starts. Existing definitions and unrelated hooks are preserved. Automatic setup can be disabled; removal also disables it. Review and trust remain user actions in Codex. |
 | Hook-configuration backups | Full pre-change hook configuration, potentially including unrelated private parameters. New versions track ownership of their backups; old backups with unknown ownership are not automatically deleted. |
 | Local communication identity and privacy controls | Certificates/private keys, retention setting, pause state and cleanup cutoff. Retained to support communication and prevent replay; no conversation bodies or session identifiers. |
 
@@ -113,7 +113,7 @@ For broader cleanup, open **Privacy and data cleanup**:
 
 - **Clear notification data in this environment and on this computer** previews the scope, then clears shared local history, legacy caches and deduplication records, plus attributable collector caches, copied scripts and managed approval hooks in the current environment. Collection in that environment and local reception are paused afterward.
 - **Clear all local notification caches only** works without a remote connection and does not remove server/container files.
-- **Resume collection and reception** explicitly resumes processing of events after the cleanup cutoff. Removed approval hooks need to be configured, reviewed and trusted again in Codex.
+- **Resume collection and reception** explicitly resumes processing of events after the cleanup cutoff. Automatic setup registers missing approval hooks when enabled; review their trust in Codex. With automatic setup disabled, use the dashboard's configuration action.
 
 Connect to and clean other SSH servers/containers separately. Unattributed old hook backups are reported and retained. System logs, terminal history, already displayed Windows notifications, disk snapshots and external backups are outside the extension's guaranteed cleanup scope. Older extension windows should be upgraded and reloaded, or they can continue writing old caches.
 

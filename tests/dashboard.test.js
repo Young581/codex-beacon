@@ -57,7 +57,8 @@ test('webview projection omits raw sources, prompts and histories while retainin
   row.event.session_title = malicious;
   const model = dashboardData({entries: [row]}, {windowId: 'window'});
   const json = JSON.stringify(model);
-  assert.ok(!json.includes('PRIVATE_')); assert.ok(!json.includes('"records"'));
+  assert.ok(!json.includes('PRIVATE_')); assert.equal(model.records, undefined);
+  assert.ok(model.projects.every(project => project.records === undefined));
   assert.equal(model.projects[0].source, malicious, 'Metadata remains text, not markup');
   assert.equal(model.projects[0].tasks[0].session, 'session');
   assert.equal(model.projects[0].tasks[0].title, malicious, 'Chat names remain text, not markup');
@@ -106,6 +107,18 @@ test('dashboard opens a singleton editor panel and waits for readiness before po
   dashboard.dispose(); assert.ok(panels[0].receiverDisposed);
 });
 
+test('the former menu opens the management page in the existing dashboard', async () => {
+  const {dashboard, panels} = fixture();
+  dashboard.open('management');
+  const panel = panels[0]; assert.equal(panel.messages.length, 0);
+  await panel.receive({type: 'ready'});
+  assert.deepEqual(panel.messages.at(-1), {type: 'view', page: 'management'});
+  dashboard.open(); assert.equal(panels.length, 1);
+  dashboard.open('management');
+  assert.deepEqual(panel.messages.at(-1), {type: 'view', page: 'management'});
+  dashboard.dispose();
+});
+
 test('message bridge rejects arbitrary commands, forged keys, replay and stale records after cleanup', async () => {
   const calls = [];
   const {dashboard, panels, setSnapshot} = fixture(async (...args) => calls.push(args));
@@ -133,5 +146,25 @@ test('concurrent clicks are acknowledged without repeating actions; closing a pa
   assert.equal(calls, 1); assert.ok(panel.messages.at(-1).busy);
   panel.dispose(); const sent = panel.messages.length; release(); await pending;
   assert.equal(panel.messages.length, sent);
+  dashboard.dispose();
+});
+
+test('management settings accept only explicit values and return action failures to the webview', async () => {
+  const calls = [];
+  const {dashboard, panels} = fixture(async (...args) => {
+    calls.push(args);
+    return args[0] === 'configureHook' ? {error: 'Python unavailable'} : {};
+  });
+  dashboard.open(); const panel = panels[0]; await panel.receive({type: 'ready'});
+  for (const [id, action, value] of [[1, 'setLanguage', 'arbitrary'], [2, 'setOpenLocation', 'shell'],
+    [3, 'setAutoHook', 'true'], [4, 'settings', {command: 'evil'}]]) {
+    await panel.receive({type: 'action', id, action, value});
+  }
+  assert.deepEqual(calls, []);
+  await panel.receive({type: 'action', id: 5, action: 'setLanguage', value: 'en'});
+  await panel.receive({type: 'action', id: 6, action: 'setAutoHook', value: false});
+  await panel.receive({type: 'action', id: 7, action: 'configureHook'});
+  assert.deepEqual(calls.slice(0, 2), [['setLanguage', undefined, 'en'], ['setAutoHook', undefined, false]]);
+  assert.equal(panel.messages.at(-1).error, 'Python unavailable');
   dashboard.dispose();
 });

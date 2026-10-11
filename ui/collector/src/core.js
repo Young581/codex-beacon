@@ -144,6 +144,7 @@ function settings(configuration, environment = {}, keyPrefix = '') {
     ...runtime,
     label: clean(get('sourceLabel', ''), 200),
     enabled: get('collectorEnabled', true) !== false,
+    autoConfigureApprovalHook: get('autoConfigureApprovalHook', true) !== false,
     retentionDays: Number.isInteger(retention) && retention >= 1 && retention <= 30 ? retention : 7,
   };
 }

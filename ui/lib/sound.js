@@ -42,10 +42,19 @@ class SoundSettings {
     if (!choice) return {cancelled: true};
     try {
       if (choice.value === 'preview') return await this.preview();
-      if (choice.value === 'reset') {
-        await this.config().update('soundFile', '', this.vscode.ConfigurationTarget.Global);
-        return {soundFile: ''};
-      }
+      if (choice.value === 'reset') return await this.reset();
+      return await this.chooseFile();
+    } catch (error) {
+      await this.vscode.window.showWarningMessage(error.message);
+      return {error: error.message};
+    }
+  }
+  async reset() {
+    await this.config().update('soundFile', '', this.vscode.ConfigurationTarget.Global);
+    return {soundFile: ''};
+  }
+  async chooseFile() {
+    try {
       const selected = await this.vscode.window.showOpenDialog({
         title: t('选择本机提示音'), openLabel: t('使用此提示音'),
         canSelectFiles: true, canSelectFolders: false, canSelectMany: false,

@@ -161,14 +161,17 @@ exports.run = async function run() {
       await command('showStatus');
     });
 
-    await test('Approval hook installer preserves unrelated hooks in isolated Codex home', async () => {
+    await test('Approval hook registers automatically and preserves unrelated hooks in isolated Codex home', async () => {
       const hooksPath = path.join(testHome, 'hooks.json');
+      await waitFor(async () => JSON.parse(fs.readFileSync(hooksPath, 'utf8')), hooks =>
+        JSON.stringify(hooks).includes('--owner codex-beacon-v1'), 'Healthy local collection must automatically register the approval hook');
       const before = JSON.stringify(JSON.parse(fs.readFileSync(hooksPath, 'utf8')));
       assert.ok(before.includes('codex-beacon-unrelated-fixture'));
       await command('configureApprovalHook');
       const installed = JSON.parse(fs.readFileSync(hooksPath, 'utf8'));
       assert.ok(JSON.stringify(installed).includes('codex-beacon-unrelated-fixture'));
-      assert.notEqual(JSON.stringify(installed), before, 'Installer should append its own hook');
+      assert.equal(JSON.stringify(installed), before, 'Manual setup must keep the automatic registration idempotent');
+      assert.equal(installed.hooks.PermissionRequest.length, 2, 'One unrelated hook and one Beacon hook');
       const first = JSON.stringify(installed);
       await command('configureApprovalHook');
       assert.equal(JSON.stringify(JSON.parse(fs.readFileSync(hooksPath, 'utf8'))), first,

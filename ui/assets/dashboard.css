@@ -122,6 +122,24 @@ button.metric:hover { background: var(--vscode-toolbar-hoverBackground); }
 .footer { margin-top: 24px; padding-top: 17px; border-top: 1px solid var(--border); color: var(--muted); font-size: 10px; line-height: 1.8; }
 .notice { border: 1px solid var(--vscode-inputValidation-warningBorder, var(--orange)); padding: 11px; border-radius: 6px; margin-bottom: 16px; overflow-wrap: anywhere; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.page-tabs { display: flex; gap: 10px; padding: 18px 0; flex-wrap: wrap; }
+.page-tab { display: inline-flex; align-items: center; gap: 8px; padding: 9px 13px; border: 1px solid transparent; border-radius: 7px; background: transparent; }
+.page-tab.active { color: var(--accent); border-color: var(--border); background: var(--surface); }
+.hook-banner { border: 1px solid var(--border); border-radius: 7px; padding: 12px 15px; margin-bottom: 20px; color: var(--muted); }
+.hook-banner summary { cursor: pointer; }
+.hook-banner .button { margin-top: 10px; }
+.management-panel { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; padding: 6px 0 12px; }
+.management-card { min-width: 0; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); padding: 20px; }
+.management-card h2 { display: flex; align-items: center; gap: 9px; font-size: 15px; margin-bottom: 17px; }
+.management-card h2 svg { color: var(--accent); }
+.management-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.management-actions .button { max-width: 100%; white-space: normal; text-align: left; justify-content: flex-start; }
+.management-field { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin: 14px 0; }
+.management-field select { color: var(--vscode-dropdown-foreground, var(--ink)); background: var(--vscode-dropdown-background, var(--canvas)); border: 1px solid var(--border); border-radius: 6px; padding: 7px 9px; max-width: 100%; }
+.management-note { color: var(--muted); line-height: 1.7; overflow-wrap: anywhere; margin-top: 10px; font-size: 12px; }
+.hook-status { color: var(--accent); font-weight: 600; }
+.management-toggle { display: flex; align-items: center; gap: 8px; margin-top: 16px; }
+@media (max-width: 760px) { .management-panel { grid-template-columns: minmax(0, 1fr); } }
 @keyframes breathe { 50% { opacity: .4; } }
 @media (max-width: 1000px) {
   .shell { padding: 21px 23px; }

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.4
+
+- 审批 Hook 在采集器正常启动后自动注册，保留已有定义、其他 Hook 和隐私暂停；信任仍由用户在 Codex 中完成。
+- 仪表盘新增“管理与设置”：直接调整语言、会话位置和音效，并集中提供审批、测试、连接、通知及隐私操作。
+- 通知菜单直接打开仪表盘管理页；移除审批 Hook 会关闭自动添加。
+- Automatically register approval hooks and centralize controls in the dashboard's Management and settings page.
+
 ## 0.8.3
 
 - 修复异步提问的 `accepted: true` 被误当成用户答复，导致“等待回答”立刻恢复为进行中。

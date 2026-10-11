@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.3
+
+- Register the approval hook after healthy collection starts, preserving existing definitions and unrelated hooks under concurrent installs.
+- Respect privacy pause and the environment's automatic setup setting; removing a hook disables automatic setup.
+- Report hook registration status and instructions to the dashboard; Codex trust remains a user action.
+
 ## 0.5.2
 
 - Keep asynchronous questions pending after the immediate acknowledgement; resume only on matching user replies or an actual answer result.

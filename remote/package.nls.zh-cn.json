@@ -1,4 +1,5 @@
 {
+  "setting.codexBeacon.autoConfigureApprovalHook": "采集器正常启动后自动注册审批提醒 Hook。请在 Codex 设置 → Hooks 中核对并信任。关闭此设置会保留已有 Hook。",
   "command.codexBeacon.remote.status": "Codex Beacon: 查看采集器状态",
   "command.codexBeacon.remote.configureApprovalHook": "Codex Beacon: 配置审批提醒 Hook",
   "command.codexBeacon.remote.removeApprovalHook": "Codex Beacon: 移除审批提醒 Hook",

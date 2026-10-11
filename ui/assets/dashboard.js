@@ -4,6 +4,7 @@
   const app = document.getElementById('app');
   let data, revision = -1, request = 0, pending = 0, error = '';
   let project = 'all', filter = 'all', query = '';
+  let page = vscode.getState()?.page === 'management' ? 'management' : 'tasks';
   const expanded = new Set();
   const icons = {
     beacon: '<path d="M12 3v18m-4 0h8M8 8a6 6 0 0 0 0 8m8-8a6 6 0 0 1 0 8M5 5a10 10 0 0 0 0 14m14-14a10 10 0 0 1 0 14"/>',
@@ -20,6 +21,8 @@
     language: '<path d="M3 5h12M9 3v2m-4 0c1 6 3 8 9 11m-2-11c0 5-3 9-8 11m11 5 4-11 4 11m-6-4h4"/>',
     pause: '<path d="M8 5v14M16 5v14"/>',
     play: '<path d="m8 5 11 7-11 7z"/>',
+    shield: '<path d="m12 3 8 3v6c0 5-8 9-8 9S4 17 4 12V6z"/><path d="m8 12 3 3 5-6"/>',
+    test: '<path d="M9 3h6m-5 0v6L4 19c-.6 1 .1 2 1 2h14c1 0 1.6-1 1-2L14 9V3M7 15h10"/>',
   };
   function el(tag, className, text) {
     const node = document.createElement(tag);
@@ -47,10 +50,10 @@
     node.dataset.focus = 'action-' + command + '-' + (key || 'global');
     return node;
   }
-  function send(command, key) {
+  function send(command, key, value) {
     if (pending) return;
     pending = ++request; error = '';
-    vscode.postMessage({type: 'action', id: pending, action: command, ...(key ? {key} : {})});
+    vscode.postMessage({type: 'action', id: pending, action: command, ...(key ? {key} : {}), ...(value !== undefined ? {value} : {})});
     render();
   }
   function count(value) {return new Intl.NumberFormat(data.language, {notation: 'compact', maximumFractionDigits: 2}).format(value);}
@@ -104,6 +107,64 @@
     card.append(heading, meta, details);
     return card;
   }
+  function hookStatus() {
+    const hook = data.management.hook, text = data.text;
+    return hook.setup === 'error' ? text.hookError : hook.setup === 'installing' ? text.hookInstalling :
+      hook.configured ? text.hookConfigured : hook.setup === 'missing' ? text.hookMissing : text.hookChecking;
+  }
+  function choice(label, command, selected, choices) {
+    const field = el('label', 'management-field');
+    field.append(el('span', '', label));
+    const select = el('select'); select.disabled = !!pending;
+    select.dataset.setting = command; select.dataset.focus = command;
+    for (const [value, title] of choices) {
+      const option = el('option', '', title); option.value = value; option.selected = value === selected;
+      select.append(option);
+    }
+    select.addEventListener('change', () => send(command, undefined, select.value));
+    field.append(select); return field;
+  }
+  function managementPanel() {
+    const text = data.text, settings = data.management;
+    const panel = el('section', 'management-panel'); panel.dataset.view = 'management';
+    const card = (title, name) => {
+      const section = el('section', 'management-card');
+      const heading = el('h2'); heading.append(icon(name), el('span', '', title)); section.append(heading); return section;
+    };
+    const actions = (...nodes) => {const group = el('div', 'management-actions'); group.append(...nodes); return group;};
+    const alerts = card(text.alerts, 'sound');
+    alerts.append(choice(text.language, 'setLanguage', settings.language, [['auto', text.autoLanguage], ['zh-CN', '中文'], ['en', 'English']]),
+      choice(text.openLocation, 'setOpenLocation', settings.openLocation, [['sidebar', text.sidebar], ['editor', text.editor]]),
+      el('p', 'management-note', text.sound + ': ' + (settings.soundName || text.defaultSound)),
+      actions(action(text.soundFile, 'sound', 'soundFile'), action(text.preview, 'play', 'preview'), action(text.resetSound, 'refresh', 'resetSound')),
+      actions(action(data.privacyPaused ? text.resumePrivateData : data.paused ? text.resume : text.pause,
+        data.paused ? 'play' : 'pause', data.privacyPaused ? 'resumePrivateData' : data.paused ? 'resume' : 'pause'),
+        action(text.settings, 'settings', 'settings')));
+    const hooks = card(text.approval, 'shield');
+    hooks.append(el('p', 'hook-status', hookStatus()), el('p', 'management-note', settings.hook.configured ? text.hookTrustHint : text.hookAutoHint));
+    const automatic = el('label', 'management-toggle');
+    const checkbox = el('input'); checkbox.type = 'checkbox'; checkbox.checked = settings.hook.autoEnabled;
+    checkbox.disabled = !!pending; checkbox.dataset.setting = 'setAutoHook'; checkbox.dataset.focus = 'setAutoHook';
+    checkbox.addEventListener('change', () => send('setAutoHook', undefined, checkbox.checked));
+    automatic.append(checkbox, el('span', '', text.autoHook)); hooks.append(automatic,
+      el('p', 'management-note', text.hookAutoHint),
+      actions(action(text.openCodex, 'arrow', 'openCodex'), action(text.configureHook, 'shield', 'configureHook'),
+        action(text.removeHook, 'trash', 'removeHook', undefined, 'button danger')));
+    const tools = card(text.tools, 'test');
+    tools.append(el('p', 'management-note', text.environment + ': ' + (settings.environment || text.unknown)),
+      el('p', 'management-note', text.collection + ': ' + (settings.collectionMessage || text.disconnected)),
+      actions(action(text.installation, 'grid', 'installation'), action(text.status, 'refresh', 'status')),
+      actions(action(text.testNotification, 'test', 'testNotification'), action(text.testCollector, 'test', 'testCollector'),
+        action(text.restartCollector, 'refresh', 'restartCollector')));
+    const records = card(text.records, 'folder');
+    records.append(actions(action(text.history, 'folder', 'history'), action(text.markRead, 'check', 'markRead'),
+      action(text.clearRead, 'check', 'clearRead'), action(text.clearHistory, 'trash', 'clearHistory', undefined, 'button danger')),
+      el('p', 'management-note', text.privacyHint),
+      actions(action(text.privacyPolicy, 'shield', 'privacyPolicy'), action(text.clearPrivateData, 'trash', 'clearPrivateData', undefined, 'button danger'),
+        action(text.clearLocalPrivateData, 'trash', 'clearLocalPrivateData', undefined, 'button danger'),
+        action(text.resumePrivateData, 'play', 'resumePrivateData')));
+    panel.append(alerts, hooks, tools, records); return panel;
+  }
   function render() {
     if (!data) return;
     const text = data.text;
@@ -120,8 +181,14 @@
     const tools = el('div', 'header-tools');
     tools.append(action(text.refresh, 'refresh', 'refresh', undefined, 'button icon-button'),
       action(text.language, 'language', 'language', undefined, 'button icon-button'),
-      action(text.settings, 'settings', 'settings', undefined, 'button icon-button'));
+      button(text.management, 'settings', () => {page = 'management'; vscode.setState({page}); render();}, 'button icon-button'));
     header.append(brand, tools);
+    const pages = el('nav', 'page-tabs'); pages.setAttribute('aria-label', text.management);
+    for (const [value, label, name] of [['tasks', text.title, 'grid'], ['management', text.management, 'settings']]) {
+      const tab = button(label, name, () => {page = value; vscode.setState({page}); render();}, 'page-tab' + (page === value ? ' active' : ''));
+      tab.dataset.page = value; tab.dataset.focus = 'page-' + value;
+      tab.setAttribute('aria-pressed', String(page === value)); pages.append(tab);
+    }
     const hero = el('section', 'hero');
     const intro = el('div'); intro.append(el('p', 'eyebrow', text.eyebrow), el('h1', '', text.title), el('p', 'subtitle', text.subtitle));
     const controls = el('div', 'hero-controls');
@@ -204,7 +271,17 @@
     main.append(list); workspace.append(nav, main);
     const footer = el('footer', 'footer', text.footer + ' * ' + text.partial + ' · — ' + text.unknown);
     const live = el('span', 'sr-only', String(shown) + ' ' + text.tasks); live.setAttribute('aria-live', 'polite');
-    shell.append(header, hero, summary, workspace, footer, live); app.append(shell);
+    shell.append(header, pages);
+    if (page === 'management') {
+      if (error) {const notice = el('div', 'notice', error); notice.setAttribute('role', 'alert'); shell.append(notice);}
+      shell.append(managementPanel());
+    } else {
+      const hooks = el('details', 'hook-banner');
+      hooks.append(el('summary', '', hookStatus()), el('p', 'management-note', text.hookTrustHint),
+        action(text.openCodex, 'arrow', 'openCodex'));
+      shell.append(hero, hooks, summary, workspace);
+    }
+    shell.append(footer, live); app.append(shell);
     if (focus) {
       const target = [...app.querySelectorAll('[data-focus]')].find(node => node.dataset.focus === focus);
       target?.focus({preventScroll: true});
@@ -219,6 +296,9 @@
     }
     if (message?.type === 'result' && message.id === pending) {
       pending = 0; error = message.error || ''; render();
+    }
+    if (message?.type === 'view' && ['tasks', 'management'].includes(message.page)) {
+      page = message.page; vscode.setState({page}); render();
     }
   });
   vscode.postMessage({type: 'ready'});

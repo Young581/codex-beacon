@@ -1,4 +1,5 @@
 {
+  "setting.codexBeacon.localAutoConfigureApprovalHook": "Automatically register the approval notification hook after the local collector starts. Review and trust it in Codex settings → Hooks. Disabling this setting keeps the existing hook.",
   "command.codexBeacon.dashboard": "Open dashboard",
   "command.codexBeacon.chooseSound": "Customize notification sound",
   "command.codexBeacon.testSound": "Preview notification sound",

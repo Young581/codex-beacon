@@ -48,7 +48,7 @@ class PrivacyActions {
     }
     await this.client.request('resumePrivacy');
     await this.refresh();
-    await this.vscode.window.showInformationMessage(t('已恢复当前环境采集和本机通知接收。清理前的事件不会补回；审批提醒如已移除，需要重新配置并信任。'));
+    await this.vscode.window.showInformationMessage(t('已恢复当前环境采集和本机通知接收。清理前的事件不会补回；启用自动添加时会注册缺失的审批 Hook，请在 Codex 中核对信任。'));
     return {paused: false};
   }
   async menu() {

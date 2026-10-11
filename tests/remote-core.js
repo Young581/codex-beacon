@@ -23,6 +23,7 @@ test('settings use explicit home, CODEX_HOME and OS home with platform Python de
   assert.equal(core.settings(config({}), {...environment, env: {}}).codexHome, '/home/research/.codex');
   assert.deepEqual(core.settings(config({}), {platform: 'win32', home: 'C:\\Users\\研究员', env: {}}), {
     codexHome: 'C:\\Users\\研究员\\.codex', python: 'py', pythonArgs: ['-3'], enabled: true, label: '', retentionDays: 7,
+    autoConfigureApprovalHook: true,
   });
   assert.deepEqual(core.settings(config({pythonPath: '/custom/python'}), environment).pythonArgs, []);
 });
@@ -101,10 +102,12 @@ test('local settings use their own keys without inheriting remote overrides', ()
   const values = {codexHome: '/remote/codex', pythonPath: '/remote/python', sourceLabel: 'remote', collectorEnabled: false};
   assert.deepEqual(core.settings(config(values), environment, 'local'), {
     codexHome: '/home/local/.codex', python: 'python3', pythonArgs: [], label: '', enabled: true, retentionDays: 7,
+    autoConfigureApprovalHook: true,
   });
   assert.deepEqual(core.settings(config({...values, localCodexHome: '~/codex-local',
     localPythonPath: '/local/python', localSourceLabel: 'local', localCollectorEnabled: false}), environment, 'local'), {
     codexHome: '/home/local/codex-local', python: '/local/python', pythonArgs: [], label: 'local', enabled: false, retentionDays: 7,
+    autoConfigureApprovalHook: true,
   });
   assert.equal(core.settings(config({localCacheRetentionDays: 2}), environment, 'local').retentionDays, 2);
   for (const invalid of [0, -1, 31, 1.5, '7', null]) {
@@ -195,7 +198,8 @@ function fixture(trusted = true, enabled = true, options = {}) {
   const outputNames = [];
   const logs = [];
   const updates = [];
-  const values = {codexHome: path.join(__dirname, 'unused-home'), collectorEnabled: enabled, ...options.values};
+  const values = {codexHome: path.join(__dirname, 'unused-home'), collectorEnabled: enabled,
+    autoConfigureApprovalHook: false, localAutoConfigureApprovalHook: false, ...options.values};
   let granted;
   let changed;
   let foldersChanged;
@@ -285,7 +289,7 @@ test('remote activate leaves local windows entirely inactive', () => {
 test('embedded local controller registers only local commands and uses the bundled script', async () => {
   const state = fixture(true, false, localOptions({localPythonPath: '/local/python', localSourceLabel: '本机'}));
   try {
-    assert.deepEqual([...state.commands.keys()], ['status', 'sessionTitles', 'setLanguage', 'configureApprovalHook', 'removeApprovalHook', 'test', 'restart',
+    assert.deepEqual([...state.commands.keys()], ['status', 'sessionTitles', 'setLanguage', 'configureApprovalHook', 'setAutoApprovalHook', 'removeApprovalHook', 'test', 'restart',
       'privacyStatus', 'previewPrivacyCleanup', 'clearPrivateData', 'resumePrivateData']
       .map(name => 'codexBeacon.local.' + name));
     assert.deepEqual(state.outputNames, ['Codex 通知 · 本地采集']);
@@ -381,6 +385,67 @@ test('explicit hook configuration invokes only install and does not return an ap
     assert.equal(result.installed, true);
     assert.equal(Object.hasOwn(result, 'decision'), false);
     assert.ok(state.messages.some(message => typeof message === 'string' && message.includes('Trust')));
+  } finally {state.controller.dispose();}
+});
+
+test('automatic setup waits for a healthy heartbeat and installs once without making a trust decision', async () => {
+  const fs = require('node:fs');
+  fs.mkdirSync(path.join(__dirname, 'runtime'), {recursive: true});
+  const home = fs.mkdtempSync(path.join(__dirname, 'runtime', 'auto-hook-'));
+  const state = fixture(true, true, {values: {codexHome: home, autoConfigureApprovalHook: true}});
+  try {
+    assert.equal(state.children.length, 1, 'Starting the follower alone does not mutate hooks');
+    const heartbeat = () => state.children[0].process.stdout.write(JSON.stringify(event('hb', 'heartbeat')) + '\n');
+    heartbeat(); heartbeat();
+    for (let index = 0; index < 30 && state.children.length < 2; index++) await tick();
+    const installer = state.children[1];
+    assert.ok(installer.args.includes('--if-missing'));
+    fs.writeFileSync(path.join(home, 'hooks.json'), JSON.stringify({hooks: {PermissionRequest: [{hooks: [{
+      type: 'command', command: 'python remote_notifier.py --owner codex-beacon-v1',
+    }]}]}}));
+    installer.process.stdout.write(JSON.stringify({installed: true})); installer.process.emit('close', 0);
+    for (let index = 0; index < 30; index++) await tick();
+    heartbeat(); await tick();
+    assert.equal(state.children.length, 2, 'Repeated heartbeats do not create extra installers');
+    const status = await state.controller.status();
+    assert.equal(status.hookConfigured, true); assert.equal(status.hookTrust, 'unknown');
+    assert.equal(status.approvalHook.autoEnabled, true);
+    assert.ok(!state.children.some(child => child.args.includes('trust')));
+  } finally {state.controller.dispose(); fs.rmSync(home, {recursive: true, force: true});}
+});
+
+test('automatic setup keeps a registered definition intact and skips privacy-paused collection', async () => {
+  const fs = require('node:fs');
+  fs.mkdirSync(path.join(__dirname, 'runtime'), {recursive: true});
+  const home = fs.mkdtempSync(path.join(__dirname, 'runtime', 'existing-hook-'));
+  const definition = JSON.stringify({hooks: {PermissionRequest: [{matcher: 'custom', hooks: [{
+    type: 'command', command: 'custom --owner codex-beacon-v1', timeout: 42,
+  }]}]}});
+  fs.writeFileSync(path.join(home, 'hooks.json'), definition);
+  const state = fixture(true, true, {values: {codexHome: home, autoConfigureApprovalHook: true}});
+  try {
+    state.children[0].process.stdout.write(JSON.stringify(event('hb', 'heartbeat')) + '\n');
+    for (let index = 0; index < 30; index++) await tick();
+    assert.equal(state.children.length, 1); assert.equal(fs.readFileSync(path.join(home, 'hooks.json'), 'utf8'), definition);
+    state.children[0].process.stdout.write(JSON.stringify({...event('paused', 'heartbeat'), privacyPaused: true}) + '\n');
+    await tick(); assert.equal(state.children.length, 1);
+    assert.equal((await state.controller.status()).privacyPaused, true);
+  } finally {state.controller.dispose(); fs.rmSync(home, {recursive: true, force: true});}
+});
+
+test('removing approval reminders turns off automatic setup even with a workspace override', async () => {
+  const state = fixture(true, true, {values: {autoConfigureApprovalHook: true}});
+  try {
+    const pending = state.commands.get('codexBeacon.remote.removeApprovalHook')();
+    await tick();
+    assert.equal(state.values.autoConfigureApprovalHook, false);
+    assert.ok(state.updates.some(update => update.key === 'autoConfigureApprovalHook' && update.target === 2));
+    const uninstall = state.children[1]; assert.ok(uninstall.args.includes('uninstall'));
+    uninstall.process.stdout.write(JSON.stringify({uninstalled: true})); uninstall.process.emit('close', 0);
+    assert.equal((await pending).uninstalled, true);
+    state.children[0].process.stdout.write(JSON.stringify(event('hb', 'heartbeat')) + '\n');
+    for (let index = 0; index < 20; index++) await tick();
+    assert.equal(state.children.length, 2, 'A later healthy heartbeat must not reinstall a removed hook');
   } finally {state.controller.dispose();}
 });
 

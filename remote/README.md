@@ -14,7 +14,7 @@
 
 本组件只处理通知和任务元数据，经已有 VS Code 连接传给 Windows 主扩展，不另建服务器、不复制聊天正文或登录信息。Codex Home 默认使用远端 `CODEX_HOME` 或 `~/.codex`；`codexBeacon.pythonPath` 可指定该环境的 Python，`codexBeacon.codexHome` 可指定 Codex Home。
 
-状态、测试和重启命令位于命令面板的 **Codex Beacon** 分类。完成／提问采集不要求配置 Hook；审批提醒需单独配置并在 Codex 中信任 Hook。未受信任工作区不启动采集或修改 Hook。
+状态、测试和重启操作也可在主扩展仪表盘的 **管理与设置** 页使用。完成／提问采集不要求配置 Hook；审批 Hook 在采集器正常启动后自动添加，用户需在 Codex 设置 → Hooks 中核对并信任。已有定义保持原样，手动移除会关闭自动添加；隐私暂停及未受信任工作区不会自动添加。
 
 旧通知扩展应在任务空闲时先停用，避免重复采集。新组件拥有独立设置、缓存和审批 Hook 标识，不迁移旧通知历史；原始 Codex 会话保留。参阅 [迁移说明](https://github.com/Young581/codex-beacon/blob/main/docs/marketplace.md#migrating-local-installations)。
 

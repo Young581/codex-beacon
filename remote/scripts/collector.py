@@ -304,6 +304,10 @@ def configured_hooks(home):
 @guarded_command
 def install(args):
     home = codex_home(args.codex_home)
+    automatic = getattr(args, "if_missing", False)
+    if automatic and privacy_state(home)["paused"]:
+        print(json.dumps({"installed": False, "paused": True}))
+        return
     directory = home / DIRECTORY_NAME
     make_directory(directory)
     with locked(directory / ".install.lock"):
@@ -313,6 +317,15 @@ def install(args):
             raise ValueError("hooks.json must be a JSON object; no files were changed")
         updated = json.loads(json.dumps(original))
         remove_owned_hooks(updated)
+        if automatic:
+            permission_entries = original.get("hooks", {}).get("PermissionRequest", [])
+            if any(isinstance(entry, dict) and isinstance(entry.get("hooks"), list) and
+                   any(is_owned_hook(hook) for hook in entry["hooks"]) for entry in permission_entries):
+                print(json.dumps({"installed": False, "already_configured": True}))
+                return
+            # Automatic setup appends only the missing approval definition.
+            # Leave existing Beacon definitions for other events untouched too.
+            updated = json.loads(json.dumps(original))
         events = updated.setdefault("hooks", {})
         for event, entry in configured_hooks(home).items():
             events.setdefault(event, []).append(entry)
@@ -1404,6 +1417,7 @@ def main(argv=None):
         subparser.add_argument("--retention-days", type=retention_days, default=DEFAULT_RETENTION_DAYS)
         if name == "install":
             subparser.add_argument("--label", help="Server/container label displayed in Windows")
+            subparser.add_argument("--if-missing", action="store_true", help="Preserve an existing Beacon definition; respect privacy pause")
         elif name == "follow":
             subparser.add_argument("--once", action="store_true", help="Replay recent records and exit")
             subparser.add_argument("--replay-seconds", type=float, default=300)

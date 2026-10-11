@@ -56,15 +56,36 @@ async function activate(context) {
   const dashboard = new Dashboard(vscode, context, {
     data: () => dashboardData(snapshot, {windowId: client.clientId, options: history.options(),
       paused: !config().get('notificationsEnabled', true), connected: !!client.authenticated,
-      collectionState: sourceStatus?.status?.state || ''}),
-    action: async (action, key) => {
+      collectionState: sourceStatus?.status?.state || '', collectionMessage: sourceStatus?.status?.message || '',
+      environment: sourceStatus?.source?.label || '', approvalHook: sourceStatus?.status?.approvalHook,
+      preferences: {language: config().get('language', 'auto'), openLocation: config().get('openLocation', 'sidebar'),
+        soundFile: config().get('soundFile', '')}}),
+    action: async (action, key, value) => {
       const generation = privacyGeneration;
+      const commands = {sound: 'chooseSound', preview: 'testSound', language: 'chooseLanguage', settings: 'settings',
+        status: 'showStatus', pause: 'pause', resume: 'resume', privacy: 'privacy', clearRead: 'clearRead',
+        openLocation: 'chooseOpenLocation', installation: 'checkInstallation', history: 'showHistory', markRead: 'markRead',
+        clearHistory: 'clearHistory', testNotification: 'testNotification', testCollector: 'testCollector', restartCollector: 'restartCollector',
+        configureHook: 'configureApprovalHook', removeHook: 'removeApprovalHook', clearPrivateData: 'clearPrivateData',
+        clearLocalPrivateData: 'clearLocalPrivateData', resumePrivateData: 'resumePrivateData'};
+      if (commands[action]) return vscode.commands.executeCommand('codexBeacon.' + commands[action]);
+      if (action === 'setLanguage' || action === 'setOpenLocation') {
+        const setting = action === 'setLanguage' ? 'language' : 'openLocation';
+        return config().update(setting, value, vscode.ConfigurationTarget.Global);
+      }
+      if (action === 'setAutoHook') return remoteCommand('codexBeacon.remote.setAutoApprovalHook', value);
+      if (action === 'soundFile') return soundSettings.chooseFile();
+      if (action === 'resetSound') return soundSettings.reset();
+      if (action === 'privacyPolicy') return vscode.commands.executeCommand('markdown.showPreview', vscode.Uri.file(path.join(context.extensionPath, 'PRIVACY.md')));
+      if (action === 'openCodex') return vscode.commands.executeCommand('chatgpt.openSidebar');
       await refresh();
       if (disposed || generation !== privacyGeneration) return;
-      const commands = {sound: 'chooseSound', preview: 'testSound', language: 'chooseLanguage', settings: 'settings',
-        status: 'showStatus', pause: 'pause', resume: 'resume', privacy: 'privacy', clearRead: 'clearRead'};
-      if (action === 'refresh') {nextTitleRead = 0; queueSessionTitles(); return;}
-      if (commands[action]) return vscode.commands.executeCommand('codexBeacon.' + commands[action]);
+      if (action === 'refresh') {
+        nextTitleRead = 0; queueSessionTitles();
+        const result = await remoteCommand('codexBeacon.remote.status');
+        if (result?.source) sourceStatus = {version: 1, kind: 'status', source: result.source, status: result};
+        return;
+      }
       const row = projectGroups(snapshot.entries || [], client.clientId).flatMap(group => group.entries).find(row => row.key === key);
       if (!row) return;
       if (action === 'open' || action === 'window') return vscode.commands.executeCommand(
@@ -319,6 +340,7 @@ async function activate(context) {
   register('codexBeacon.showStatus', async () => {
     let remote;
     try { remote = await remoteCommand('codexBeacon.remote.status'); } catch (error) { remote = {error: error.message}; }
+    if (remote?.source) sourceStatus = {version: 1, kind: 'status', source: remote.source, status: remote};
     await refresh();
     log(t('当前环境状态：\n') + JSON.stringify(remote, null, 2));
     output.show(true);
@@ -441,27 +463,8 @@ async function activate(context) {
     }
   });
   register('codexBeacon.menu', async () => {
-    await client.request('interact');
-    const paused = !config().get('notificationsEnabled', true);
-    const items = [
-      {label: t('$(dashboard) 打开仪表盘'), command: 'codexBeacon.dashboard'},
-      {label: t('$(globe) 语言'), command: 'codexBeacon.chooseLanguage'},
-      {label: t('$(unmute) 自定义提示音'), command: 'codexBeacon.chooseSound'},
-      {label: t('$(layout-sidebar-right) 选择会话打开位置'), command: 'codexBeacon.chooseOpenLocation'},
-      {label: t('$(extensions) 检查／安装当前环境组件'), command: 'codexBeacon.checkInstallation'},
-      {label: t('$(history) 查看通知历史'), command: 'codexBeacon.showHistory'},
-      {label: t('$(clear-all) 清空已读通知'), command: 'codexBeacon.clearRead'},
-      {label: t('$(trash) 清空全部通知'), command: 'codexBeacon.clearHistory'},
-      {label: t('$(beaker) 测试本机弹窗和声音'), command: 'codexBeacon.testNotification'},
-      {label: t('$(debug-disconnect) 测试当前窗口采集链路'), command: 'codexBeacon.testCollector'},
-      {label: paused ? t('$(bell) 恢复提醒') : t('$(bell-slash) 暂停提醒（继续记录）'), command: paused ? 'codexBeacon.resume' : 'codexBeacon.pause'},
-      {label: t('$(shield) 配置当前环境的审批提醒'), command: 'codexBeacon.configureApprovalHook'},
-      {label: t('$(pulse) 查看连接状态'), command: 'codexBeacon.showStatus'},
-      {label: t('$(settings-gear) 通知设置'), command: 'codexBeacon.settings'},
-      {label: t('$(shield) 隐私与数据清理'), command: 'codexBeacon.privacy'}
-    ];
-    const selected = await vscode.window.showQuickPick(items, {title: t('Codex 会话通知')});
-    if (selected) await vscode.commands.executeCommand(selected.command);
+    await refresh(); dashboard.open('management');
+    return {opened: !!dashboard.panel};
   });
 
   client.on('diagnostic', log);

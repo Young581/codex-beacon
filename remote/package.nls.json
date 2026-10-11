@@ -1,4 +1,5 @@
 {
+  "setting.codexBeacon.autoConfigureApprovalHook": "Automatically register the approval notification hook after the collector starts. Review and trust it in Codex settings → Hooks. Disabling this setting keeps the existing hook.",
   "command.codexBeacon.remote.status": "Show collector status",
   "command.codexBeacon.remote.configureApprovalHook": "Configure approval reminder hook",
   "command.codexBeacon.remote.removeApprovalHook": "Remove approval reminder hook",
