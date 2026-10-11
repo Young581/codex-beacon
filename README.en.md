@@ -6,7 +6,7 @@ Track Codex tasks by project in VS Code with colored status lights, token usage,
 
 为 VS Code 中的 Codex 提供按项目分组的任务列表、状态灯、token 与费用估算，以及完成提醒。[阅读完整中文说明 →](README.md)
 
-Based on the MIT-licensed [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier), with Windows PowerShell path fixes and installation helpers. The current code versions are **Codex Beacon 0.8.9** and **Collector 0.5.7**. Features include sound volume, sounds for different events, conversation grouping, numbered rounds and a dashboard with common management controls. Check the installed extension's details for its Marketplace version; the latest fixes are available from Releases.
+Based on the MIT-licensed [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier), with Windows PowerShell path fixes and installation helpers. The current code versions are **Codex Beacon 0.8.10** and **Collector 0.5.8**. Features include sound volume, sounds for different events, conversation grouping, numbered rounds and a dashboard with common management controls. Check the installed extension's details for its Marketplace version; the latest fixes are available from Releases.
 
 ## Features
 
@@ -93,7 +93,7 @@ A deleted or undecodable audio file falls back to the system sound and shows a w
 
 ## Runtime and startup fixes
 
-Version 0.8.9 validates a real Python 3.8+ runtime and the required standard libraries before starting collection, tries other usable candidates automatically, and reuses the validated runtime for collection, tests and hook commands. If no runtime works, it shows installation, configuration and restart steps. Exit code 101 indicates startup failure; it does not by itself establish that Codex Home is misconfigured. Recovery was verified using a real Windows executable returning 101 and isolated installation tests of the final VSIX packages.
+Version 0.8.10 validates a real Python 3.8+ runtime and the required standard libraries before starting collection, tries other usable candidates automatically, and reuses the validated runtime for collection, tests and hook commands. If no runtime works, it shows installation, configuration and restart steps. Exit code 101 indicates startup failure; it does not by itself establish that Codex Home is misconfigured. Recovery was verified using a real Windows executable returning 101 and isolated installation tests of the final VSIX packages.
 
 Notification and taskbar helper processes use the absolute PowerShell path in the Windows system directory. This fixes `spawn powershell.exe ENOENT` when VS Code inherits a PATH without PowerShell. The fix does not change the system PATH or relax communication authentication.
 
@@ -116,6 +116,8 @@ python -B build.py --output dist
 Real VS Code extension-host tests use isolated user data and synthetic conversations as described in the [host-test guide](packaging/README.md). The repository's Windows CI runs checks and creates downloadable build artifacts.
 
 ## Project tasks and estimated costs
+
+After VS Code or collection restarts, saved running/waiting states become unknown until a new activity event confirms them. Explicit completed, failed and canceled results remain final. Starting a new round automatically marks earlier-round reminders read within the same project, source and conversation, retaining history and usage while canceling queued old alerts. The current round and other conversations keep their unread reminders.
 
 The **Codex Beacon → Tasks** sidebar groups tasks by project directory and source by default. Identically named projects with different directories or sources remain separate, and the current window's project appears first. Each request round is one task; it does not represent an entire project or background job. Click to open its conversation, or hover to see the full directory, round, model and usage. The grouping button switches to notification history.
 

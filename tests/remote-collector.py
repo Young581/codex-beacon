@@ -680,6 +680,26 @@ class RemoteTests(unittest.TestCase):
         self.assertEqual(observer.poll(force=True), [])
         self.assertEqual(REMOTE.RolloutObserver(self.home, 300).poll(force=True), events)
 
+    def test_restart_replays_old_activity_without_confirming_it_and_keeps_round_start_time(self):
+        path = self.write_session("restart-activity", records=[
+            ("event_msg", {"type": "task_started", "turn_id": "previous-turn"}),
+            ("turn_context", {"turn_id": "previous-turn", "model": "gpt-6.1-sol"})])
+        observer = REMOTE.RolloutObserver(self.home, 300)
+        previous = observer.poll(force=True)
+        self.assertTrue(previous)
+        self.assertTrue(all(record["replayed"] for record in previous))
+        started = previous[0]["task"]["startedAt"]
+        self.assertEqual(previous[-1]["task"]["startedAt"], started)
+        with path.open("ab") as stream:
+            stream.write(json.dumps({"timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                                    "type": "turn_context", "payload": {"turn_id": "previous-turn", "model": "gpt-6-luna"}}).encode() + b"\n")
+        fresh = observer.poll(force=True)
+        self.assertEqual(len(fresh), 1)
+        self.assertFalse(fresh[0]["replayed"])
+        self.assertEqual(fresh[0]["task"]["startedAt"], started)
+        restored = REMOTE.RolloutObserver(self.home, 300).poll(force=True)
+        self.assertTrue(all(record["replayed"] for record in restored))
+
     def test_tail_partial_usage_never_uses_session_total_as_turn_total(self):
         observer = REMOTE.RolloutObserver(self.home, 300)
         state = {"originator": "codex_vscode", "subagent": False, "session_id": "partial", "cwd": "/fixture",

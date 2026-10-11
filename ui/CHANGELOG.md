@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.10
+
+- 重开窗口或重启采集器后，历史“进行中／等待处理”需由新的活动事件重新确认；保留明确的完成、失败和取消结果。
+- 同一项目和对话开始新一轮时自动标读之前轮次，取消旧提醒的排队播放；当前轮次和其他对话不受影响，历史与用量保留。
+- 通知后台升级到 v11，迁移 v10 历史；区分历史回放与新活动，避免恢复旧任务的活动状态。
+- Require fresh evidence for restored activity and automatically acknowledge earlier rounds when a new round starts.
+
 ## 0.8.9
 
 - 启动前实际验证 Python 3.8+ 及标准库，优先使用已安装运行时，候选启动失败（含 101）时自动检测其他安装。

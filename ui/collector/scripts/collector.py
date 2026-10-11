@@ -882,12 +882,14 @@ class SourceCheckedSpool:
         self.sources = sources
         self.receiver = receiver
         self.pending = {}
+        self.started_at = time.time()
 
     def emit_verified(self, record):
         # valid_line has removed any originator claimed by the spool itself.
         # This marker is added only after fresh session metadata verification.
         if record["type"] not in ("test", "heartbeat"):
             record["originator"] = "codex_vscode"
+            record["replayed"] = record["timestamp"] < self.started_at
         self.receiver(record)
 
     def accept(self, line, cutoff=None):
@@ -979,6 +981,7 @@ class RolloutObserver:
 
     def __init__(self, home, replay_seconds, sources=None, retention=DEFAULT_RETENTION_DAYS):
         self.home = home
+        self.started_at = time.time()
         self.replay_seconds = replay_seconds
         self.states = {}
         self.next_scan = 0
@@ -1052,7 +1055,8 @@ class RolloutObserver:
             state["turn_id"] = turn
             state["waiting_calls"] = {}
             state["question_items"] = {}
-            state["task"] = {"state": "running", "sequence": 0, "model": state.get("model", ""),
+            state["task"] = {"state": "running", "sequence": 0, "startedAt": rollout_timestamp(outer.get("timestamp")),
+                             "startSequence": state.get("line_position", 0), "model": state.get("model", ""),
                              "usage": {"complete": state.get("previous_usage") is not None or state.get("history_complete", False), "segments": []}}
             changed = True
         if kind == "event_msg" and subtype == "token_count":
@@ -1250,6 +1254,7 @@ class RolloutObserver:
                     state["line_position"] = line_position
                     record = self.convert(line, state, cutoff)
                     if record is not None:
+                        record["replayed"] = record["timestamp"] < self.started_at
                         output.append(record)
             except OSError:
                 continue

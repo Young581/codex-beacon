@@ -481,6 +481,48 @@ exports.run = async function run() {
       await config.update('modelPrices', {}, vscode.ConfigurationTarget.Global);
     });
 
+    await test('Restarting collection does not revive historical running tasks without fresh activity', async () => {
+      const turn = prefix + '-restore-active';
+      const append = (type, payload) => fs.appendFileSync(fixturePath, JSON.stringify({
+        timestamp: new Date().toISOString(), type, payload}) + '\n');
+      append('event_msg', {type: 'task_started', turn_id: turn});
+      await waitFor(snapshot, s => s.tasks?.some(row => row.turnId === turn && row.state === 'running') ||
+        history(s).some(row => row.event.turn_id === turn && row.taskConfirmed), 'Fresh start must confirm activity');
+      await command('local.restart');
+      await waitFor(() => command('local.status'), value => value.state === 'connected', 'Restarted collector must connect');
+      const restored = await waitFor(snapshot, s => history(s).some(row => row.event.turn_id === turn && !row.taskConfirmed),
+        'Restarted collection must invalidate previous activity evidence');
+      const taskId = require(path.join(vscode.extensions.getExtension(UI_ID).extensionPath, 'lib/tasks'))
+        .taskRows(history(restored)).find(row => row.event.turn_id === turn).taskId;
+      // The UI connection survives a collector restart, so restart alone must
+      // invalidate earlier evidence as well as a full VS Code window reload.
+      assert.equal(restored.tasks.find(row => row.taskId === taskId).state, 'unknown');
+      append('turn_context', {turn_id: turn, model: 'gpt-6.1-sol'});
+      await waitFor(snapshot, s => s.tasks?.some(row => row.taskId === taskId && row.state === 'running'),
+        'Fresh activity must confirm the existing turn again');
+      append('event_msg', {type: 'task_complete', turn_id: turn});
+      await waitFor(snapshot, s => s.tasks?.some(row => row.taskId === taskId && row.state === 'completed'), 'Completion must remain final');
+      await command('clearHistory');
+    });
+
+    await test('A new round automatically reads previous-round reminders while keeping its own reminders unread', async () => {
+      const append = (type, payload) => fs.appendFileSync(fixturePath, JSON.stringify({
+        timestamp: new Date().toISOString(), type, payload}) + '\n');
+      const first = prefix + '-auto-read-first', second = prefix + '-auto-read-second';
+      append('event_msg', {type: 'task_started', turn_id: first});
+      append('event_msg', {type: 'task_complete', turn_id: first});
+      await waitFor(snapshot, s => history(s).some(row => row.event.turn_id === first && !row.read), 'Previous completion must start unread');
+      append('event_msg', {type: 'task_started', turn_id: second});
+      await waitFor(snapshot, s => history(s).some(row => row.event.turn_id === second) &&
+        history(s).filter(row => row.event.turn_id === first).every(row => row.read), 'New start must read previous-round reminders');
+      append('response_item', {type: 'function_call', name: 'request_user_input', call_id: 'auto-read-question'});
+      await waitFor(snapshot, s => history(s).some(row => row.event.turn_id === second && row.event.type === 'question' && !row.read),
+        'The current question must remain unread');
+      append('event_msg', {type: 'task_complete', turn_id: second});
+      await waitFor(snapshot, s => history(s).some(row => row.event.turn_id === second && row.event.type === 'done'), 'Current turn must complete');
+      await command('clearHistory');
+    });
+
     await test('Window-only commands focus a live project and restore a disconnected project without reading or opening sessions', async () => {
       const {BrokerClient} = require(path.join(vscode.extensions.getExtension(UI_ID).extensionPath, 'lib/client'));
       const runtime = path.dirname(process.env.CODEX_NOTIFIER_TEST_REPORT);

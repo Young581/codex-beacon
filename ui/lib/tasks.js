@@ -56,10 +56,19 @@ function taskRows(entries) {
     // Hook approval can arrive after the most recent rollout snapshot.
     if (latest.event.type !== 'task' && latest.event.timestamp > (telemetry?.event.timestamp || 0)) state = inferredState(latest.event);
     const target = latest.targetWindowId || representative.targetWindowId;
-    if (!target && ['running', 'waiting_input', 'waiting_async', 'waiting_approval'].includes(state)) state = 'unknown';
+    if ((!target || latest.taskConfirmed === false) && ['running', 'waiting_input', 'waiting_async', 'waiting_approval'].includes(state)) state = 'unknown';
     return {...representative, taskId: row.id, records: ordered, relatedKeys: ordered.map(entry => entry.key),
       read: unread.length === 0, taskState: state, telemetry: telemetry?.event.task,
       receivedAt: Math.max(...ordered.map(entry => entry.receivedAt)), targetWindowId: target};
+  }).map((row, index, rows) => {
+    // A later explicit round start supersedes an unfinished historical round.
+    const active = ['running', 'waiting_input', 'waiting_async', 'waiting_approval'].includes(row.taskState);
+    const start = row.telemetry?.startedAt ?? Math.min(...row.records.map(record => record.event.timestamp));
+    if (active && rows.some(other => other !== row && other.source.id === row.source.id &&
+      other.event.session_id === row.event.session_id && pathIdentity(other.event.cwd || other.source.cwd) === pathIdentity(row.event.cwd || row.source.cwd) &&
+      (other.telemetry?.startedAt > start || other.telemetry?.startedAt === start &&
+        other.telemetry?.startSequence > row.telemetry?.startSequence))) return {...row, taskState: 'unknown'};
+    return row;
   });
 }
 

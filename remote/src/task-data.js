@@ -8,6 +8,14 @@ function normalizeTask(value) {
     return input;
   };
   const result = {state: value.state, sequence: value.sequence, model: text(value.model || '')};
+  if (value.startedAt !== undefined) {
+    if (!Number.isFinite(value.startedAt) || value.startedAt < 0 || value.startedAt > 4102444800) throw new Error('Invalid task start time');
+    result.startedAt = value.startedAt;
+  }
+  if (value.startSequence !== undefined) {
+    if (!Number.isSafeInteger(value.startSequence) || value.startSequence < 0 || value.startSequence > value.sequence) throw new Error('Invalid round start sequence');
+    result.startSequence = value.startSequence;
+  }
   const usage = value.usage;
   if (usage !== undefined) {
     if (!usage || typeof usage.complete !== 'boolean' || !Array.isArray(usage.segments) || usage.segments.length > 16) throw new Error('Invalid task usage');

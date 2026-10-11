@@ -7,7 +7,7 @@ const crypto = require('node:crypto');
 const CONTROL_FILE = 'broker-privacy.json';
 const DEFAULT_RETENTION_DAYS = 7;
 const DAY = 86400000;
-const CACHE_NAME = /^(?:broker-state(?:-v(?:[2-9]|10))?\.json(?:\.\d+\.[a-f0-9]{12}\.tmp)?|broker-token)$/u;
+const CACHE_NAME = /^(?:broker-state(?:-v(?:[2-9]|10|11))?\.json(?:\.\d+\.[a-f0-9]{12}\.tmp)?|broker-token)$/u;
 
 function retentionDays(value) {
   if (!Number.isInteger(value) || value < 1 || value > 30) throw new Error(t('缓存保留天数必须为 1–30 的整数'));

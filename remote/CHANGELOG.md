@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.8
+
+- 区分历史回放与实时活动，记录明确的轮次开始时间；采集器重启状态带有新的生命周期标识。
+- 支持主扩展 0.8.10 的旧状态重新确认与同一对话新轮次自动已读。
+- Distinguish replayed activity from live events and preserve explicit round start times across usage updates.
+
 ## 0.5.7
 
 - 验证 Python 3.8+ 运行时后启动采集与 Hook 操作；Windows 优先使用真实安装，自动回退失败候选。

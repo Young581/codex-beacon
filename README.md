@@ -6,7 +6,7 @@
 
 Track Codex tasks by project in VS Code with colored status lights, token usage, estimated API costs and completion alerts. [Read the full English guide →](README.en.md)
 
-基于 [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier) 的 MIT 开源项目，包含 Windows PowerShell 路径修复和安装辅助脚本。当前代码版本为主扩展 **0.8.9**、采集器 **0.5.7**，支持音量调节、分场景音效、对话分组与轮次显示，并将常用操作集中到仪表盘“管理与设置”。市场安装版本请以扩展详情为准，最新修复版可从 Releases 获取。
+基于 [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier) 的 MIT 开源项目，包含 Windows PowerShell 路径修复和安装辅助脚本。当前代码版本为主扩展 **0.8.10**、采集器 **0.5.8**，支持音量调节、分场景音效、对话分组与轮次显示，并将常用操作集中到仪表盘“管理与设置”。市场安装版本请以扩展详情为准，最新修复版可从 Releases 获取。
 
 ## 当前功能
 
@@ -93,7 +93,7 @@ Windows 勿扰模式、通知权限和静音设置可能影响实际提醒。首
 
 ## 运行时与启动修复
 
-0.8.9 在启动采集前验证真实 Python 3.8+ 和所需标准库，自动尝试其他可用候选，并让采集、测试和 Hook 命令复用验证后的运行时。没有可用运行时时显示安装、配置及重启步骤。退出码 101 表示启动失败，单凭它不能判断 Codex Home 配置有误。已使用真实返回 101 的 Windows 程序验证自动回退，并通过最终 VSIX 的隔离安装测试。
+0.8.10 在启动采集前验证真实 Python 3.8+ 和所需标准库，自动尝试其他可用候选，并让采集、测试和 Hook 命令复用验证后的运行时。没有可用运行时时显示安装、配置及重启步骤。退出码 101 表示启动失败，单凭它不能判断 Codex Home 配置有误。已使用真实返回 101 的 Windows 程序验证自动回退，并通过最终 VSIX 的隔离安装测试。
 
 通知和任务栏辅助进程统一通过 Windows 系统目录内的 PowerShell 绝对路径启动，修复 VS Code 继承的 PATH 缺少 PowerShell 时出现的 `spawn powershell.exe ENOENT`。没有修改系统 PATH，也没有放宽通信认证。
 
@@ -116,6 +116,8 @@ python -B build.py --output dist
 真实 VS Code 宿主测试按 [宿主测试说明](packaging/README.md) 使用独立用户数据和合成会话。仓库提供 Windows CI 工作流，用于检查与生成可下载的构建产物。
 
 ## 项目任务与费用
+
+重开 VS Code 或重启采集器后，历史“进行中／等待处理”显示为“状态未确认”，收到新的活动事件后再恢复对应状态；明确的完成、失败和取消结果保留。新一轮请求开始时，自动将同一项目、来源和对话之前轮次的提醒标为已读，保留历史与用量，并取消旧提醒的排队播放。当前轮次与其他对话保持未读状态。
 
 侧栏 **Codex Beacon → 任务** 默认按项目目录与来源分组，同名但目录或来源不同的项目保持独立，本窗口项目优先。每轮请求是一条任务，不代表整个项目或后台作业；点击打开会话，悬停查看完整目录、轮次、模型与用量。标题栏的分组按钮可切回原通知列表。
 

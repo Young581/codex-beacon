@@ -120,6 +120,7 @@ async function activate(context) {
       catch (error) { policy[key] = ''; log(error.message); }
     }
     return {id: client.clientId, label: clean(`${project} · ${environment}`, 200),
+      collectionEpoch: String(sourceStatus?.status?.collectionEpoch || ''), collectionState: sourceStatus?.status?.state || '',
       sourceId: sourceStatus?.source?.id || '', workspaceUri: (vscode.workspace.workspaceFile || folder)?.toString() || '',
       workspaceCwd: cwd, workspaceCwds: paths, focused: vscode.window.state.focused, routeUri: '', policy, language: getLanguage()};
   }

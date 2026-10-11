@@ -25,6 +25,8 @@
 
 ### 安装与使用
 
+重开窗口或重启采集器后，旧的进行中／等待处理状态需等待新的活动事件确认；明确的完成、失败与取消结果保留。同一项目和对话开始新一轮时，之前轮次的提醒自动已读，历史与用量保留。当前轮次和其他对话的提醒不受影响。
+
 主扩展 ID：`Young581.codex-beacon`。要求 **Windows x64、VS Code 1.96+、Python 3.8+**，以及在受信任文件夹中运行的 Codex 扩展。
 
 本机安装主扩展即可。点击右下角 **Codex** 或运行 **Codex Beacon: 打开仪表盘**，即可打开管理面板。命令面板中的 **测试本机弹窗和声音** 可检查提醒。
@@ -80,6 +82,8 @@ Track Codex tasks by project and conversation in VS Code and get alerts when a r
 Use **Management and settings → Alerts and display → Notification sound volume** to set 0–100% volume for all notifications and previews. 0% mutes sound; the default is 100%. System sounds and custom WAV/MP3 use the same level without changing system or other application volumes. The setting `codexBeacon.soundVolume` takes effect immediately.
 
 ### Getting started
+
+After a window or collector restarts, saved running/waiting states require fresh activity evidence; completed, failed and canceled results remain final. Starting a new round reads earlier-round reminders in the same project and conversation while retaining history and usage. Current-round reminders and other conversations are unaffected.
 
 Install **Codex Beacon**, ID `Young581.codex-beacon`, on **Windows x64 with VS Code 1.96+ and Python 3.8+**. Open a trusted project folder with the Codex extension. Click the **Codex** status-bar button to open the dashboard, or run **Open dashboard** from the command palette.
 

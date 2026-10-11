@@ -6,7 +6,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { spawn } = require('node:child_process');
 const { EventEmitter } = require('node:events');
-const { NotificationStore, BatchScheduler, validateSource, validateEvent, formatBatch, BROKER_PROTOCOL_VERSION } = require('./broker-core');
+const { NotificationStore, BatchScheduler, validateSource, validateEvent, formatBatch, BROKER_PROTOCOL_VERSION, turnKey } = require('./broker-core');
 const {resolveSoundFile, resolveSoundVolume, validateSoundVolume} = require('./sound');
 const { WindowRegistry } = require('./routing');
 const { notificationOptions } = require('./presentation');
@@ -153,6 +153,8 @@ function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNo
   const clients = new Set();
   const windows = new WindowRegistry(now);
   const observedBy = new Map();
+  // Live evidence belongs to connected observers, never to persisted history.
+  const confirmedTurns = new Map();
   const mutedUntil = new Map();
   // Interaction cancels these events for their entire remaining delivery lifetime.
   // A retry or a long batch delay must not revive them when the window mute expires.
@@ -163,7 +165,8 @@ function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNo
   const targetFor = record => windows.select(record, observedBy.get(record.key));
   const annotated = record => {
     const target = targetFor(record);
-    return {...record, targetWindowId: target?.id || '', targetWindowLabel: target?.label || '', notificationLanguage: target?.language || 'zh-CN'};
+    return {...record, taskConfirmed: !!confirmedTurns.get(turnKey(record))?.size,
+      targetWindowId: target?.id || '', targetWindowLabel: target?.label || '', notificationLanguage: target?.language || 'zh-CN'};
   };
   function effectiveOptions(record, original) {
     const target = targetFor(record);
@@ -231,6 +234,12 @@ function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNo
     }
   });
   store.on('changed', () => broadcast({ type: 'historyChanged' }));
+  store.on('read', keys => {
+    const read = new Set(keys);
+    scheduler.cancel(record => read.has(record.key));
+    native.cancel?.(keys);
+    for (const key of keys) silencedKeys.add(key);
+  });
   store.on('event', (record, options) => {
     deliveryOptions.set(record.key, options);
     const target = targetFor(record);
@@ -326,7 +335,13 @@ function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNo
     }
     switch (request.op) {
       case 'window': case 'registerWindow': case 'updateWindow': {
+        const previous = windows.windows.get(client.id);
         const changed = windows.update(client.id, request.window);
+        const current = windows.windows.get(client.id);
+        if (current.collectionEpoch !== previous?.collectionEpoch || current.sourceId !== previous?.sourceId ||
+            current.collectionState && current.collectionState !== 'connected') {
+          for (const [key, observers] of confirmedTurns) { observers.delete(client.id); if (!observers.size) confirmedTurns.delete(key); }
+        }
         store.rememberWindows(targetFor);
         if (changed) broadcast({type: 'historyChanged'});
         return {registered: true, clientId: client.id};
@@ -338,11 +353,21 @@ function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNo
         }
         const receipt = store.add(request.source, event, request.options);
         if (receipt.ignored) return receipt;
+        if (event.session_id && event.turn_id && event.replayed !== true && (!receipt.duplicate || event.replayed === false)) {
+          const record = store.entries.find(row => row.key === receipt.key);
+          if (record) {
+            const key = turnKey(record);
+            if (!confirmedTurns.has(key)) confirmedTurns.set(key, new Set());
+            confirmedTurns.get(key).add(client.id);
+          }
+        }
         if (!observedBy.has(receipt.key)) observedBy.set(receipt.key, new Set());
         observedBy.get(receipt.key).add(client.id);
         store.rememberWindows(targetFor);
         if (receipt.duplicate) broadcast({type: 'historyChanged'});
         const retained = new Set(store.entries.map(record => record.key));
+        const retainedTurns = new Set(store.entries.map(turnKey));
+        for (const key of confirmedTurns.keys()) if (!retainedTurns.has(key)) confirmedTurns.delete(key);
         for (const map of [observedBy, deliveryOptions]) for (const key of map.keys()) if (!retained.has(key)) map.delete(key);
         for (const set of [forcedTests, silencedKeys]) for (const key of set) if (!retained.has(key)) set.delete(key);
         return receipt;
@@ -358,7 +383,7 @@ function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNo
         finally {
           if (store.control.paused) {
             scheduler.cancel(); native.cancelAll?.();
-            observedBy.clear(); deliveryOptions.clear(); forcedTests.clear(); silencedKeys.clear(); mutedUntil.clear();
+            observedBy.clear(); confirmedTurns.clear(); deliveryOptions.clear(); forcedTests.clear(); silencedKeys.clear(); mutedUntil.clear();
             broadcast({type: 'privacyReset'});
           }
         }
@@ -378,7 +403,7 @@ function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNo
       case 'focusEntry': return routeEntry(request.key, true);
       case 'attentionBind': return attentionRequest('bind', {id: client.id, marker: request.marker, pid: request.pid, executable: request.executable});
       case 'attentionUpdate': return attentionRequest('update', {id: client.id, count: request.count, needsDecision: request.needsDecision, flash: request.flash});
-      case 'clear': { const result = store.clear(); scheduler.cancel(); observedBy.clear(); deliveryOptions.clear(); forcedTests.clear(); silencedKeys.clear(); return result; }
+      case 'clear': { const result = store.clear(); scheduler.cancel(); observedBy.clear(); confirmedTurns.clear(); deliveryOptions.clear(); forcedTests.clear(); silencedKeys.clear(); return result; }
       case 'test': {
         const source = validateSource(request.source);
         const event = { version: 1, id: crypto.randomUUID(), type: 'test', timestamp: now() / 1000,
@@ -404,7 +429,11 @@ function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNo
     socket.on('error', () => {});
     socket.on('close', () => {
       clearTimeout(client.helloTimer); clients.delete(client);
-      if (client.id) { windows.remove(client.id); mutedUntil.delete(client.id); broadcast({type: 'historyChanged'}); }
+      if (client.id) {
+        windows.remove(client.id); mutedUntil.delete(client.id);
+        for (const [key, observers] of confirmedTurns) { observers.delete(client.id); if (!observers.size) confirmedTurns.delete(key); }
+        broadcast({type: 'historyChanged'});
+      }
       if (client.id && attention && !stopping) void attention.request('release', {id: client.id}).catch(() => {});
       scheduleIdle();
     });
@@ -437,7 +466,7 @@ function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNo
   server.on('listening', () => {
     if (stopping) return;
     try {
-      const legacyFileName = ['broker-state-v9.json', 'broker-state-v8.json', 'broker-state-v7.json', 'broker-state-v6.json', 'broker-state-v5.json', 'broker-state-v4.json', 'broker-state-v3.json', 'broker-state-v2.json', 'broker-state.json']
+      const legacyFileName = ['broker-state-v10.json', 'broker-state-v9.json', 'broker-state-v8.json', 'broker-state-v7.json', 'broker-state-v6.json', 'broker-state-v5.json', 'broker-state-v4.json', 'broker-state-v3.json', 'broker-state-v2.json', 'broker-state.json']
         .find(file => fs.existsSync(path.join(storage, file)));
       store.reload({legacyFileName});
       if (store.needsMigration) { store.save(); store.needsMigration = false; }

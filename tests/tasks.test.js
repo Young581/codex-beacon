@@ -104,6 +104,74 @@ test('active unconnected tasks are explicitly unconfirmed; hook approval overrid
   delete approval.event.task;
   assert.equal(taskRows([running, approval])[0].taskState, 'waiting_approval');
 });
+
+test('reconnected project windows do not confirm saved activity; terminal results stay final', () => {
+  for (const state of ['running', 'waiting_input', 'waiting_async', 'waiting_approval']) {
+    assert.equal(taskRows([{...row(state, 10, state), taskConfirmed: false}])[0].taskState, 'unknown');
+    assert.equal(taskRows([{...row(state, 10, state), taskConfirmed: true}])[0].taskState, state);
+  }
+  for (const state of ['completed', 'failed', 'cancelled']) {
+    assert.equal(taskRows([{...row(state, 10, state), taskConfirmed: false}])[0].taskState, state);
+  }
+  const previous = row('previous', 10); previous.event.task.startedAt = 1;
+  const next = row('next', 20); next.event.turn_id = 'next-turn'; next.event.task.startedAt = 2;
+  assert.equal(taskRows([previous, next]).find(item => item.key === previous.key).taskState, 'unknown');
+  const other = {...next, event: {...next.event, session_id: 'other-session'}};
+  assert.equal(taskRows([previous, other]).find(item => item.key === previous.key).taskState, 'running');
+});
+
+test('starting a new round reads only earlier reminders in the same project, source and conversation', () => {
+  const store = new NotificationStore(path.join(__dirname, '.broker-test-data', crypto.randomUUID()));
+  const base = Date.now() / 1000;
+  const first = {...event('first', 'done', 10, 'completed'), timestamp: base - 5};
+  first.task.startedAt = base - 10;
+  store.add(source, first, {});
+  const otherChat = {...first, id: 'other-chat', session_id: 'other-chat'};
+  store.add(source, otherChat, {});
+  store.add({...source, id: 'other-source'}, {...first, id: 'other-source'}, {});
+  store.add(source, {...first, id: 'other-project', cwd: '/another/project'}, {});
+  const next = {...event('next', 'task', 30), timestamp: base, turn_id: 'new-turn'};
+  next.task.startedAt = base;
+  store.add(source, next, {});
+  const history = store.history();
+  assert.equal(history.entries.find(item => item.event.id === 'first').read, true);
+  assert.equal(history.unread, 3);
+  store.add(source, {...event('current-question', 'question', 40, 'waiting_input'), timestamp: base + 1, turn_id: 'new-turn',
+    task: {...next.task, sequence: 40, state: 'waiting_input'}}, {});
+  assert.equal(store.history().unread, 4, 'The new round keeps its own reminders unread');
+  let lateAlerts = 0; store.on('event', () => lateAlerts++);
+  store.add(source, {...first, id: 'late-first-done', timestamp: base + 2}, {sound: true, desktop: true});
+  assert.equal(lateAlerts, 0, 'Delayed old-round notifications must not sound or become unread again');
+  assert.equal(new NotificationStore(store.storage).history().unread, 4);
+  store.add(source, {...first, id: 'first-telemetry', type: 'task'}, {});
+  assert.equal(store.history().unread, 4, 'Out-of-order older rounds cannot read the current question');
+});
+
+test('usage-only updates without a round start do not auto-read and failed saves preserve unread reminders', () => {
+  const store = new NotificationStore(path.join(__dirname, '.broker-test-data', crypto.randomUUID()));
+  store.add(source, event('old', 'done', 10, 'completed'), {});
+  store.add(source, {...event('usage-only'), turn_id: 'next'}, {});
+  assert.equal(store.history().unread, 1);
+  const next = {...event('explicit-start', 'task', 40), turn_id: 'next', task: {...task(40), startedAt: Date.now() / 1000 + 1}};
+  const before = store.history(); const save = store.save;
+  store.save = () => {throw new Error('locked state file');};
+  assert.throws(() => store.add(source, next, {}), /locked/);
+  assert.deepEqual(store.history(), before);
+  store.save = save;
+});
+
+test('round start sequence orders starts with equal timestamps, regardless of arrival order', () => {
+  const store = new NotificationStore(path.join(__dirname, '.broker-test-data', crypto.randomUUID()));
+  const stamp = Date.now() / 1000;
+  const previous = {...event('equal-first', 'done', 20, 'completed'), timestamp: stamp,
+    task: {...task(20, 'completed'), startedAt: stamp, startSequence: 10}};
+  const next = {...event('equal-next', 'question', 40, 'waiting_input'), timestamp: stamp, turn_id: 'next-turn',
+    task: {...task(40, 'waiting_input'), startedAt: stamp, startSequence: 30}};
+  store.add(source, next, {});
+  store.add(source, previous, {});
+  assert.equal(store.history().unread, 1);
+  assert.equal(store.history().entries.find(record => record.event.id === previous.id).read, true);
+});
 test('cost splits cached and cache-write inputs, never bills reasoning output twice', () => {
   assert.equal(estimateCost({complete: true, segments: [segment()]}).amount, 0.00229);
   assert.equal(estimateCost({complete: true, segments: [{...segment(), reasoningOutput: 0}]}).amount, 0.00229);

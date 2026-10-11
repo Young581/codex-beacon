@@ -2,7 +2,7 @@
   "name": "codex-beacon",
   "displayName": "Codex Beacon",
   "description": "Track Codex tasks by project with a compact dashboard, colored states, token usage and completion alerts.",
-  "version": "0.8.9",
+  "version": "0.8.10",
   "publisher": "Young581",
   "license": "MIT",
   "engines": {

@@ -29,6 +29,10 @@ function normalizeEvent(value) {
     record.originator = value.originator;
   }
   if (value.type === 'heartbeat' && typeof value.privacyPaused === 'boolean') record.privacyPaused = value.privacyPaused;
+  if (value.replayed !== undefined) {
+    if (typeof value.replayed !== 'boolean') return null;
+    record.replayed = value.replayed;
+  }
   if (value.task !== undefined) {
     try { record.task = normalizeTask(value.task); } catch { return null; }
   }

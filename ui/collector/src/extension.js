@@ -34,7 +34,7 @@ function createController(vscode, context, dependencies = {}) {
   let autoHookPromise = null;
   const hookAttempts = new Set();
   let currentStatus = {state: 'stopped', messageSpec: describe('Collector is not started.')};
-  const renderedStatus = () => ({...currentStatus, message: renderMessage(currentStatus.messageSpec),
+  const renderedStatus = () => ({...currentStatus, collectionEpoch: generation, message: renderMessage(currentStatus.messageSpec),
     approvalHook: {...hookState, autoEnabled: config?.autoConfigureApprovalHook !== false}});
   const operations = new Set();
   const log = message => output.appendLine(`${new Date().toISOString()} ${message}`);

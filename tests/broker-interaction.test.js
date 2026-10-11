@@ -17,6 +17,68 @@ const storage = label => path.resolve(__dirname, 'runtime', label + '-' + crypto
 // These cases exercise delivery cancellation, so explicitly enable done alerts.
 const doneDeliveryPolicy = {soundOnDone: true, desktopOnDone: true};
 
+test('saved running tasks require fresh observer evidence after a window reconnects', {timeout: 20000}, async () => {
+  const directory = storage('live-evidence');
+  const client = new BrokerClient(directory, path.resolve(__dirname, '../ui/lib/broker.js'));
+  const saved = {...event('saved-running'), type: 'task', turn_id: 'saved-turn', replayed: true,
+    task: {state: 'running', sequence: 10, model: '', usage: {complete: false, segments: []}}};
+  const store = new NotificationStore(directory, {fileName: `broker-state-v${BROKER_PROTOCOL_VERSION}.json`});
+  store.add(source, saved, {});
+  const broker = startBroker({storage: directory, pipe: client.pipe, noNative: true});
+  await once(broker.server, 'listening');
+  let next;
+  const register = value => value.request('window', {window: {id: value.clientId, label: 'fixture',
+    sourceId: source.id, workspaceCwd: '/a', workspaceCwds: ['/a'], workspaceUri: '', focused: false, policy: {}}});
+  const state = async value => require('../ui/lib/tasks').taskRows((await value.request('history')).entries)[0].taskState;
+  try {
+    await client.connect(); await register(client);
+    assert.equal(await state(client), 'unknown');
+    await client.request('event', {source, event: saved, options: {}});
+    assert.equal(await state(client), 'unknown', 'Replayed starts must not revive saved activity');
+    const fresh = {...saved, replayed: false, task: {...saved.task, sequence: 20}};
+    await client.request('event', {source, event: fresh, options: {}});
+    assert.equal(await state(client), 'running');
+    next = new BrokerClient(directory, path.resolve(__dirname, '../ui/lib/broker.js'));
+    await next.connect(); await register(next);
+    assert.equal(await state(next), 'running', 'Another connected observer preserves live evidence');
+    client.dispose();
+    for (let attempt = 0; attempt < 50 && await state(next) !== 'unknown'; attempt++) await pause(20);
+    assert.equal(await state(next), 'unknown', 'Closing the reporting window invalidates its evidence');
+    await next.request('event', {source, event: {...fresh, replayed: true, task: {...fresh.task, sequence: 30}}, options: {}});
+    assert.equal(await state(next), 'unknown');
+    await next.request('event', {source, event: {...fresh, replayed: false, task: {...fresh.task, sequence: 40}}, options: {}});
+    assert.equal(await state(next), 'running');
+  } finally {client.dispose(); next?.dispose(); broker.close();}
+});
+
+test('new-round acknowledgement cancels queued old reminders without muting the current round', {timeout: 12000}, async () => {
+  const directory = storage('round-delivery');
+  const client = new BrokerClient(directory, path.resolve(__dirname, '../ui/lib/broker.js'));
+  const delivered = [];
+  const native = new EventEmitter(); native.close = () => {}; native.cancel = () => {};
+  native.deliver = async (batch, latest) => {const current = latest(); if (current) delivered.push(current);};
+  const broker = startBroker({storage: directory, pipe: client.pipe, nativeNotifier: native, noNative: true,
+    batchOptions: {batchMs: 200, intervalMs: 10}});
+  await once(broker.server, 'listening');
+  try {
+    await client.connect();
+    await client.request('window', {window: {id: client.clientId, sourceId: source.id, workspaceCwd: '/a',
+      workspaceCwds: ['/a'], focused: false, policy: doneDeliveryPolicy}});
+    const base = Date.now() / 1000;
+    const old = {...event('old-round'), timestamp: base - 1, turn_id: 'old-turn',
+      task: {state: 'completed', sequence: 10, startedAt: base - 2, model: ''}};
+    const oldReceipt = await client.request('event', {source, event: old, options: {sound: true, desktop: true}});
+    const next = {...event('new-round'), timestamp: base, type: 'task', turn_id: 'new-turn',
+      task: {state: 'running', sequence: 20, startedAt: base, model: ''}};
+    await client.request('event', {source, event: next, options: {}});
+    const current = await client.request('event', {source, event: {...next, id: 'new-question', type: 'question',
+      task: {...next.task, state: 'waiting_input', sequence: 30}}, options: {sound: true, desktop: true}});
+    await pause(350);
+    assert.ok(!delivered.some(batch => batch.keys.includes(oldReceipt.key)));
+    assert.ok(delivered.some(batch => batch.keys.includes(current.key)), 'Current reminders must remain audible');
+  } finally {client.dispose(); broker.close();}
+});
+
 test('custom sounds follow live destination policy and an explicit muted-window preview uses its selected file', {timeout: 12000}, async () => {
   const directory = storage('custom-sound-policy');
   const client = new BrokerClient(directory, path.resolve(__dirname, '../ui/lib/broker.js'));
@@ -269,8 +331,8 @@ test('event sounds follow the destination window, live edits, inheritance and me
   } finally {a.dispose(); b.dispose(); broker.close();}
 });
 
-test('v10 migration prefers v9, falls back through older states, and never rewrites a live older broker state', async () => {
-  for (const legacyFileName of ['broker-state-v9.json', 'broker-state-v8.json', 'broker-state-v7.json', 'broker-state-v6.json', 'broker-state-v5.json', 'broker-state-v4.json', 'broker-state-v3.json', 'broker-state-v2.json', 'broker-state.json']) {
+test('v11 migration prefers v10, falls back through older states, and never rewrites a live older broker state', async () => {
+  for (const legacyFileName of ['broker-state-v10.json', 'broker-state-v9.json', 'broker-state-v8.json', 'broker-state-v7.json', 'broker-state-v6.json', 'broker-state-v5.json', 'broker-state-v4.json', 'broker-state-v3.json', 'broker-state-v2.json', 'broker-state.json']) {
     const directory = storage('migration');
     const legacy = new NotificationStore(directory, {fileName: legacyFileName});
     legacy.add(source, event('legacy'), {desktop: false, sound: false});
@@ -287,13 +349,13 @@ test('v10 migration prefers v9, falls back through older states, and never rewri
     const broker = startBroker({storage: directory, pipe: client.pipe, noNative: true});
     await once(broker.server, 'listening');
     try {
-      assert.equal(path.basename(broker.store.file), 'broker-state-v10.json');
+      assert.equal(path.basename(broker.store.file), 'broker-state-v11.json');
       assert.equal(broker.store.needsMigration, false);
       assert.deepEqual(broker.store.entries.map(record => record.event.id), ['legacy']);
       broker.store.markRead({});
       assert.deepEqual(fs.readFileSync(legacy.file), oldBytes);
       legacy.add(source, event('late-legacy'), {desktop: false, sound: false});
-      const reopened = new NotificationStore(directory, {fileName: 'broker-state-v10.json', legacyFileName});
+      const reopened = new NotificationStore(directory, {fileName: 'broker-state-v11.json', legacyFileName});
       assert.equal(reopened.entries.length, 1);
       assert.equal(reopened.history().unread, 0);
     } finally {client.dispose(); broker.close();}

@@ -9,12 +9,43 @@ const privacy = require('./privacy-storage');
 const {normalizeTask} = require('../collector/src/task-data');
 const {destination} = require('./project-window');
 const {validateSoundFile, validateSoundVolume} = require('./sound');
+const {normalizePath} = require('./routing');
 
 const TYPES = new Set(['done', 'approval', 'question', 'test', 'task']);
 const TITLES = { done: 'Codex 本轮已回复', approval: 'Codex 等待审批', question: 'Codex 等待回答', test: 'Codex 通知测试' };
 const MAX_HISTORY = 200;
 const MAX_SEEN = 5000;
-const BROKER_PROTOCOL_VERSION = 10;
+const BROKER_PROTOCOL_VERSION = 11;
+
+function conversationKey(record) {
+  return JSON.stringify([record.source.id, normalizePath(record.event.cwd || record.source.cwd || ''), record.event.session_id]);
+}
+function turnKey(record) { return JSON.stringify([conversationKey(record), record.event.turn_id]); }
+function readEarlierRounds(entries) {
+  const starts = new Map();
+  const turnStarts = new Map();
+  for (const record of entries) {
+    const startedAt = record.event.task?.startedAt;
+    if (!record.event.session_id || !record.event.turn_id || startedAt === undefined) continue;
+    const key = conversationKey(record);
+    const previous = starts.get(key);
+    const sequence = record.event.task.startSequence;
+    if (!previous || startedAt > previous.time || startedAt === previous.time && sequence > previous.sequence)
+      starts.set(key, {time: startedAt, sequence, turn: record.event.turn_id});
+    turnStarts.set(turnKey(record), {time: startedAt, sequence});
+  }
+  const readKeys = [];
+  const records = entries.map(record => {
+    const latest = starts.get(conversationKey(record));
+    if (record.read || record.event.type === 'test' || !latest || record.event.turn_id === latest.turn) return record;
+    const start = turnStarts.get(turnKey(record));
+    const time = start?.time ?? record.event.timestamp;
+    if (time > latest.time || time === latest.time && !(start?.sequence < latest.sequence)) return record;
+    readKeys.push(record.key);
+    return {...record, read: true};
+  });
+  return {records, readKeys};
+}
 
 function object(value, name) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${name} must be an object`);
@@ -59,6 +90,10 @@ function validateEvent(event) {
     originator: field(event.originator, 'event.originator', 64),
   };
   if (event.task !== undefined) result.task = normalizeTask(event.task);
+  if (event.replayed !== undefined) {
+    if (typeof event.replayed !== 'boolean') throw new Error('Invalid event replay flag');
+    result.replayed = event.replayed;
+  }
   if (event.session_title !== undefined) result.session_title = field(event.session_title, 'event.session_title', 160);
   if (event.type === 'task' && (!result.task || !result.session_id || !result.turn_id)) throw new Error('Invalid task identity');
   return result;
@@ -254,8 +289,11 @@ class NotificationStore extends EventEmitter {
       const record = {key, receivedAt: this.now(), source, event, read: true,
         ...(existing?.destination ? {destination: existing.destination} : {})};
       this.entries = existing ? this.entries.map((row, i) => i === index ? record : row) : [...this.entries, record].slice(-MAX_HISTORY);
+      const acknowledged = readEarlierRounds(this.entries);
+      this.entries = acknowledged.records;
       this.seen.add(key); this.seenAt.set(key, this.now()); this.trimSeen();
       try { this.save(); } catch (error) { this.entries = previous; this.seen = oldSeen; this.seenAt = oldSeenAt; throw error; }
+      if (acknowledged.readKeys.length) this.emit('read', acknowledged.readKeys);
       this.emit('changed');
       return {accepted: true, duplicate: false, key};
     }
@@ -265,12 +303,16 @@ class NotificationStore extends EventEmitter {
     const oldSeen = new Set(this.seen);
     const oldSeenAt = new Map(this.seenAt);
     this.entries = [...this.entries, record].slice(-MAX_HISTORY);
+    const acknowledged = readEarlierRounds(this.entries);
+    this.entries = acknowledged.records;
     this.seen.add(key);
     this.seenAt.set(key, this.now());
     this.trimSeen();
     try { this.save(); } catch (error) { this.entries = oldEntries; this.seen = oldSeen; this.seenAt = oldSeenAt; throw error; }
+    if (acknowledged.readKeys.length) this.emit('read', acknowledged.readKeys);
     this.emit('changed');
-    this.emit('event', record, options);
+    const saved = this.entries.find(entry => entry.key === key);
+    if (!saved.read) this.emit('event', saved, options);
     return { accepted: true, duplicate: false, key };
   }
 
@@ -452,4 +494,4 @@ class BatchScheduler extends EventEmitter {
   }
 }
 
-module.exports = { NotificationStore, BatchScheduler, validateSource, validateEvent, validateOptions, formatBatch, MAX_HISTORY, MAX_SEEN, BROKER_PROTOCOL_VERSION };
+module.exports = { NotificationStore, BatchScheduler, validateSource, validateEvent, validateOptions, formatBatch, MAX_HISTORY, MAX_SEEN, BROKER_PROTOCOL_VERSION, turnKey };
