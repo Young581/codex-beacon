@@ -27,10 +27,12 @@
 !lib/i18n.js
 !lib/installation.js
 !lib/ipc-security.js
+!lib/local-pipe.js
 !lib/navigation.js
 !lib/presentation.js
 !lib/privacy-storage.js
 !lib/privacy.js
+!lib/posix-notifier.js
 !lib/project-window.js
 !lib/read-tracking.js
 !lib/routing.js

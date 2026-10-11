@@ -12,6 +12,7 @@ const { WindowRegistry } = require('./routing');
 const { notificationOptions } = require('./presentation');
 const {loadIdentity, powershell} = require('./ipc-security');
 const {createSecureServer} = require('./secure-pipe');
+const {PosixNotifier} = require('./posix-notifier');
 
 const MAX_PACKET = 64 * 1024;
 const MAX_WRITE_QUEUE = 4 * 1024 * 1024;
@@ -148,7 +149,8 @@ function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNo
   }
   const identity = loadIdentity(storage);
   const store = new NotificationStore(storage, {fileName: `broker-state-v${BROKER_PROTOCOL_VERSION}.json`, now, initialize: false});
-  const native = nativeNotifier || new NativeNotifier({ disabled: noNative || process.env.CODEX_NOTIFIER_TEST_MODE === '1' });
+  const Notifier = process.platform === 'win32' ? NativeNotifier : PosixNotifier;
+  const native = nativeNotifier || new Notifier({ disabled: noNative || process.env.CODEX_NOTIFIER_TEST_MODE === '1' });
   let attention = attentionNotifier;
   const clients = new Set();
   const windows = new WindowRegistry(now);

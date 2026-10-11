@@ -1,4 +1,4 @@
-name: Windows checks and VSIX build
+name: Cross-platform checks and VSIX build
 
 on:
   push:
@@ -9,6 +9,43 @@ permissions:
   contents: read
 
 jobs:
+  posix:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      PYTHONUTF8: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Verify embedded collector
+        run: python -B packaging/sync-local-collector.py --check
+      - name: JavaScript regression checks
+        shell: bash
+        run: |
+          checks=()
+          for file in tests/*.js; do
+            [[ "$file" == tests/tls-runtime-smoke.js ]] || checks+=("$file")
+          done
+          node --test --experimental-test-isolation=none "${checks[@]}"
+      - name: Python collector checks
+        run: python -B tests/remote-collector.py
+      - name: Packaging checks
+        run: python -B tests/package-validation.py
+      - name: Settings helper checks
+        run: python -B test-configuration.py
+      - name: Real local TLS transport
+        run: node tests/tls-runtime-smoke.js
+      - name: Build VSIX packages
+        run: python -B build.py --output dist
   windows:
     runs-on: windows-latest
     env:

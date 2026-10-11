@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.0
+
+- 新增 Linux 桌面通知，复用 libnotify；“打开对话”沿用原有窗口路由，已读／删除后不再响应旧通知按钮。
+- Linux 复用 PipeWire／PulseAudio／FFmpeg 播放系统及 WAV／MP3 音效，支持独立音量、0% 静音、分场景设置与失效回退。
+- Unix 通信使用较短的私有套接字目录，修复长路径连接失败；保留双向 TLS 和证书校验。
+- 新增 macOS AppleScript／afplay 预览后端，兼容系统 LibreSSL；桌面通知权限、音效和真机窗口操作尚待 Mac 验收。
+- 增加 Linux／macOS 持续集成；在 Ubuntu 24.04 Wayland 桌面验证真实 VS Code 宿主、系统通知接口和音效。
+- Add Linux native alerts/audio, short private Unix socket paths and a macOS preview backend; retain existing Windows behavior.
+
 ## 0.8.10
 
 - 重开窗口或重启采集器后，历史“进行中／等待处理”需由新的活动事件重新确认；保留明确的完成、失败和取消结果。

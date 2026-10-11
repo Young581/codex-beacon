@@ -6,11 +6,11 @@ Track Codex tasks by project in VS Code with colored status lights, token usage,
 
 为 VS Code 中的 Codex 提供按项目分组的任务列表、状态灯、token 与费用估算，以及完成提醒。[阅读完整中文说明 →](README.md)
 
-Based on the MIT-licensed [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier), with Windows PowerShell path fixes and installation helpers. The current code versions are **Codex Beacon 0.8.10** and **Collector 0.5.8**. Features include sound volume, sounds for different events, conversation grouping, numbered rounds and a dashboard with common management controls. Check the installed extension's details for its Marketplace version; the latest fixes are available from Releases.
+Based on the MIT-licensed [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier), with Windows PowerShell path fixes and installation helpers. The current code versions are **Codex Beacon 0.9.0** and **Collector 0.5.9**. Features include sound volume, sounds for different events, conversation grouping, numbered rounds and a dashboard with common management controls. Check the installed extension's details for its Marketplace version; the latest fixes are available from Releases.
 
 ## Features
 
-- Alerts when each Codex response ends, with optional Windows desktop notifications and sound.
+- Alerts when each Codex response ends, with optional system desktop notifications and sound.
 - Window title and taskbar indicators to help locate windows needing attention.
 - Tasks grouped by project directory and source, with one task per request round; switch to unread/read notification history when needed.
 - Sidebar task buttons open the corresponding Codex conversation and mark its reminder read after successful navigation. Project-level buttons switch to or reopen local, SSH or container project windows.
@@ -21,13 +21,13 @@ Based on the MIT-licensed [lengmo1996/codex-vscode-notifier](https://github.com/
 - A dashboard management page for language, sound, conversation opening location, approval alerts, tests, connection status, history and privacy cleanup.
 - Chinese and English interfaces.
 
-A completed response does not mean a deployment, training run or other background job has finished. Local Windows operation has been verified. Live SSH, container and WSL environments were not verified as part of this repository's current fixes.
+A completed response does not mean a deployment, training run or other background job has finished. Local Windows and Ubuntu 24.04 desktop operation have been verified. macOS is a preview requiring physical desktop acceptance. Full SSH/container/WSL integration requires separate verification. See [platform support](docs/platforms.md).
 
 ## Installation
 
-Requires **Windows x64, VS Code 1.96+ and Python 3.8+**.
+Requires **Windows or a Linux desktop (macOS preview), VS Code 1.96+ and Python 3.8+**. Linux/macOS default to `python3`. Linux notifications need `notify-send`; audio needs `pw-play`, `paplay` or `ffplay`.
 
-Install [Codex Beacon](https://marketplace.visualstudio.com/items?itemName=Young581.codex-beacon) from the VS Code Marketplace, published by **Young581**. Local Windows collection is included. For SSH/container projects, install [Codex Beacon Collector](https://marketplace.visualstudio.com/items?itemName=Young581.codex-beacon-collector) in the target environment, or use **Check / install components for this environment** in the main extension to locate it.
+Install [Codex Beacon](https://marketplace.visualstudio.com/items?itemName=Young581.codex-beacon) from the VS Code Marketplace, published by **Young581**. Local collection is included. For SSH/container projects, install [Codex Beacon Collector](https://marketplace.visualstudio.com/items?itemName=Young581.codex-beacon-collector) in the target environment, or use **Check / install components for this environment** in the main extension to locate it.
 
 Alternatively, download the main extension and collector VSIX files from [Releases](https://github.com/Young581/codex-beacon/releases) and choose **Install from VSIX** in VS Code's Extensions view. You can also build them locally:
 
@@ -59,7 +59,7 @@ Python is not bundled or automatically downloaded. If no usable runtime is found
 
 When tasks are idle, run **Developer: Reload Window**. After an upgrade, if the shared notification process still uses old code, close all VS Code windows, wait 10 seconds and reopen them. Run **Test desktop notification and sound** to verify alerts.
 
-Windows Do Not Disturb, notification permissions and mute settings may affect alerts. When taskbar status is first enabled, the extension prepends `${codexBeaconNotification}${separator}` to the existing `window.title` template.
+System Do Not Disturb, notification permissions and mute settings may affect alerts. When taskbar status is first enabled, the extension prepends `${codexBeaconNotification}${separator}` to the existing `window.title` template.
 
 ## Dashboard
 
@@ -85,11 +85,11 @@ Use **Management and settings → Alerts and display → Notification sound volu
 
 Open **Management and settings → Alerts and display → Sound scenario**, select Common, Completion, Question or Approval, then choose a local WAV/MP3 file, preview it or restore the default. You can also run **Codex Beacon: Custom notification sound** and select the scenario. Preview plays sound without a desktop popup, including when the global sound switch is off. A preview adds a test record to history.
 
-Event settings are `codexBeacon.soundFileOnDone`, `codexBeacon.soundFileOnQuestion` and `codexBeacon.soundFileOnApproval`. An empty event setting inherits `codexBeacon.soundFile`; an empty common sound uses the Windows system sound. Each event setting is saved independently, so resetting one does not change the others. Notification playback still follows the global sound switch and the completion sound switch.
+Event settings are `codexBeacon.soundFileOnDone`, `codexBeacon.soundFileOnQuestion` and `codexBeacon.soundFileOnApproval`. An empty event setting inherits `codexBeacon.soundFile`; an empty common sound uses the system sound. Each event setting is saved independently, so resetting one does not change the others. Notification playback still follows the global sound switch and the completion sound switch.
 
-You can also set `codexBeacon.soundFile` to a local absolute path in user settings. SSH/container projects use the audio on your Windows computer. Changes need no reload. When first upgrading from an older version, close all VS Code windows when tasks are idle, wait 10 seconds and reopen them to update the shared notification process.
+You can also set `codexBeacon.soundFile` to a local absolute path in user settings. SSH/container projects use the audio on your local computer. Changes need no reload. When first upgrading from an older version, close all VS Code windows when tasks are idle, wait 10 seconds and reopen them to update the shared notification process.
 
-A deleted or undecodable audio file falls back to the system sound and shows a warning once. Windows may not support some unusual WAV/MP3 encodings; use PCM WAV or a common MP3 encoding. Merged reminders play once, choosing the highest-priority event with sound enabled: approval, question, then completion. Choosing a file does not enable a disabled global sound switch. Audio files stay local and are not packaged or uploaded.
+A deleted or undecodable audio file falls back to the system sound and shows a warning once. System players may not support some unusual WAV/MP3 encodings; use PCM WAV or a common MP3 encoding. Merged reminders play once, choosing the highest-priority event with sound enabled: approval, question, then completion. Choosing a file does not enable a disabled global sound switch. Audio files stay local and are not packaged or uploaded.
 
 ## Runtime and startup fixes
 
@@ -113,7 +113,7 @@ python -B test-configuration.py
 python -B build.py --output dist
 ```
 
-Real VS Code extension-host tests use isolated user data and synthetic conversations as described in the [host-test guide](packaging/README.md). The repository's Windows CI runs checks and creates downloadable build artifacts.
+Real VS Code extension-host tests use isolated user data and synthetic conversations as described in the [host-test guide](packaging/README.md). CI runs Windows, Linux and macOS checks and creates downloadable build artifacts. macOS desktop acceptance remains pending.
 
 ## Project tasks and estimated costs
 

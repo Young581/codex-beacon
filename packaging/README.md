@@ -54,3 +54,9 @@ isolated run directory. Exit code zero and `failed: 0` are both required for a s
 
 This verifies the **local** VS Code extension host. It does not verify an SSH/container extension
 host or whether a person visually saw a Windows notification. Those need separate smoke tests.
+
+The Python launcher supports Windows, Linux and macOS. On Linux, use a logged-in
+desktop with its DISPLAY/Wayland, user D-Bus and audio environment for native
+acceptance. An SSH session alone may not inherit these variables. Headless or
+automated macOS checks do not establish visible notifications or audible sound.
+See [platform support](../docs/platforms.md) for tested environments and dependencies.

@@ -53,7 +53,7 @@ class SoundSettings {
     const file = this.config().get(soundKey(type), '');
     const choice = await this.vscode.window.showQuickPick([
       {label: t('选择音频文件（WAV／MP3）'), value: 'file', description: file ? path.basename(file) :
-        t(type === 'default' ? 'Windows 系统默认提示音' : '跟随通用提示音')},
+        t(type === 'default' ? '系统默认提示音' : '跟随通用提示音')},
       {label: t('试听当前提示音'), value: 'preview'},
       {label: t(type === 'default' ? '恢复系统默认提示音' : '跟随通用提示音'), value: 'reset'},
       ...(type === 'default' ? ['done', 'question', 'approval'].map(value => ({

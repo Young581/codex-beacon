@@ -414,7 +414,7 @@ function formatBatch(items) {
   const audible = items.filter(item => item.options.sound && validateSoundVolume(item.options.soundVolume) > 0)
     .sort((a, b) => priority[a.record.event.type] - priority[b.record.event.type]);
   const soundFile = audible[0]?.options.soundFile;
-  return { title, body: lines.join('\n'), sound: audible.length > 0,
+  return { title, language: items[0]?.record.notificationLanguage === 'en' ? 'en' : 'zh-CN', body: lines.join('\n'), sound: audible.length > 0,
     soundVolume: validateSoundVolume(audible[0]?.options.soundVolume),
     ...(soundFile ? {soundFile} : {}), desktop: items.some(item => item.options.desktop), keys: visibleItems.map(item => item.record.key) };
 }

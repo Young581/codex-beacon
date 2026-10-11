@@ -11,14 +11,17 @@ runtime = Path(launch['runtime'])
 environment = dict(os.environ)
 environment.pop('ELECTRON_RUN_AS_NODE', None)
 environment.update(launch['env'])
-startup = subprocess.STARTUPINFO()
-startup.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-startup.wShowWindow = 0
+platform_options = {}
+if os.name == 'nt':
+    startup = subprocess.STARTUPINFO()
+    startup.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    startup.wShowWindow = 0
+    platform_options.update(creationflags=subprocess.CREATE_NO_WINDOW, startupinfo=startup)
 log_path = runtime / 'vscode-process.log'
 with log_path.open('wb') as log:
     process = subprocess.Popen([launch['code'], *launch['args']], env=environment,
                                stdout=log, stderr=subprocess.STDOUT,
-                               creationflags=subprocess.CREATE_NO_WINDOW, startupinfo=startup)
+                               **platform_options)
     print(json.dumps({'pid': process.pid, 'log': str(log_path), 'report': launch['env']['CODEX_NOTIFIER_TEST_REPORT']}), flush=True)
     try:
         result = process.wait(timeout=180)

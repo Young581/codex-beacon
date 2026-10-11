@@ -110,7 +110,12 @@ test('authenticated protocol uses a separate pipe without touching an older runn
   const client = new BrokerClient(path.resolve(__dirname, 'unused-unit-storage'), 'unused-broker.js');
   try {
     if (process.platform === 'win32') assert.equal(client.pipe.startsWith(`\\\\.\\pipe\\codex-beacon-secure-v1-p${BROKER_PROTOCOL_VERSION}-`), true);
-    else assert.equal(path.basename(client.pipe), `broker-secure-v1-p${BROKER_PROTOCOL_VERSION}.sock`);
+    else {
+      assert.match(path.basename(client.pipe), new RegExp(`^[a-f0-9]{24}-p${BROKER_PROTOCOL_VERSION}\\.sock$`));
+      assert.ok(Buffer.byteLength(client.pipe) < 104);
+      const older = new BrokerClient(path.resolve(__dirname, 'other-unit-storage'), 'unused-broker.js');
+      assert.notEqual(client.pipe, older.pipe); older.dispose();
+    }
   } finally {client.dispose();}
 });
 

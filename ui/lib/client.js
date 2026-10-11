@@ -8,6 +8,7 @@ const {spawn} = require('node:child_process');
 const {EventEmitter} = require('node:events');
 const {BROKER_PROTOCOL_VERSION} = require('./broker-core');
 const {loadIdentity, tlsOptions, verifyPeer, checkPeer, securityError} = require('./ipc-security');
+const {localPipe} = require('./local-pipe');
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 class BrokerClient extends EventEmitter {
@@ -16,8 +17,7 @@ class BrokerClient extends EventEmitter {
     this.storage = storage;
     this.script = brokerScript;
     this.options = options;
-    const suffix = crypto.createHash('sha256').update(path.resolve(storage)).digest('hex').slice(0, 24);
-    this.pipe = process.platform === 'win32' ? `\\\\.\\pipe\\codex-beacon-secure-v1-p${BROKER_PROTOCOL_VERSION}-` + suffix : path.join(storage, `broker-secure-v1-p${BROKER_PROTOCOL_VERSION}.sock`);
+    this.pipe = localPipe(storage, BROKER_PROTOCOL_VERSION);
     this.clientId = crypto.randomUUID();
     this.pending = new Map();
     this.socket = null;

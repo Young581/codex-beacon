@@ -4,7 +4,7 @@
 
 ## 中文
 
-适用版本：主扩展 0.8.0–0.8.10、远端采集器 0.5.0–0.5.8。社区扩展，非 OpenAI 或 Microsoft 官方产品。
+适用版本：主扩展 0.8.0–0.9.0、远端采集器 0.5.0–0.5.9。社区扩展，非 OpenAI 或 Microsoft 官方产品。
 
 ## 数据去向与隔离
 
@@ -65,17 +65,17 @@
 
 ## English
 
-Custom notification sounds read only the selected local Windows WAV/MP3 file. Its path is stored in local user settings and passed to the local playback helper over authenticated IPC. Audio content is not included in notification history, release packages or network uploads.
+Custom notification sounds read only the selected local WAV/MP3 file. Its path is stored in local user settings and passed to the local playback helper over authenticated IPC. Audio content is not included in notification history, release packages or network uploads.
 
 Project recovery retains validated folder/workspace URIs and window labels with their notifications, including SSH/container authority identifiers. They follow the same retention/deletion policy; no connection passwords or private keys are stored. Legacy recovery reads VS Code's recent-project list only.
 
-Applies to main-extension versions 0.8.0–0.8.10 and remote-collector versions 0.5.0–0.5.8. This is a community extension, not an official OpenAI or Microsoft product.
+Applies to main-extension versions 0.8.0–0.9.0 and remote-collector versions 0.5.0–0.5.9. This is a community extension, not an official OpenAI or Microsoft product.
 
 ### Data destinations and isolation
 
 There is no developer-operated synchronization server, telemetry upload or account binding. Other people installing this extension use their own environment's data directories; installation does not connect them to the author's computer or expose the author's sessions. Published extension packages do not include the author's runtime data or credentials.
 
-Local-folder collection runs on the local computer. SSH/container collection runs in that remote environment, and notification metadata reaches Windows through the existing VS Code connection. The extension does not create another SSH channel or copy SSH private keys. Remote windows do not start Windows local collection.
+Local-folder collection runs on the local computer. SSH/container collection runs in that remote environment, and notification metadata reaches the local computer through the existing VS Code connection. The extension does not create another SSH channel or copy SSH private keys. Remote windows do not start local collection.
 
 Local VS Code windows belonging to the same OS user intentionally share notification history. Source labels, window matching and session-origin fields provide filtering and navigation, not access isolation between people. Sharing a server account, container user or readable Codex Home can expose the same notifications. Different SSH keys for the same account do not create separate isolation. Use separate OS accounts and separately permissioned directories when required.
 
@@ -115,7 +115,7 @@ For broader cleanup, open **Privacy and data cleanup**:
 - **Clear all local notification caches only** works without a remote connection and does not remove server/container files.
 - **Resume collection and reception** explicitly resumes processing of events after the cleanup cutoff. Automatic setup registers missing approval hooks when enabled; review their trust in Codex. With automatic setup disabled, use the dashboard's configuration action.
 
-Connect to and clean other SSH servers/containers separately. Unattributed old hook backups are reported and retained. System logs, terminal history, already displayed Windows notifications, disk snapshots and external backups are outside the extension's guaranteed cleanup scope. Older extension windows should be upgraded and reloaded, or they can continue writing old caches.
+Connect to and clean other SSH servers/containers separately. Unattributed old hook backups are reported and retained. System logs, terminal history, already displayed system notifications, disk snapshots and external backups are outside the extension's guaranteed cleanup scope. Older extension windows should be upgraded and reloaded, or they can continue writing old caches.
 
 Cleanup preserves original Codex conversations, credentials, project files and unrelated hooks. Minimal pause controls without session identifiers and local communication identities remain to prevent old events replaying in other windows. This is application-data deletion, not secure disk erasure or guaranteed deletion from backups. The file scope is previewed before deletion. Unsafe paths, links or changed ownership cause rejection or an explicit incomplete result; partial cleanup is not reported as complete.
 

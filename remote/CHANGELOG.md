@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.9
+
+- 同步跨平台共享翻译与平台说明；Linux／macOS 本机采集仍由主扩展内置，此组件只在远端窗口启动。
+- Update shared translations and platform documentation; local collection remains embedded in the main extension.
+
 ## 0.5.8
 
 - 区分历史回放与实时活动，记录明确的轮次开始时间；采集器重启状态带有新的生命周期标识。

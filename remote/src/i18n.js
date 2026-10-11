@@ -1,6 +1,15 @@
 'use strict';
 // Only extension-owned templates are translated. Substitutions are opaque data.
 const MESSAGES = {
+  "系统默认提示音": "Default system notification sound",
+  "本机测试": "Local test",
+  "已提交一条本机测试通知；是否可见可听取决于系统通知和音量设置。": "A local test notification was submitted; visibility and sound depend on system notification and volume settings.",
+  "系统通知显示失败，更新已保存在通知历史。": "The system could not display the notification. The update is saved in notification history.",
+  "Unsafe local notification socket directory": ["本机通知套接字目录不安全，已停止连接", "Unsafe local notification socket directory"],
+  "System notification sound was not found; select a WAV or MP3 file": ["未找到系统提示音；请选择 WAV 或 MP3 文件", "System notification sound was not found; select a WAV or MP3 file"],
+  "Native notification or audio helper timed out": ["系统通知或音频组件响应超时", "Native notification or audio helper timed out"],
+  "Native notifications are unavailable on this platform": ["当前平台不支持系统通知", "Native notifications are unavailable on this platform"],
+  "Install PipeWire (pw-play), PulseAudio (paplay), or FFmpeg (ffplay) to play notification sounds": ["播放提示音需要安装 PipeWire（pw-play）、PulseAudio（paplay）或 FFmpeg（ffplay）", "Install PipeWire (pw-play), PulseAudio (paplay), or FFmpeg (ffplay) to play notification sounds"],
   "提示音场景": "Sound scenario",
   "通用提示音": "Common sound",
   "本轮完成提示音": "Completion sound",

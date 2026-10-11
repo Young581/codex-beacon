@@ -32,8 +32,14 @@ function posixIdentity(storage) {
     const temporary = fs.mkdtempSync(path.join(directory, '.identity-'));
     try {
       const key = path.join(temporary, 'key.pem'), cert = path.join(temporary, 'cert.pem');
+      const config = path.join(temporary, 'openssl.cnf');
+      // Apple's system LibreSSL lacks OpenSSL's -addext flag. A private
+      // config works on both implementations and retains mutual TLS EKU.
+      fs.writeFileSync(config, '[req]\ndistinguished_name=dn\nx509_extensions=ext\n[dn]\n[ext]\n' +
+        'basicConstraints=critical,CA:TRUE\nkeyUsage=critical,digitalSignature,keyEncipherment,keyCertSign\n' +
+        'extendedKeyUsage=serverAuth,clientAuth\n', {mode: 0o600});
       const result = spawnSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-keyout', key, '-out', cert,
-        '-days', '3650', '-subj', '/CN=Codex-Notifier-' + crypto.randomUUID(), '-addext', 'extendedKeyUsage=serverAuth,clientAuth'],
+        '-days', '3650', '-subj', '/CN=Codex-Notifier-' + crypto.randomUUID(), '-config', config],
       {encoding: 'utf8', timeout: 30000, windowsHide: true});
       if (result.error || result.status !== 0) throw securityError(t('创建本机 TLS 身份失败；非 Windows 平台需要系统 OpenSSL'));
       const identity = JSON.stringify({key: fs.readFileSync(key, 'utf8'), cert: fs.readFileSync(cert, 'utf8')});

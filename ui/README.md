@@ -18,7 +18,7 @@
 - 任务右上角直接打开会话、标为已读和删除；项目名称旁打开项目窗口。标读后隐藏按钮和圆点，历史保留在“全部”，也可用“清空已读”移除已读历史。
 - 左侧按对话筛选，原生侧栏显示“项目 → 对话名称 → 第几轮”；窄窗口提供项目和对话下拉列表。轮次按当前保留记录编号，删除或过期后会重新编号。
 - 管理与设置使用分类导航和单列内容，每行一个操作。
-- Windows 桌面通知、任务栏和窗口标题标记，支持本机 WAV／MP3 自定义音效及试听。
+- Windows／Linux 系统桌面通知、窗口标题标记（macOS 为预览支持），Windows 额外提供任务栏标记，支持本机 WAV／MP3 自定义音效及试听。
 - 完成、等待回答、等待审批可分别设置音效；未单独设置时跟随通用音效。
 - 中文和英文界面随 VS Code 切换，也可手动选择语言。
 - 本机采集内置；SSH／容器通过独立配套组件采集事件。
@@ -27,25 +27,27 @@
 
 重开窗口或重启采集器后，旧的进行中／等待处理状态需等待新的活动事件确认；明确的完成、失败与取消结果保留。同一项目和对话开始新一轮时，之前轮次的提醒自动已读，历史与用量保留。当前轮次和其他对话的提醒不受影响。
 
-主扩展 ID：`Young581.codex-beacon`。要求 **Windows x64、VS Code 1.96+、Python 3.8+**，以及在受信任文件夹中运行的 Codex 扩展。
+主扩展 ID：`Young581.codex-beacon`。要求 **Windows 或 Linux 桌面（macOS 为预览支持）、VS Code 1.96+、Python 3.8+**，以及在受信任文件夹中运行的 Codex 扩展。
 
 本机安装主扩展即可。点击右下角 **Codex** 或运行 **Codex Beacon: 打开仪表盘**，即可打开管理面板。命令面板中的 **测试本机弹窗和声音** 可检查提醒。
+
+Linux／macOS 默认使用 `python3`。Ubuntu 桌面需要 `notify-send` 和 `pw-play`（也支持 `paplay`／`ffplay`）；依赖缺失时可安装 `python3 openssl libnotify-bin pipewire-bin sound-theme-freedesktop`。Linux 通知提供“打开对话”按钮。macOS 使用系统 `osascript`／`afplay` 作为预览适配，系统通知没有直接打开对话按钮。详见[平台支持与测试范围](https://github.com/Young581/codex-beacon/blob/main/docs/platforms.md)。
 
 Windows 会自动检测用户／系统标准目录、PATH 中的 Python 和 `py` 启动器，实际验证 Python 3.8+ 与所需标准库后才开始采集。优先使用真实安装；候选退出 101、缺失或版本过旧时自动尝试其他候选。无需安装 `py` 启动器或预先添加 PATH。显式配置的路径会被验证并保留。
 
 本机仍需安装 Python 3.8+，扩展不附带 Python，也不会自动下载运行时。若仪表盘提示没有可用运行时，请从 [Python 官网](https://www.python.org/downloads/windows/)安装，或在 `codexBeacon.localPythonPath` 填写有效 Python 可执行文件的绝对路径，然后点击 **管理与设置 → 测试与连接 → 重启当前环境采集器**。101 表示启动失败，不能仅据此认定 Codex Home 有误。
 
-默认读取该环境的 `CODEX_HOME` 或 `~/.codex`。完成弹窗和声音默认开启，可在设置中分别关闭；Windows 勿扰模式可能抑制通知。
+默认读取该环境的 `CODEX_HOME` 或 `~/.codex`。完成弹窗和声音默认开启，可在设置中分别关闭；系统勿扰模式可能抑制通知。
 
-SSH／容器项目需要在目标环境安装并启用 **Codex Beacon Collector**（`Young581.codex-beacon-collector`），并在那里安装 Python 3.8+。主扩展的 **检查／安装当前环境的组件** 可定位该组件。Windows 本地音效仍在本机播放。远端集成有自动化检查，本次未进行真实 SSH／容器环境验证。
+SSH／容器项目需要在目标环境安装并启用 **Codex Beacon Collector**（`Young581.codex-beacon-collector`），并在那里安装 Python 3.8+。主扩展的 **检查／安装当前环境的组件** 可定位该组件。本地音效仍在本机播放。远端集成有自动化检查，本次未进行真实 SSH／容器环境验证。
 
 ### 提示音与用量
 
 在 **管理与设置 → 提醒与显示 → 提示音音量** 拖动滑块，设置 0–100% 音量，0% 为静音。系统声音、自定义 WAV／MP3、各类提醒和试听共用此音量，默认 100%；不会改变系统或其他应用的音量。也可设置 `codexBeacon.soundVolume`，立即生效。
 
-打开 **管理与设置 → 提醒与显示 → 提示音场景**，选择通用、本轮完成、等待回答或等待审批，再选择音频文件、试听或恢复默认。每类音效独立保存，留空跟随通用音效；通用音效留空使用 Windows 系统声音。仍受声音总开关控制，完成音效还受 `soundOnDone` 控制。
+打开 **管理与设置 → 提醒与显示 → 提示音场景**，选择通用、本轮完成、等待回答或等待审批，再选择音频文件、试听或恢复默认。每类音效独立保存，留空跟随通用音效；通用音效留空使用 系统声音。仍受声音总开关控制，完成音效还受 `soundOnDone` 控制。
 
-对应设置：`codexBeacon.soundFileOnDone`、`codexBeacon.soundFileOnQuestion`、`codexBeacon.soundFileOnApproval`。SSH／容器项目也使用当前 Windows 电脑的音频。合并提醒只播放一次，按审批、回答、完成的顺序选择最高优先级音效。
+对应设置：`codexBeacon.soundFileOnDone`、`codexBeacon.soundFileOnQuestion`、`codexBeacon.soundFileOnApproval`。SSH／容器项目也使用当前电脑的音频。合并提醒只播放一次，按审批、回答、完成的顺序选择最高优先级音效。
 
 在管理面板选择 **自定义提示音**，选取本机 WAV／MP3 文件，也可设置 `codexBeacon.soundFile`。支持试听和恢复系统音；文件失效时回退到系统音。更换音效无需重载。
 
@@ -85,7 +87,9 @@ Use **Management and settings → Alerts and display → Notification sound volu
 
 After a window or collector restarts, saved running/waiting states require fresh activity evidence; completed, failed and canceled results remain final. Starting a new round reads earlier-round reminders in the same project and conversation while retaining history and usage. Current-round reminders and other conversations are unaffected.
 
-Install **Codex Beacon**, ID `Young581.codex-beacon`, on **Windows x64 with VS Code 1.96+ and Python 3.8+**. Open a trusted project folder with the Codex extension. Click the **Codex** status-bar button to open the dashboard, or run **Open dashboard** from the command palette.
+Install **Codex Beacon**, ID `Young581.codex-beacon`, on **Windows or a Linux desktop (macOS preview), VS Code 1.96+ and Python 3.8+**. Open a trusted project folder with the Codex extension. Click the **Codex** status-bar button to open the dashboard, or run **Open dashboard** from the command palette.
+
+Linux/macOS default to `python3`. Ubuntu needs `notify-send` and `pw-play` (or `paplay`/`ffplay`); install `python3 openssl libnotify-bin pipewire-bin sound-theme-freedesktop` if missing. Linux notifications offer Open conversation. macOS uses system `osascript`/`afplay` as a preview; its system notifications have no direct conversation action. See [platform support and test scope](https://github.com/Young581/codex-beacon/blob/main/docs/platforms.md).
 
 Local collection is embedded. Windows detects Python in standard installation directories and PATH and validates Python 3.8+ and the required standard libraries before collection starts. Actual runtimes are preferred over launchers; candidates that exit with 101, are missing or are too old are skipped automatically. The optional `py` launcher and a PATH entry are not required. Explicit Python settings are validated and retained.
 
@@ -93,7 +97,7 @@ Python 3.8+ must still be installed locally; the extension does not bundle or do
 
 For SSH/container projects, install **Codex Beacon Collector** (`Young581.codex-beacon-collector`) and Python in that environment. Use **Check / install components for this environment** to locate it. Native audio plays on your Windows computer. Remote integration has automated checks but has not been tested against a live SSH/container host in this release.
 
-In **Management and settings → Alerts and display → Sound scenario**, select Common, Completion, Question or Approval, then choose a local WAV/MP3 file, preview it or reset it. Each event sound is independent; an empty override inherits `codexBeacon.soundFile`, and an empty common sound uses the Windows system sound. Settings: `codexBeacon.soundFileOnDone`, `codexBeacon.soundFileOnQuestion`, `codexBeacon.soundFileOnApproval`. The global sound switch and completion's `soundOnDone` still apply. Merged alerts play once, preferring approval, then question, then completion. Settings also include language, notification policies and custom model prices (`codexBeacon.modelPrices`, USD per million tokens). Estimated costs are API estimates rather than bills; unknown and partial usage remains labeled.
+In **Management and settings → Alerts and display → Sound scenario**, select Common, Completion, Question or Approval, then choose a local WAV/MP3 file, preview it or reset it. Each event sound is independent; an empty override inherits `codexBeacon.soundFile`, and an empty common sound uses the system sound. Settings: `codexBeacon.soundFileOnDone`, `codexBeacon.soundFileOnQuestion`, `codexBeacon.soundFileOnApproval`. The global sound switch and completion's `soundOnDone` still apply. Merged alerts play once, preferring approval, then question, then completion. Settings also include language, notification policies and custom model prices (`codexBeacon.modelPrices`, USD per million tokens). Estimated costs are API estimates rather than bills; unknown and partial usage remains labeled.
 
 Colored states distinguish running, waiting for input/approval, response complete, failed, canceled and unknown. Finishing a response does not prove that background work has finished. Pausing alerts keeps recording history; marking read does not approve an action. Approval reminders require a separately configured and trusted hook.
 

@@ -6,11 +6,11 @@
 
 Track Codex tasks by project in VS Code with colored status lights, token usage, estimated API costs and completion alerts. [Read the full English guide →](README.en.md)
 
-基于 [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier) 的 MIT 开源项目，包含 Windows PowerShell 路径修复和安装辅助脚本。当前代码版本为主扩展 **0.8.10**、采集器 **0.5.8**，支持音量调节、分场景音效、对话分组与轮次显示，并将常用操作集中到仪表盘“管理与设置”。市场安装版本请以扩展详情为准，最新修复版可从 Releases 获取。
+基于 [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier) 的 MIT 开源项目，包含 Windows PowerShell 路径修复和安装辅助脚本。当前代码版本为主扩展 **0.9.0**、采集器 **0.5.9**，支持音量调节、分场景音效、对话分组与轮次显示，并将常用操作集中到仪表盘“管理与设置”。市场安装版本请以扩展详情为准，最新修复版可从 Releases 获取。
 
 ## 当前功能
 
-- Codex 每轮回复结束时提醒，可开启 Windows 弹窗与声音。
+- Codex 每轮回复结束时提醒，可开启系统弹窗与声音。
 - 窗口标题和任务栏标记，帮助定位需要处理的窗口。
 - 按项目目录与来源分组，每轮请求一条任务；可切回未读／已读通知列表。
 - 侧栏每轮任务旁的按钮直接打开对应 Codex 对话，成功后标为已读；项目行的“打开项目窗口”按钮切换或重新打开本机、SSH／容器项目。
@@ -21,13 +21,13 @@ Track Codex tasks by project in VS Code with colored status lights, token usage,
 - 仪表盘“管理与设置”集中提供语言、音效、会话打开位置、审批提醒、测试、连接状态、历史与隐私清理。
 - 中文和英文界面。
 
-本轮回复结束不代表部署、训练或其他后台任务已经完成。当前 Windows 本机模式经过验证；SSH、容器和 WSL 未在本仓库的本次修复中进行实际环境验证。
+本轮回复结束不代表部署、训练或其他后台任务已经完成。Windows 本机与 Ubuntu 24.04 桌面本机模式经过验证；macOS 提供预览适配，尚无真实 Mac 桌面验收。SSH、容器和 WSL 的完整远端集成仍需单独验证。详见[平台支持说明](docs/platforms.md)。
 
 ## 安装
 
-需要 Windows x64、VS Code ≥ 1.96 和 Python 3.8+。
+需要 Windows 或 Linux 桌面（macOS 为预览支持）、VS Code ≥ 1.96 和 Python 3.8+。Linux／macOS 默认使用 `python3`；Ubuntu 桌面通知需 `notify-send`，音效需 `pw-play`、`paplay` 或 `ffplay`。
 
-从 VS Code 扩展市场安装 [Codex Beacon](https://marketplace.visualstudio.com/items?itemName=Young581.codex-beacon)，发布者为 **Young581**。Windows 本机采集已内置；SSH／容器项目在目标环境安装 [Codex Beacon Collector](https://marketplace.visualstudio.com/items?itemName=Young581.codex-beacon-collector)，也可通过主扩展的“检查／安装当前环境的组件”定位它。
+从 VS Code 扩展市场安装 [Codex Beacon](https://marketplace.visualstudio.com/items?itemName=Young581.codex-beacon)，发布者为 **Young581**。本机采集已内置；SSH／容器项目在目标环境安装 [Codex Beacon Collector](https://marketplace.visualstudio.com/items?itemName=Young581.codex-beacon-collector)，也可通过主扩展的“检查／安装当前环境的组件”定位它。
 
 从 [Releases](https://github.com/Young581/codex-beacon/releases) 下载主扩展与采集器的 VSIX 文件，在 VS Code 扩展面板选择“从 VSIX 安装”。也可自行构建：
 
@@ -59,7 +59,7 @@ Windows 会自动检测标准安装目录与 PATH 中的 Python，并验证版�
 
 在任务空闲时运行“开发人员：重新加载窗口”。升级后若共享通知后台仍使用旧代码，可在任务空闲时关闭所有 VS Code 窗口，等待 10 秒后再打开。验证提醒可运行 **Codex 通知：测试本机弹窗和声音**。
 
-Windows 勿扰模式、通知权限和静音设置可能影响实际提醒。首次启用任务栏状态时，扩展会在原 `window.title` 模板前加入 `${codexBeaconNotification}${separator}`。
+系统勿扰模式、通知权限和静音设置可能影响实际提醒。首次启用任务栏状态时，扩展会在原 `window.title` 模板前加入 `${codexBeaconNotification}${separator}`。
 
 ## 仪表盘
 
@@ -87,9 +87,9 @@ Windows 勿扰模式、通知权限和静音设置可能影响实际提醒。首
 
 分场景设置为 `codexBeacon.soundFileOnDone`、`codexBeacon.soundFileOnQuestion`、`codexBeacon.soundFileOnApproval`。留空跟随通用 `codexBeacon.soundFile`，通用留空使用系统声音。各场景独立保存，恢复某一场景不影响其他音效；仍遵守声音总开关与完成声音开关。
 
-所选音频用于本轮完成、等待审批和等待回答的声音提醒。也可在用户设置中填写 `codexBeacon.soundFile` 的本机绝对路径；留空使用系统提示音。SSH／容器项目也读取 Windows 本机音频。修改后无需重载；首次从旧版升级需在任务空闲时关闭全部 VS Code 窗口，等待 10 秒再打开，以更新共享通知后台。
+所选音频用于本轮完成、等待审批和等待回答的声音提醒。也可在用户设置中填写 `codexBeacon.soundFile` 的本机绝对路径；留空使用系统提示音。SSH／容器项目也读取 当前电脑的本机音频。修改后无需重载；首次从旧版升级需在任务空闲时关闭全部 VS Code 窗口，等待 10 秒再打开，以更新共享通知后台。
 
-文件被删除或无法解码时自动回退到系统提示音，并提示一次。部分特殊 WAV／MP3 编码可能不被 Windows 支持，建议使用 PCM WAV 或常见 MP3。合并的提醒只播放一次，以优先级最高且启用声音的提醒选择音频（审批、提问、完成）。选择音频不会自动开启已关闭的声音总开关。音频文件只在本机读取，不打包或上传。
+文件被删除或无法解码时自动回退到系统提示音，并提示一次。部分特殊 WAV／MP3 编码可能不被系统播放器支持，建议使用 PCM WAV 或常见 MP3。合并的提醒只播放一次，以优先级最高且启用声音的提醒选择音频（审批、提问、完成）。选择音频不会自动开启已关闭的声音总开关。音频文件只在本机读取，不打包或上传。
 
 ## 运行时与启动修复
 
@@ -113,7 +113,7 @@ python -B test-configuration.py
 python -B build.py --output dist
 ```
 
-真实 VS Code 宿主测试按 [宿主测试说明](packaging/README.md) 使用独立用户数据和合成会话。仓库提供 Windows CI 工作流，用于检查与生成可下载的构建产物。
+真实 VS Code 宿主测试按 [宿主测试说明](packaging/README.md) 使用独立用户数据和合成会话。仓库提供 Windows、Linux 和 macOS CI 工作流，用于检查与生成可下载的构建产物。
 
 ## 项目任务与费用
 

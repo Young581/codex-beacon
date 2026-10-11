@@ -31,7 +31,7 @@ const LABELS = {
   updated: '最近更新', showAll: '查看全部任务',
   management: '管理与设置', alerts: '提醒与显示', tools: '测试与连接', records: '通知与数据', approval: '审批提醒',
   openLocation: '会话打开位置', sidebar: 'Codex 会话侧栏', editor: '主编辑器', autoLanguage: '跟随 VS Code',
-  soundFile: '选择音频文件（WAV／MP3）', resetSound: '恢复系统默认提示音', defaultSound: 'Windows 系统默认提示音',
+  soundFile: '选择音频文件（WAV／MP3）', resetSound: '恢复系统默认提示音', defaultSound: '系统默认提示音',
   soundScenario: '提示音场景', commonSound: '通用提示音', doneSound: '本轮完成提示音', questionSound: '等待回答提示音', approvalSound: '等待审批提示音',
   inheritSound: '跟随通用提示音', soundHint: '未单独设置的场景使用通用提示音；通用提示音为空时使用系统默认声音。',
   soundVolume: '提示音音量', volumeHint: '所有提示音和试听共用此音量，0% 为静音；不会改变系统音量。',

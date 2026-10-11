@@ -287,10 +287,10 @@ async function activate(context) {
         statusColor: statusBar.backgroundColor?.id} : {})};
   });
   register('codexBeacon.testNotification', async () => {
-    const source = {id: `test-${vscode.env.machineId}`, label: t('Windows 本机测试'), host: t('本机'), home: '', cwd: ''};
+    const source = {id: `test-${vscode.env.machineId}`, label: t('本机测试'), host: t('本机'), home: '', cwd: ''};
     const receipt = await client.request('test', {source, options: {desktop: true, sound: config().get('sound', true), soundVolume: resolveSoundVolume(config()), soundFile: validateSoundFile(config().get('soundFile', ''))}});
     await refresh();
-    log(t('已提交一条本机测试通知；是否可见可听取决于 Windows 通知和音量设置。'));
+    log(t('已提交一条本机测试通知；是否可见可听取决于系统通知和音量设置。'));
     return receipt;
   });
   register('codexBeacon.testSound', async (type = 'default') => {
@@ -300,7 +300,7 @@ async function activate(context) {
       await vscode.window.showWarningMessage(t('旧版通知后台仍在运行。请在任务空闲后关闭所有 VS Code 窗口，等待 10 秒再重新打开，以启用自定义提示音。'));
       return {unsupported: true};
     }
-    const source = {id: `test-${vscode.env.machineId}`, label: t('Windows 本机测试'), host: 'localhost', home: '', cwd: ''};
+    const source = {id: `test-${vscode.env.machineId}`, label: t('本机测试'), host: 'localhost', home: '', cwd: ''};
     return client.request('test', {source, options: {desktop: false, sound: true, soundFile, soundVolume: resolveSoundVolume(config())}});
   });
   const soundSettings = new SoundSettings(vscode, {config,
@@ -535,7 +535,7 @@ async function activate(context) {
   client.on('deliveryError', message => {
     const relevant = (message.entries || []).filter(entry => !sourceStatus || entry.source.id === sourceStatus.source.id);
     if (!relevant.length) return;
-    failure(t('Windows 系统通知显示失败，更新已保存在通知历史。') + clean(message.error, 200)).catch(() => {});
+    failure(t('系统通知显示失败，更新已保存在通知历史。') + clean(message.error, 200)).catch(() => {});
   });
   context.subscriptions.push(output, history, view, statusBar, vscode.workspace.onDidChangeConfiguration(event => {
     if (Object.values(SOUND_KEYS).some(key => event.affectsConfiguration('codexBeacon.' + key))) soundFallbackWarned.clear();

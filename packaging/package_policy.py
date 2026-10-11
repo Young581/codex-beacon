@@ -15,9 +15,9 @@ EXTENSION_FILES = {
     "ui": COMMON_FILES | frozenset({
         "extension.js", "lib/i18n.js", "lib/broker-core.js", "lib/broker.js", "lib/client.js",
         "lib/history.js", "lib/tasks.js", "lib/project-window.js", "lib/navigation.js", "lib/presentation.js", "lib/read-tracking.js", "lib/installation.js",
-        "lib/routing.js", "lib/dashboard.js", "lib/sound.js", "lib/title-pulse.js", "lib/window-attention-native.js",
+        "lib/routing.js", "lib/dashboard.js", "lib/sound.js", "lib/title-pulse.js", "lib/window-attention-native.js", "lib/local-pipe.js",
         "lib/window-attention.js", "lib/window-title.js", "assets/bell.svg", "assets/beacon.png",
-        "lib/ipc-security.js", "lib/secure-pipe.js", "lib/privacy-storage.js", "lib/privacy.js",
+        "lib/ipc-security.js", "lib/secure-pipe.js", "lib/privacy-storage.js", "lib/privacy.js", "lib/posix-notifier.js",
         "assets/secure-pipe.ps1", "assets/secure-pipe.cs",
         "assets/show-notification.ps1", "assets/window-attention.cs", "assets/window-attention.ps1",
         "assets/dashboard.js", "assets/dashboard.css",
@@ -26,7 +26,7 @@ EXTENSION_FILES = {
     "remote": COMMON_FILES | frozenset({"src/i18n.js", "src/core.js", "src/task-data.js", "src/extension.js", "src/python-runtime.js", "scripts/collector.py", "assets/beacon.png"}),
 }
 SOURCE_SUPPORT_FILES = frozenset({
-    "UPSTREAM.md", "docs/verification.md", "docs/dashboard.png", "docs/marketplace.md", ".github/workflows/ci.yml", "packaging/run-windows-checks.ps1",
+    "UPSTREAM.md", "docs/verification.md", "docs/platforms.md", "docs/dashboard.png", "docs/marketplace.md", ".github/workflows/ci.yml", "packaging/run-windows-checks.ps1",
     "install.ps1", "configure-notifications.py", "test-configuration.py",
     ".gitignore", "LICENSE", "CONTRIBUTING.md", "SECURITY.md",
     ".github/ISSUE_TEMPLATE/bug_report.yml", ".github/ISSUE_TEMPLATE/feature_request.yml", ".github/ISSUE_TEMPLATE/config.yml",
@@ -40,7 +40,7 @@ SOURCE_SUPPORT_FILES = frozenset({
     "tests/broker-privacy.test.js", "tests/ui-privacy.test.js", "tests/ui-installation.test.js", "tests/sidebar-navigation.test.js",
     "tests/title-pulse.test.js", "tests/tls-runtime-smoke.js", "tests/ipc-security.test.js", "tests/ui-client-lifecycle.test.js", "tests/ui-client.test.js",
     "tests/ui-history.test.js", "tests/tasks.test.js", "tests/project-window.test.js", "tests/ui-navigation.test.js", "tests/ui-presentation.test.js",
-    "tests/window-attention.test.js", "tests/window-title.test.js", "tests/native-powershell.test.js", "tests/sound.test.js", "tests/dashboard.test.js", "tests/extension-host/index.js",
+    "tests/window-attention.test.js", "tests/window-title.test.js", "tests/native-powershell.test.js", "tests/sound.test.js", "tests/posix-notifier.test.js", "tests/dashboard.test.js", "tests/extension-host/index.js",
     "tests/route-editor-fixture/extension.js", "tests/route-editor-fixture/package.json",
 })
 SOURCE_FILES = SOURCE_SUPPORT_FILES | frozenset(
