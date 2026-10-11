@@ -477,7 +477,10 @@ exports.run = async function run() {
       const read = await snapshot();
       assert.equal(read.unread, 0);
       assert.equal(read.tasks[0].state, 'completed');
-      assert.equal((await command('deleteEntry', completedRow.key)).deleted, 5);
+      const related = require(path.join(vscode.extensions.getExtension(UI_ID).extensionPath, 'lib/tasks'))
+        .taskRows(history(read)).find(row => row.taskId === completedRow.taskId).relatedKeys;
+      assert.ok(related.length >= 5, 'The round includes telemetry, approval lifecycle and question reminders');
+      assert.equal((await command('deleteEntry', completedRow.key)).deleted, related.length);
       assert.equal((await snapshot()).tasks.length, 0);
       for (const [subtype, state, color] of [['turn_aborted', 'cancelled', 'descriptionForeground'], ['task_failed', 'failed', 'charts.red']]) {
         const terminalTurn = turn + '-' + state;
