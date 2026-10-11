@@ -58,27 +58,27 @@ test('initialization prefixes once and later unread updates only change this win
   assert.equal(initialized.configured, true);
   assert.equal(initialized.scope, 'global');
   assert.equal(mock.edits.length, 1);
-  assert.equal(mock.edits[0].value, '${codexNotification}${separator}' + mock.settings.defaultValue);
-  assert.deepEqual(mock.calls[0], { command: 'registerWindowTitleVariable', args: ['codexNotification', 'codexNotifier.windowTitle'] });
+  assert.equal(mock.edits[0].value, '${codexBeaconNotification}${separator}' + mock.settings.defaultValue);
+  assert.deepEqual(mock.calls[0], { command: 'registerWindowTitleVariable', args: ['codexBeaconNotification', 'codexBeacon.windowTitle'] });
   await title.update('[待处理 3]');
   await title.update('[待处理 1]');
-  assert.equal(mock.contexts.get('codexNotifier.windowTitle'), '[待处理 1]');
+  assert.equal(mock.contexts.get('codexBeacon.windowTitle'), '[待处理 1]');
   assert.equal(mock.edits.length, 1);
 });
 
 test('existing token is not duplicated, including when initialization runs again in another host', async () => {
-  const mock = mockVscode({ settings: { globalValue: '${codexNotification}${separator}CUSTOM' } });
+  const mock = mockVscode({ settings: { globalValue: '${codexBeaconNotification}${separator}CUSTOM' } });
   await new WindowTitleController(mock.api).initialize();
   await new WindowTitleController(mock.api).initialize();
   assert.equal(mock.edits.length, 0);
-  assert.equal(mock.settings.globalValue, '${codexNotification}${separator}CUSTOM');
+  assert.equal(mock.settings.globalValue, '${codexBeaconNotification}${separator}CUSTOM');
 });
 
 test('effective workspace override is updated at workspace scope and global settings stay intact', async () => {
   const mock = mockVscode({ settings: { globalValue: 'GLOBAL', workspaceValue: 'WORKSPACE' } });
   assert.equal((await new WindowTitleController(mock.api).initialize()).scope, 'workspace');
   assert.equal(mock.edits[0].target, 2);
-  assert.equal(mock.settings.workspaceValue, '${codexNotification}${separator}WORKSPACE');
+  assert.equal(mock.settings.workspaceValue, '${codexBeaconNotification}${separator}WORKSPACE');
   assert.equal(mock.settings.globalValue, 'GLOBAL');
 });
 
@@ -88,7 +88,7 @@ test('second inspection preserves a concurrently changed template', async () => 
     if (++inspections === 2) settings.globalValue = 'USER CHANGED';
   } });
   await new WindowTitleController(mock.api).initialize();
-  assert.equal(mock.settings.globalValue, '${codexNotification}${separator}USER CHANGED');
+  assert.equal(mock.settings.globalValue, '${codexBeaconNotification}${separator}USER CHANGED');
 });
 
 test('binding marker restores the newest friendly prefix after updates during discovery', async () => {
@@ -98,17 +98,17 @@ test('binding marker restores the newest friendly prefix after updates during di
   const entered = deferred();
   const finish = deferred();
   const bound = title.withBindingMarker('CN-BIND-0123456789', async marker => {
-    assert.equal(mock.contexts.get('codexNotifier.windowTitle'), marker);
+    assert.equal(mock.contexts.get('codexBeacon.windowTitle'), marker);
     entered.resolve();
     await finish.promise;
     return '123456';
   });
   await entered.promise;
   assert.equal((await title.update('[待处理 7]')).deferred, true);
-  assert.equal(mock.contexts.get('codexNotifier.windowTitle'), 'CN-BIND-0123456789');
+  assert.equal(mock.contexts.get('codexBeacon.windowTitle'), 'CN-BIND-0123456789');
   finish.resolve();
   assert.equal(await bound, '123456');
-  assert.equal(mock.contexts.get('codexNotifier.windowTitle'), '[待处理 7]');
+  assert.equal(mock.contexts.get('codexBeacon.windowTitle'), '[待处理 7]');
 });
 
 test('failed binding restores the friendly prefix and does not prevent a later attempt', async () => {
@@ -116,7 +116,7 @@ test('failed binding restores the friendly prefix and does not prevent a later a
   const title = new WindowTitleController(mock.api);
   await title.update('[待处理]');
   await assert.rejects(title.withBindingMarker('CN-BIND-failed', async () => { throw new Error('no unique HWND'); }), /no unique HWND/);
-  assert.equal(mock.contexts.get('codexNotifier.windowTitle'), '[待处理]');
+  assert.equal(mock.contexts.get('codexBeacon.windowTitle'), '[待处理]');
   assert.equal(await title.withBindingMarker('CN-BIND-next', async () => 123), 123);
 });
 
@@ -132,7 +132,7 @@ test('dispose during binding clears the context and never restores an old marker
   await title.dispose();
   finish.resolve();
   await bound;
-  assert.equal(mock.contexts.get('codexNotifier.windowTitle'), '');
+  assert.equal(mock.contexts.get('codexBeacon.windowTitle'), '');
   assert.equal(mock.settings.globalValue, 'USER NEW TEMPLATE');
   assert.equal(mock.edits.length, 1);
   assert.equal((await title.update('AFTER DISPOSE')).applied, false);

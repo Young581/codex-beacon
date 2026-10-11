@@ -17,7 +17,7 @@ class BrokerClient extends EventEmitter {
     this.script = brokerScript;
     this.options = options;
     const suffix = crypto.createHash('sha256').update(path.resolve(storage)).digest('hex').slice(0, 24);
-    this.pipe = process.platform === 'win32' ? `\\\\.\\pipe\\codex-notifier-secure-v1-p${BROKER_PROTOCOL_VERSION}-` + suffix : path.join(storage, `broker-secure-v1-p${BROKER_PROTOCOL_VERSION}.sock`);
+    this.pipe = process.platform === 'win32' ? `\\\\.\\pipe\\codex-beacon-secure-v1-p${BROKER_PROTOCOL_VERSION}-` + suffix : path.join(storage, `broker-secure-v1-p${BROKER_PROTOCOL_VERSION}.sock`);
     this.clientId = crypto.randomUUID();
     this.pending = new Map();
     this.socket = null;

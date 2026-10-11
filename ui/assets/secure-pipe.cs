@@ -160,7 +160,7 @@ public static class CodexSecurePipe {
           identity = new X509Certificate2Collection {certificate, publicRoot}.Export(X509ContentType.Pfx, "");
         }
       }
-      byte[] protectedKey = ProtectedData.Protect(identity, Encoding.UTF8.GetBytes("codex-notifier-ipc-v1"), DataProtectionScope.CurrentUser);
+      byte[] protectedKey = ProtectedData.Protect(identity, Encoding.UTF8.GetBytes("codex-beacon-ipc-v1"), DataProtectionScope.CurrentUser);
       string temporary = Path.Combine(directory, Guid.NewGuid().ToString("N") + ".tmp");
       try {
         var fileSecurity = new FileSecurity(); fileSecurity.SetOwner(User); fileSecurity.SetAccessRuleProtection(true, false);
@@ -174,7 +174,7 @@ public static class CodexSecurePipe {
     CheckFile(file); Validate(File.GetAccessControl(file));
     byte[] encrypted = File.ReadAllBytes(file);
     if (encrypted.Length > 16384) throw new IOException("Invalid IPC key file");
-    byte[] result = ProtectedData.Unprotect(encrypted, Encoding.UTF8.GetBytes("codex-notifier-ipc-v1"), DataProtectionScope.CurrentUser);
+    byte[] result = ProtectedData.Unprotect(encrypted, Encoding.UTF8.GetBytes("codex-beacon-ipc-v1"), DataProtectionScope.CurrentUser);
     var certificates = new X509Certificate2Collection(); certificates.Import(result, "", X509KeyStorageFlags.EphemeralKeySet);
     X509Certificate2 leaf = null, authority = null;
     foreach (X509Certificate2 certificate in certificates) {
@@ -239,7 +239,7 @@ public static class CodexSecurePipe {
     lock (ClientsLock) { foreach (var stream in Clients.Values) stream.Dispose(); Clients.Clear(); }
   }
   public static void Run(string name) {
-    if (String.IsNullOrEmpty(name) || !name.StartsWith(@"\\.\pipe\codex-notifier-", StringComparison.Ordinal) || name.Length > 240)
+    if (String.IsNullOrEmpty(name) || !name.StartsWith(@"\\.\pipe\codex-beacon-", StringComparison.Ordinal) || name.Length > 240)
       throw new IOException("Invalid local IPC pipe name");
     try { Waiting = Create(name, true); }
     catch (Win32Exception error) { Emit(new {type = "error", code = error.NativeErrorCode == 5 || error.NativeErrorCode == 231 ? "EADDRINUSE" : "EACCES", error = error.Message}); return; }

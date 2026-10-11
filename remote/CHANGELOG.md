@@ -68,6 +68,12 @@
 
 # Changelog
 
+## 0.5.0
+
+- Prepare Codex Beacon Collector as the independent companion to Codex Beacon.
+- Use the codexBeacon command/settings namespace and separate hook ownership and caches.
+- Add Marketplace branding and remote installation documentation.
+
 ## 0.1.1
 
 - Restrict notifications to sessions whose first metadata record identifies codex_vscode; do not trust source=vscode alone.

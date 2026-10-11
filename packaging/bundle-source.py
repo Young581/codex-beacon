@@ -12,7 +12,7 @@ from package_policy import (SOURCE_FILES, archive_snapshot, collect_reviewed, me
                             read_archive_members)
 
 ROOT = Path(__file__).resolve().parents[1]
-PREFIX = "codex-notifier-source/"
+PREFIX = "codex-beacon-source/"
 FIXED_DATE = (2026, 9, 7, 0, 0, 0)
 
 

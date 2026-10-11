@@ -26,8 +26,8 @@ import time
 import uuid
 
 
-OWNER = "codex-vscode-notifier-v1"
-DIRECTORY_NAME = "vscode-notifier"
+OWNER = "codex-beacon-v1"
+DIRECTORY_NAME = "codex-beacon"
 MAX_INPUT_BYTES = 1024 * 1024
 MAX_EVENT_BYTES = 4096
 MAX_LOG_BYTES = 5 * 1024 * 1024
@@ -50,7 +50,7 @@ PRIVACY_LOCK = ".privacy.lock"
 BACKUP_LEDGER = "backup-ledger.json"
 OWNED_CACHE_NAMES = {"events.jsonl", "events.jsonl.1", "config.json", "remote_notifier.py",
                      ".install.lock", ".events.lock", BACKUP_LEDGER}
-BACKUP_NAME = re.compile(r"hooks\.json\.bak-codex-vscode-notifier-\d{8}-\d{6}-[0-9a-f]{32}$")
+BACKUP_NAME = re.compile(r"hooks\.json\.bak-codex-beacon-\d{8}-\d{6}-[0-9a-f]{32}$")
 
 
 def reject_links(path):
@@ -228,7 +228,7 @@ def read_json(path, default):
 def backup(path):
     stamp = time.strftime("%Y%m%d-%H%M%S", time.gmtime())
     home = safe_home(path.parent)
-    destination = safe_path(home, "hooks.json.bak-codex-vscode-notifier-" + stamp + "-" + uuid.uuid4().hex)
+    destination = safe_path(home, "hooks.json.bak-codex-beacon-" + stamp + "-" + uuid.uuid4().hex)
     ledger_path = safe_path(home, DIRECTORY_NAME + "/" + BACKUP_LEDGER)
     ledger = bounded_json(ledger_path, {"version": 1, "owner": OWNER, "files": []})
     if not isinstance(ledger, dict) or ledger.get("owner") != OWNER or not isinstance(ledger.get("files"), list):
@@ -318,7 +318,7 @@ def install(args):
             events.setdefault(event, []).append(entry)
         old_config = read_json(directory / "config.json", {})
         if not isinstance(old_config, dict):
-            raise ValueError("vscode-notifier/config.json must be a JSON object; no files were changed")
+            raise ValueError("codex-beacon/config.json must be a JSON object; no files were changed")
         configuration = dict(old_config)
         configuration["version"] = 1
         configuration["retentionDays"] = retention_days(args.retention_days)
@@ -451,7 +451,7 @@ def hook(args):
             append_event(home, event_type, payload, verified_originator="codex_vscode")
     except Exception as error:
         # Avoid echoing payloads, prompts, commands, or exception text containing them.
-        print("codex-notifier: hook notification failed ({}); Codex may continue".format(
+        print("codex-beacon: hook notification failed ({}); Codex may continue".format(
             type(error).__name__), file=sys.stderr)
     finally:
         print("{}", flush=True)
@@ -1093,7 +1093,7 @@ class RolloutObserver:
                                   verified_originator=state["originator"])[0]
             record["timestamp"] = timestamp
             record["id"] = uuid.uuid5(uuid.NAMESPACE_URL,
-                "codex-notifier:{}:{}:{}".format(event_type, state["session_id"], stable_part)).hex
+                "codex-beacon:{}:{}:{}".format(event_type, state["session_id"], stable_part)).hex
             if state.get("task"):
                 # Deep copy counters: later updates must not rewrite earlier events.
                 record["task"] = json.loads(json.dumps(state["task"]))
@@ -1347,7 +1347,7 @@ def main(argv=None):
     except (KeyboardInterrupt, BrokenPipeError):
         return 0
     except Exception as error:
-        print("codex-notifier: {}".format(error), file=sys.stderr)
+        print("codex-beacon: {}".format(error), file=sys.stderr)
         return 1
 
 

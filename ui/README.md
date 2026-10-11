@@ -1,155 +1,79 @@
-# Codex 会话通知 / Codex Session Notifier
+# Codex Beacon · Codex 灯塔
 
-> Codex Beacon 衍生版本：主扩展 0.7.0，支持直接切换／恢复对应项目窗口、项目任务、状态灯、token/费用估算和自定义单价，并保留 Windows PowerShell 路径修复。项目／任务行的窗口按钮保持未读。请从 [本仓库 Releases](https://github.com/Young581/codex-beacon/releases) 下载；下方扩展市场说明指向上游产品。本仓库未向扩展市场发布新条目。安装、费用配置请优先参阅 [项目首页](https://github.com/Young581/codex-beacon)。
-
-[GitHub](https://github.com/lengmo1996/codex-vscode-notifier) · [下载安装 / Downloads](https://github.com/lengmo1996/codex-vscode-notifier/releases/latest) · [反馈 / Issues](https://github.com/lengmo1996/codex-vscode-notifier/issues)
-
-[中文](#中文) | [English](#english)
+[中文](#中文) · [English](#english) · [GitHub](https://github.com/Young581/codex-beacon) · [Issues](https://github.com/Young581/codex-beacon/issues)
 
 ## 中文
 
-**仪表盘：** 点击右下角 Codex 状态栏按钮、任务面板顶部的仪表盘图标，或运行 **Codex Beacon: 打开仪表盘**。单列卡片默认显示聊天名称、模型、状态、时间和短轮次，token、估算费用及会话／窗口跳转、标读与删除按钮收进任务详情，每条独立展开。标题来自 Codex 名称索引与只读状态库，缺失时显示短会话编号；可按任务名称搜索。打开页面保持未读，测试通知单独归入“测试”。安装后在任务空闲时重新加载窗口。
+在 VS Code 中按项目管理 Codex 任务，查看彩色状态灯，在每轮回复结束、等待回答或审批时获得提醒。
 
-**提示语言：** 默认跟随 VS Code。通知菜单的语言选项支持 `auto`、`zh-CN`、`en`，可指定中文或英文；右键与顶部菜单、弹窗、任务和窗口标题即时切换，不显示固定双语文字。命令面板与设置使用 VS Code 的界面语言。语言切换不重启采集，不改变已读状态；已有日志、会话路径、主机名与原始系统错误保持原样。SSH／容器请同时更新采集器。
+![Codex Beacon dashboard with synthetic tasks](https://raw.githubusercontent.com/Young581/codex-beacon/main/docs/dashboard.png)
 
-版本 0.7.0 · Windows x64 · 保留上游扩展 ID
+### 功能
 
-只关注 **VS Code 的 Codex 插件**发起的本地文件夹、SSH 和容器会话。Codex 桌面 App、CLI 及来源无法确认的会话不提醒。这是社区扩展，并非 OpenAI 或 Microsoft 官方产品。
+- 按项目和环境分组，显示 Codex 聊天名称、模型、任务状态和时间。
+- 单列紧凑任务卡片；每条详情独立展开，查看每轮 token、API 费用估算和完整编号。
+- 彩色状态：运行、等待回答／审批、本轮完成、失败、取消和状态未确认。
+- 打开对应 Codex 会话，切换到对应项目窗口或恢复已关闭的项目窗口。
+- Windows 桌面通知、任务栏和窗口标题标记，支持本机 WAV／MP3 自定义音效及试听。
+- 中文和英文界面随 VS Code 切换，也可手动选择语言。
+- 本机采集内置；SSH／容器通过独立配套组件采集事件。
 
-## 安装
+### 安装与使用
 
-在扩展市场只需搜索并安装 **Codex 会话通知**，发布者 **lengmo1996**，扩展 ID `lengmo1996.codex-notifier-ui`。主扩展通过扩展包关联配套采集器，无需再寻找第二个安装入口。
+主扩展 ID：`Young581.codex-beacon`。要求 **Windows x64、VS Code 1.96+、Python 3.8+**，以及在受信任文件夹中运行的 Codex 扩展。
 
-- **本地文件夹**：采集已内置，安装主扩展即可使用。
-- **SSH／容器**：在目标窗口打开 **Codex 通知：检查／安装当前环境组件**。缺少采集器时会定位它的扩展页面，选择 **安装到 SSH／容器** 并启用即可。每个新服务器或容器需要检查一次。
-- 缺少远端组件时，状态栏显示黄色 **Codex · 需安装远端组件**，点击即可进入上述引导。检查不主动发出通知声音、不重载窗口、不恢复已暂停的采集。
+本机安装主扩展即可。点击右下角 **Codex** 或运行 **Codex Beacon: 打开仪表盘**，即可打开管理面板。命令面板中的 **测试本机弹窗和声音** 可检查提醒。
 
-统一入口采用 VS Code 的 `extensionPack`，不保证把组件自动安装到所有未来连接的远端环境。扩展管理器可能在本机保留配套采集器；它在本地不启动采集，SSH／容器中的采集仍只在对应环境运行。配套组件可独立安装或卸载，不阻止主扩展在本地使用。
+Python 无法自动识别时，在 `codexBeacon.localPythonPath` 设置 Python 可执行文件的绝对路径。默认读取该环境的 `CODEX_HOME` 或 `~/.codex`。完成弹窗和声音默认开启，可在设置中分别关闭；Windows 勿扰模式可能抑制通知。
 
-离线安装时，先在 Windows 安装 `codex-notifier-ui-0.7.0.vsix`；需要 SSH／容器采集时，在对应环境安装 `codex-notifier-collector-0.4.0.vsix`。离线 VSIX 不包含其他扩展的安装包。
+SSH／容器项目需要在目标环境安装并启用 **Codex Beacon Collector**（`Young581.codex-beacon-collector`），并在那里安装 Python 3.8+。主扩展的 **检查／安装当前环境的组件** 可定位该组件。Windows 本地音效仍在本机播放。远端集成有自动化检查，本次未进行真实 SSH／容器环境验证。
 
-本地需要 Python 3.8 或以上及受信任的本地文件夹。SSH／容器窗口不会启动 Windows 本地采集，空窗口不采集。
+### 提示音与用量
 
-两端升级后，等待任务空闲再逐个执行 **Developer: Reload Window**。主扩展会静默忽略旧采集器缺少来源标识的事件，因此远端 0.1.0 必须升级。同一扩展 ID 升级保留历史；如果此前安装的是 `lengmo.*` 开发包，请先卸载它，避免与 `lengmo1996.*` 重复提醒；不同发布者 ID 的历史不自动迁移。旧版显式设置的本地采集配置会迁移到对应 Local 设置。
+在管理面板选择 **自定义提示音**，选取本机 WAV／MP3 文件，也可设置 `codexBeacon.soundFile`。支持试听和恢复系统音；文件失效时回退到系统音。更换音效无需重载。
 
-## 提醒与标读
+每轮用量和费用放在任务详情里。金额为美元 **API 估算，不是实际账单**；未知或不完整的数据会明确标注。使用 `codexBeacon.modelPrices` 按精确模型名称覆盖默认单价，单位为每百万 token：
 
-- **自定义提示音**：在通知菜单或命令面板选择本机 WAV／MP3 文件，可单独试听或恢复系统默认。也可设置 `codexNotifier.soundFile`；留空使用系统音。SSH／容器项目也读取 Windows 本机音频；文件失效时回退系统音并提示一次。主动试听忽略声音总开关，不弹桌面通知，会留下测试记录。首次升级需在任务空闲时关闭全部 VS Code 窗口，等待 10 秒后重开；之后换音效无需重载。
-- 对应窗口的未读回复用黄色标记，审批或提问用红色。窗口预览标题圆点持续闪动到已读。Windows 合并任务栏按钮只显示汇总颜色，扩展不改变整张缩略图背景。
-- 默认本轮回复结束播放声音，并显示颜色和未读；审批／提问也按声音总开关提醒。回复结束默认不弹系统通知，可通过 **Sound On Done / Desktop On Done** 分别调整。标题显示“本轮已回复”，不把它称为整个任务完成。
-- **新提醒默认未读；切回窗口不会自动标读。点击通知只标读被点击的那一条**，同一窗口、同一会话的其他提醒也保留原状态。
-- **Auto Read On Window Focus 默认关闭**。如果主动开启，手动切回窗口会标读该窗口全部已有提醒；手动切换会话编辑器标签会标读该会话。通知主动跳转期间暂停自动标读。升级保留用户显式设置；此前手动开启过该项的用户需自行关闭。
-- 单击通知默认回到目标窗口的 **Codex 插件会话侧栏**。通知菜单 → **选择会话打开位置** 可切换为中间主编辑器；对应设置为 **Open Location**。点击和标读全程静音。
-- 窗口未连接、跳转报错或检测到侧栏跳转期间焦点改变时保留未读。VS Code 首次打开扩展链接可能要求确认；侧栏接口无法确认后端恢复结果，跳转请求返回只表示已请求打开，并不证明对话已加载。
-- 已读仅表示处理过提醒，不表示批准操作、回答问题或后台训练／部署已经成功。
+```json
+{
+  "codexBeacon.modelPrices": {
+    "my-model": {"input": 2, "cachedInput": 0.1, "cacheWrite": 2.5, "output": 10}
+  }
+}
+```
 
-同一环境同一目录有多个窗口时，选择最近使用的匹配窗口。跳转已按 Codex 26.901.22334 的侧栏 URI 和编辑器接口核对。侧栏先聚焦目标窗口，再使用 VS Code 活动窗口路由，避免数字 windowId 前缀碰撞；它依赖分发时的活动窗口，快速切换窗口仍存在竞态，检测到焦点改变会保留未读。插件或 VS Code 更新后可能需要重新验证。侧栏当前会话没有公共读取接口，因此不根据侧栏切换自动标读。
+本轮完成表示 Codex 本次回复结束，不代表训练、部署或其他后台工作完成。状态来自明确事件，静默不会被推断为失败。
 
-## 删除通知
+### 从旧版迁移
 
-- 每条通知右侧或右键菜单：**删除这条通知**。
-- “已读”分组、视图标题栏：**清空已读通知**，保留未读。
-- 视图标题栏垃圾桶或通知菜单：**清空全部通知**。
+此版本使用独立扩展 ID 和 `codexBeacon.*` 设置。任务空闲时先停用旧通知扩展，再启用 Beacon，以免重复提醒；旧通知历史不自动迁移，Python、音效和自定义价格需要重新配置。Codex 会话和项目文件保留。此前配置过旧审批 Hook 的用户，先通过旧扩展移除，再按需配置和信任 Beacon 的 Hook。
 
-仅删除通知历史，不删除 Codex 对话、代码或服务器文件。删除会取消尚未发出的对应提醒；已显示的 Windows 气泡按系统时限关闭。去重记录保留，重连不会立即恢复被删除条目。
+### 数据与许可
 
-## 设置与检查
+没有开发者服务器、遥测上传或账号绑定。仅在本机／已有 VS Code 远端连接中处理通知和任务元数据，不复制聊天正文，不修改 Codex 原始会话。聊天名称按会话 ID 从标题索引和只读状态库匹配。详见 [隐私说明](https://github.com/Young581/codex-beacon/blob/main/PRIVACY.md)。
 
-搜索设置 `codexNotifier`。声音、弹窗、窗口标记、标题闪动和三类事件可以分别关闭；暂停仍记录历史。
-
-本地使用 **Local Codex Home / Local Python Path / Local Source Label / Local Collector Enabled**；SSH／容器使用远端组件设置。Codex Home 留空使用该环境的 `CODEX_HOME` 或 `~/.codex`。
-
-按 **Ctrl+Shift+P** 搜索：
-
-- **Codex 通知：查看连接状态**。
-- **Codex 通知：测试当前窗口采集链路**。
-- **Codex 通知：测试本机弹窗和声音**（测试本身会主动发声）。
-- **Codex 通知：配置当前环境的审批提醒**。
-
-审批 hook 仍需在对应 Codex 设置的 Hooks → PermissionRequest 中核对并 Trust；扩展不代替审批。完成和提问采集默认不改 hook。
-
-采集只传递事件、来源、目录和会话标识，不转发正文。源会话必须有 VS Code 插件专用来源标识；子代理完成不提醒。采集随 VS Code 工作区连接运行，具体扫描和离线回放上限见 Remote 说明。系统勿扰或静音可能影响弹窗和声音，历史仍可查看。
-
-MIT License。
-
-## 隐私与清理
-
-默认通知缓存保留 7 天（可设置 1–30 天）。本机使用当前用户限定的管道及 TLS 双向认证；安装者之间没有公共会话同步。打开 **Codex 通知：隐私与数据清理** 可预览、清理并暂停；其他远端环境须分别清理。详细数据范围、账号共享边界和保留限制见 [隐私说明](PRIVACY.md)。
-
-## 远端组件改名后的升级
-
-配套组件的新 ID 为 `lengmo1996.codex-notifier-collector`。原远端市场条目删除后名称不可重用，因此主扩展 0.3.4 已改为关联新 ID。请保留主扩展市场条目并使用 Update；新远端组件使用 New extension 上传。
-
-如果目标服务器或容器仍装有旧 `lengmo1996.codex-notifier-remote` 或 `lengmo.codex-notifier-remote`，请在任务空闲时卸载旧扩展，再安装新组件并重载该窗口，避免两个采集器同时注册相同命令。无需删除 Codex 原始会话或执行隐私清理；采集逻辑及既有数据目录未变。
+基于 [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier)，保留 MIT 版权和许可。本项目由 Young581 独立维护，是社区扩展。
 
 ## English
 
-**Dashboard:** click the Codex status bar item, the dashboard icon above the task tree or run **Codex Beacon: Open dashboard**. Single-column task cards show the Codex chat name, model, state, time and short turn ID. Expand each task independently for usage, estimated costs and navigation/read/delete actions. Names are matched from Codex's title index and read-only state metadata, with short session IDs as a fallback; task-name search is supported. Opening the page keeps tasks unread. Notification tests have a separate Tests group. Reload the window when tasks are idle after installing.
+Track Codex tasks by project in VS Code and get alerts when a response ends or input is needed. Compact, single-column cards show the chat title, model, state and time. Expand each card independently for per-turn tokens, estimated API costs and session/window actions.
 
-**Custom sounds:** use **Customize notification sound** in the notification menu or Command Palette to select a local WAV/MP3 file, preview it, or restore the system sound. `codexNotifier.soundFile` accepts an absolute path on the local Windows computer, including for SSH/container projects; empty uses the system sound. Missing or unsupported audio falls back with one warning. Explicit preview plays even when sounds are disabled, creates a test-history entry and shows no desktop popup. After upgrading, close all VS Code windows when tasks are idle, wait 10 seconds and reopen once to update the shared broker. Later sound changes apply immediately.
+### Getting started
 
-Version 0.7.0 · Windows x64 · Upstream extension identifiers retained
+Install **Codex Beacon**, ID `Young581.codex-beacon`, on **Windows x64 with VS Code 1.96+ and Python 3.8+**. Open a trusted project folder with the Codex extension. Click the **Codex** status-bar button to open the dashboard, or run **Open dashboard** from the command palette.
 
-Get sound, window indicators and unread reminders when **Codex in VS Code** finishes a response, asks a structured question or needs approval. Track local folders, Remote SSH servers and containers across multiple VS Code windows. Codex Desktop App sessions, standalone CLI sessions and sessions of unknown origin are excluded. This is a community extension, not an official OpenAI or Microsoft product.
+Local collection is embedded. If Python cannot be found, set `codexBeacon.localPythonPath` to its absolute executable path. Completion popups and sounds are enabled by default and can be adjusted independently. Run **Test desktop notification and sound** to verify them.
 
-### Install once, check each remote environment
+For SSH/container projects, install **Codex Beacon Collector** (`Young581.codex-beacon-collector`) and Python in that environment. Use **Check / install components for this environment** to locate it. Native audio plays on your Windows computer. Remote integration has automated checks but has not been tested against a live SSH/container host in this release.
 
-Install **Codex 会话通知**, ID `lengmo1996.codex-notifier-ui`, from the Marketplace. The extension pack links its companion, `lengmo1996.codex-notifier-collector`.
+Choose a local WAV/MP3 file with **Customize notification sound**, preview it, or restore the system sound. Settings include `codexBeacon.soundFile`, language, notification policies and custom model prices (`codexBeacon.modelPrices`, USD per million tokens). Estimated costs are API estimates rather than bills; unknown and partial usage remains labeled.
 
-| Environment | What runs there |
-| --- | --- |
-| Local VS Code folder on Windows | The main extension includes local collection. Python 3.8+ and a trusted folder are required. Empty windows do not collect. |
-| Remote SSH server or container | The companion collects events in that environment. Windows local collection does not start for a remote window. |
+Colored states distinguish running, waiting for input/approval, response complete, failed, canceled and unknown. Finishing a response does not prove that background work has finished. Pausing alerts keeps recording history; marking read does not approve an action. Approval reminders require a separately configured and trusted hook.
 
-In each SSH/container window, run **Codex Notifier: Check / install components for this environment** from the Command Palette, or click the yellow missing-component status indicator. On the companion's extension page, choose **Install in SSH / Container** and enable it. Check every new environment: extension packs do not guarantee installation into all future remote connections. A locally retained copy of the companion stays inactive and can be managed independently.
+### Migration and privacy
 
-For this derivative's offline installation, download `codex-notifier-ui-0.7.0.vsix` from the Codex Beacon repository and install `codex-notifier-collector-0.4.0.vsix` in the remote environment as needed. A VSIX does not embed its extension-pack members. Reload affected windows after active tasks are idle.
+Disable older notifier extensions before enabling Beacon to avoid duplicate alerts. This listing uses independent IDs, the `codexBeacon.*` settings namespace, notification history, caches and hook ownership. Reapply custom settings. Existing conversations and project files are retained; old notification history is not imported.
 
-### Understand the reminders
+No developer server, telemetry upload or account binding. Notification metadata stays on your computer or travels through your existing VS Code remote connection. Read the [privacy policy](https://github.com/Young581/codex-beacon/blob/main/PRIVACY.md).
 
-| Event or action | Default behavior |
-| --- | --- |
-| A response ends | Sound, yellow window indicator and unread history entry; no desktop popup by default. This means the current response ended, not that the overall goal or a background job finished. |
-| Approval or structured question | Sound and a red window indicator. Approval requires a configured and trusted hook. |
-| Return to a VS Code window | Existing notifications remain unread. |
-| Click a notification | Silently request its session in the target window's Codex sidebar and mark only that notification read. Other reminders retain their state. |
-| Delete a notification | Remove it from history; do not delete the original Codex conversation. |
-
-Unread status dots in window preview titles alternate every 0.8 seconds. Marking read stops the indicator. Windows may aggregate taskbar indicators; the extension does not flash the entire thumbnail background. Do Not Disturb, muted audio and system notification policies can affect delivery.
-
-**Auto Read On Window Focus is off by default.** If explicitly enabled, manually returning to a window marks all its existing reminders read; switching conversation editor tabs marks that session's reminders read. Notification-initiated navigation temporarily suspends automatic acknowledgement. Updates preserve explicit preferences, so turn this setting off if you enabled it before. New events arriving while a window stays focused are not consumed automatically.
-
-Read state acknowledges a reminder; it does not approve a tool action, answer a question or confirm that a deployment succeeded.
-
-### Choose where a session opens
-
-Notification menu → **Choose session opening location**, or set **Open Location**:
-
-- `sidebar` (default): return to the Codex extension's session sidebar.
-- `editor`: open the session as a tab in the central editor area.
-
-Disconnected windows, navigation errors and detected focus changes during sidebar routing preserve unread state. Sidebar links focus the destination first, then use VS Code's active-window routing to avoid numeric window-ID prefix collisions. Rapid window switching still introduces a race. VS Code may request confirmation when opening an extension link for the first time. Neither a returned sidebar request nor an open editor tab proves that Codex's backend has successfully resumed the conversation. No public API exposes the sidebar's current session, so sidebar selection itself is not used for automatic read tracking. Routing was inspected against Codex extension 26.901.22334; updates may require compatibility work.
-
-When multiple windows share the same environment and directory, the most recently used matching window is selected.
-
-### Manage history and settings
-
-Use **Delete this notification**, **Clear read notifications**, or **Clear all notifications** from the notification view. Deletion cancels queued reminders and retains bounded deduplication records so reconnecting does not immediately restore them. Already displayed system notifications expire according to Windows policy.
-
-Search VS Code settings for `codexNotifier`. **Sound**, **Sound On Done**, **Desktop Notifications**, **Desktop On Done**, **Taskbar Attention**, **Blink Window Title** and the three event-type switches are independent controls. **Pause alerts** keeps recording history; privacy cleanup pauses reception as well.
-
-Local folders use **Local Codex Home / Local Python Path / Local Source Label / Local Collector Enabled**. Remote environments use the companion's settings. An empty Codex Home uses that environment's `CODEX_HOME`, then `~/.codex`.
-
-Useful Command Palette actions include **Show connection status**, **Test collection in this window**, **Test desktop notification and sound**, and **Configure approval reminders for this environment**. A notification test intentionally plays sound when enabled. To receive approval reminders, review and trust the managed **PermissionRequest** hook in that environment's Codex settings. The extension never makes approval decisions. Response and question collection does not automatically install a hook.
-
-### Privacy, retention and upgrades
-
-The extension forwards allowlisted event metadata, including environment labels, paths and session identifiers, not prompt or response bodies. The collector locally parses session logs to identify these events. History is intentionally shared among the same OS user's local VS Code windows. There is no developer-operated synchronization server or telemetry upload; installing this extension does not connect another user to the author's sessions. Shared remote OS accounts or shared Codex Home directories are not separate privacy boundaries.
-
-Notification caches default to **7 days**, configurable from **1–30 days**. **Privacy and data cleanup** previews the scope, clears managed data and pauses collection/reception. Explicit resume is required. Original Codex conversations, credentials, project files and unrelated hooks are preserved. Other remote environments must be cleaned separately. See the bilingual [privacy policy](PRIVACY.md) for data fields, authentication, storage, backups and cleanup limits.
-
-If an environment still has `lengmo1996.codex-notifier-remote` or `lengmo.codex-notifier-remote`, uninstall that old companion before installing `lengmo1996.codex-notifier-collector`, then reload when tasks are idle. Do not run both collectors together. Main-extension updates under the same ID retain history; history is not automatically migrated between publishers. Publishers should update existing Marketplace entries instead of deleting them.
-
-Open the notification menu → **语言 / Language** to choose **中文** or **English**, or set `codexNotifier.language` to `zh-CN` (default) or `en`. This setting is independent of the VS Code display language. New popups, logs, history labels, and window title markers use the selected language immediately; the collector keeps running and unread states are preserved. Existing log lines and the current output channel name remain unchanged until reload. Session names, paths, hostnames, and raw OS error details are preserved. Each native popup uses its target window’s language. If an older background component is still running after upgrading, close all VS Code windows when tasks are idle, wait 10 seconds, and reopen.
-
-MIT License.
+Based on the MIT-licensed [upstream project](https://github.com/lengmo1996/codex-vscode-notifier), independently maintained by Young581.

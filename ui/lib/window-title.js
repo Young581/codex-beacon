@@ -18,8 +18,8 @@ function titleText(value) {
 class WindowTitleController {
   constructor(vscode, options = {}) {
     this.vscode = vscode;
-    this.variableName = validIdentifier(options.variableName || 'codexNotification', 'window title variable');
-    this.contextKey = validIdentifier(options.contextKey || 'codexNotifier.windowTitle', 'window title context key');
+    this.variableName = validIdentifier(options.variableName || 'codexBeaconNotification', 'window title variable');
+    this.contextKey = validIdentifier(options.contextKey || 'codexBeacon.windowTitle', 'window title context key');
     this.token = '${' + this.variableName + '}';
     this.serialize = options.serialize || (operation => operation());
     this.desiredPrefix = '';

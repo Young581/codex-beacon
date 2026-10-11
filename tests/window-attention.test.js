@@ -20,7 +20,7 @@ function fixture(t, nativeRequest) {
   const logs = [];
   const timers = new Map();
   let nextTimer = 0;
-  let template = '${codexNotification}${separator}${rootName}';
+  let template = '${codexBeaconNotification}${separator}${rootName}';
   const vscode = {
     ConfigurationTarget: {Global: 1, Workspace: 2},
     commands: {
@@ -50,7 +50,7 @@ function fixture(t, nativeRequest) {
       if (op === 'attentionBind') return {bound: true};
       assert.equal(op, 'attentionUpdate');
       return {bound: true, color: payload.count === 0 ? 'none' : payload.needsDecision ? 'red' : 'yellow',
-        title: contexts.get('codexNotifier.windowTitle')};
+        title: contexts.get('codexBeacon.windowTitle')};
     },
   };
   const controller = new WindowAttention(vscode, client, {log: message => logs.push(message), testing: true});
@@ -143,7 +143,7 @@ test('marking read during binding cancels animation immediately and never submit
   release.resolve();
   await Promise.all([pending, read]);
   assert.deepEqual(f.updates().map(request => request.payload), [{count: 0, needsDecision: false, flash: false}]);
-  assert.equal(f.contexts.get('codexNotifier.windowTitle'), '');
+  assert.equal(f.contexts.get('codexBeacon.windowTitle'), '');
   assert.equal(f.controller.state.count, 0);
   assert.equal(f.timers.size, 0);
 });
@@ -163,7 +163,7 @@ test('disabling attention during binding cannot restore a stale title or submit 
   release.resolve();
   await Promise.all([pending, disabled]);
   assert.deepEqual(f.updates().map(request => request.payload.count), [0]);
-  assert.equal(f.contexts.get('codexNotifier.windowTitle'), '');
+  assert.equal(f.contexts.get('codexBeacon.windowTitle'), '');
   assert.equal(f.controller.state.count, 0);
   assert.equal(f.timers.size, 0);
 });
@@ -175,16 +175,16 @@ test('disabling blinking keeps the unread text, while disabling attention stops 
   const staleFrame = [...f.timers.values()][0];
   assert.equal(typeof staleFrame, 'function');
   await f.controller.update(entries, {blink: false});
-  assert.equal(f.contexts.get('codexNotifier.windowTitle'), '🟡 本轮已回复 1');
+  assert.equal(f.contexts.get('codexBeacon.windowTitle'), '🟡 本轮已回复 1');
   assert.equal(f.timers.size, 0);
   assert.equal(f.updates().length, 1, 'Animation settings must not emit another native request');
   staleFrame();
   await settle();
-  assert.equal(f.contexts.get('codexNotifier.windowTitle'), '🟡 本轮已回复 1');
+  assert.equal(f.contexts.get('codexBeacon.windowTitle'), '🟡 本轮已回复 1');
   assert.equal(f.timers.size, 0);
 
   await f.controller.update(entries, {enabled: false});
-  assert.equal(f.contexts.get('codexNotifier.windowTitle'), '');
+  assert.equal(f.contexts.get('codexBeacon.windowTitle'), '');
   assert.equal(f.updates().at(-1).payload.count, 0);
   await f.controller.update(entries, {enabled: true});
   assert.equal(f.timers.size, 1);
@@ -209,7 +209,7 @@ test('disposing during binding stops animation and blocks late native updates or
   await settle();
   await f.controller.update([entry('source:later')]);
   await f.controller.title.commandQueue;
-  assert.equal(f.contexts.get('codexNotifier.windowTitle'), '');
+  assert.equal(f.contexts.get('codexBeacon.windowTitle'), '');
   assert.equal(f.timers.size, 0);
   assert.equal(f.updates().length, 0);
 });

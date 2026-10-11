@@ -77,7 +77,7 @@ class HistoryView {
         waiting_approval: '等审批', waiting_async: '异步等待', unknown: '未知'}[entry.taskState] || state);
       item.tooltip = taskTooltip(entry, this.options());
       item.iconPath = new vscode.ThemeIcon(icon, new vscode.ThemeColor(color));
-      item.command = {command: 'codexNotifier.showEntry', title: t('打开对应会话并标为已读'), arguments: [entry.key]};
+      item.command = {command: 'codexBeacon.showEntry', title: t('打开对应会话并标为已读'), arguments: [entry.key]};
       item.contextValue = entry.read ? 'readNotification' : 'unreadNotification';
       item.accessibilityInformation = {label: `${t(state)} · ${usageDescription(entry.telemetry, this.options())}`};
       return item;
@@ -91,7 +91,7 @@ class HistoryView {
     item.tooltip = t`${entry.read ? t('已读') : t('未读')} · ${eventTitle(entry)}\n目标窗口：${clean(entry.targetWindowLabel) || t('尚未连接')}\n目录：${clean(entry.event.cwd)}\n会话：${clean(entry.event.session_id)}\n${date.toLocaleString(getLanguage())}\n单击静默标记并打开对应会话`;
     item.iconPath = new vscode.ThemeIcon(entry.read ? 'check' : 'circle-filled', new vscode.ThemeColor(entry.read ?
       'descriptionForeground' : ['approval', 'question'].includes(entry.event.type) ? 'list.errorForeground' : 'list.warningForeground'));
-    item.command = {command: 'codexNotifier.showEntry', title: t('打开对应会话并标为已读'), arguments: [entry.key]};
+    item.command = {command: 'codexBeacon.showEntry', title: t('打开对应会话并标为已读'), arguments: [entry.key]};
     item.contextValue = entry.read ? 'readNotification' : 'unreadNotification';
     item.accessibilityInformation = {label: `${label}，${item.description}`};
     return item;

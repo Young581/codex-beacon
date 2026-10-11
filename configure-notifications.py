@@ -71,15 +71,15 @@ def main():
     parser.add_argument('--check', action='store_true')
     args = parser.parse_args()
     values = {
-        'codexNotifier.notificationsEnabled': True,
-        'codexNotifier.notifyOnDone': True,
-        'codexNotifier.desktopNotifications': True,
-        'codexNotifier.desktopOnDone': True,
-        'codexNotifier.sound': True,
-        'codexNotifier.soundOnDone': True,
-        'codexNotifier.onlyWhenUnfocused': False,
-        'codexNotifier.localPythonPath': sys.executable,
-        'codexNotifier.language': 'zh-CN',
+        'codexBeacon.notificationsEnabled': True,
+        'codexBeacon.notifyOnDone': True,
+        'codexBeacon.desktopNotifications': True,
+        'codexBeacon.desktopOnDone': True,
+        'codexBeacon.sound': True,
+        'codexBeacon.soundOnDone': True,
+        'codexBeacon.onlyWhenUnfocused': False,
+        'codexBeacon.localPythonPath': sys.executable,
+        'codexBeacon.language': 'zh-CN',
     }
     original = args.settings.read_text(encoding='utf-8-sig') if args.settings.exists() else '{}\n'
     updated = update(original, values)
@@ -91,7 +91,7 @@ def main():
         return
     args.settings.parent.mkdir(parents=True, exist_ok=True)
     if args.settings.exists():
-        backup = args.settings.with_name('settings.before-codex-notifier-' + datetime.datetime.now().strftime('%Y%m%d-%H%M%S-%f') + '.json')
+        backup = args.settings.with_name('settings.before-codex-beacon-' + datetime.datetime.now().strftime('%Y%m%d-%H%M%S-%f') + '.json')
         shutil.copy2(args.settings, backup)
         print('Backup: ' + str(backup))
     args.settings.write_text(updated, encoding='utf-8')

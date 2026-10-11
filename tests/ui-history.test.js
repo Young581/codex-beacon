@@ -39,7 +39,7 @@ test('history separates current and other unread entries from collapsed read ent
   assert.match(read.label, /已读/);
   assert.equal(unread.iconPath.color.id, 'list.warningForeground');
   assert.equal(read.iconPath.color.id, 'descriptionForeground');
-  assert.equal(unread.command.command, 'codexNotifier.showEntry');
+  assert.equal(unread.command.command, 'codexBeacon.showEntry');
   assert.equal(unread.contextValue, 'unreadNotification');
   assert.equal(read.contextValue, 'readNotification');
 });

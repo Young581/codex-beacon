@@ -2,7 +2,7 @@
 
 为 VS Code 中的 Codex 提供按项目分组的任务列表、状态灯、token 与费用估算，以及完成提醒。
 
-基于 [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier) 的 MIT 开源项目，包含 Windows PowerShell 路径修复和安装辅助脚本。当前版本为主扩展 **0.7.0**、采集器 **0.4.0**。
+基于 [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier) 的 MIT 开源项目，包含 Windows PowerShell 路径修复和安装辅助脚本。当前版本为主扩展 **0.8.0**、采集器 **0.5.0**。
 
 ## 当前功能
 
@@ -37,20 +37,20 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 
 ```json
 {
-  "codexNotifier.notificationsEnabled": true,
-  "codexNotifier.notifyOnDone": true,
-  "codexNotifier.desktopNotifications": true,
-  "codexNotifier.desktopOnDone": true,
-  "codexNotifier.sound": true,
-  "codexNotifier.soundOnDone": true
+  "codexBeacon.notificationsEnabled": true,
+  "codexBeacon.notifyOnDone": true,
+  "codexBeacon.desktopNotifications": true,
+  "codexBeacon.desktopOnDone": true,
+  "codexBeacon.sound": true,
+  "codexBeacon.soundOnDone": true
 }
 ```
 
-如 Python 不在启动器默认位置，还需在 `codexNotifier.localPythonPath` 中设置其完整路径。默认用户配置以外的 VS Code Profile 需要在该 Profile 中单独配置。
+如 Python 不在启动器默认位置，还需在 `codexBeacon.localPythonPath` 中设置其完整路径。默认用户配置以外的 VS Code Profile 需要在该 Profile 中单独配置。
 
 在任务空闲时运行“开发人员：重新加载窗口”。升级后若共享通知后台仍使用旧代码，可在任务空闲时关闭所有 VS Code 窗口，等待 10 秒后再打开。验证提醒可运行 **Codex 通知：测试本机弹窗和声音**。
 
-Windows 勿扰模式、通知权限和静音设置可能影响实际提醒。首次启用任务栏状态时，扩展会在原 `window.title` 模板前加入 `${codexNotification}${separator}`。
+Windows 勿扰模式、通知权限和静音设置可能影响实际提醒。首次启用任务栏状态时，扩展会在原 `window.title` 模板前加入 `${codexBeaconNotification}${separator}`。
 
 ## 仪表盘
 
@@ -73,7 +73,7 @@ Windows 勿扰模式、通知权限和静音设置可能影响实际提醒。首
 
 打开任务面板右上角“…” → 通知菜单 → **自定义提示音**，或在命令面板运行 **Codex Beacon: 自定义提示音**，选择本机 WAV／MP3 文件。该菜单也可 **试听当前提示音** 或 **恢复系统默认提示音**。试听只播放声音，不弹出桌面通知；即使声音总开关关闭，主动试听仍播放。试听会在历史中留下测试记录。
 
-所选音频用于本轮完成、等待审批和等待回答的声音提醒。也可在用户设置中填写 `codexNotifier.soundFile` 的本机绝对路径；留空使用系统提示音。SSH／容器项目也读取 Windows 本机音频。修改后无需重载；首次从旧版升级需在任务空闲时关闭全部 VS Code 窗口，等待 10 秒再打开，以更新共享通知后台。
+所选音频用于本轮完成、等待审批和等待回答的声音提醒。也可在用户设置中填写 `codexBeacon.soundFile` 的本机绝对路径；留空使用系统提示音。SSH／容器项目也读取 Windows 本机音频。修改后无需重载；首次从旧版升级需在任务空闲时关闭全部 VS Code 窗口，等待 10 秒再打开，以更新共享通知后台。
 
 文件被删除或无法解码时自动回退到系统提示音，并提示一次。部分特殊 WAV／MP3 编码可能不被 Windows 支持，建议使用 PCM WAV 或常见 MP3。合并的提醒只播放一次，以优先级最高且启用声音的提醒选择音频（审批、提问、完成）。选择音频不会自动开启已关闭的声音总开关。音频文件只在本机读取，不打包或上传。
 
@@ -107,9 +107,9 @@ python -B build.py --output dist
 
 顶部使用简短的“任务”标题和图标按钮。全部标读、清空已读、清空全部以及完整通知菜单收纳在右上角 **“…”** 内，窄侧栏无需拉宽即可访问。
 
-菜单默认跟随 VS Code 界面语言，可在通知菜单的语言选项或 `codexNotifier.language` 中选择 `auto`、`zh-CN`、`en`。右键与顶部操作只显示一种语言，并跟随插件语言即时切换；命令面板与设置采用 VS Code 的界面语言。
+菜单默认跟随 VS Code 界面语言，可在通知菜单的语言选项或 `codexBeacon.language` 中选择 `auto`、`zh-CN`、`en`。右键与顶部操作只显示一种语言，并跟随插件语言即时切换；命令面板与设置采用 VS Code 的界面语言。
 
-任务行把 token／金额放在最前面，例如 `4.48M tok · ≈$0.7053`，后接简短状态；K 表示千，M 表示百万，`*` 表示部分统计。完整 token 数、会话／轮次编号、模型、状态与时间放在悬停详情中。没有用量显示“无用量”，未知单价显示 `$?`，估算价带 `≈`。
+任务行显示紧凑 token 数与简短状态；K 表示千，M 表示百万，`*` 表示部分统计。金额与完整用量放在管理面板的可展开任务详情里。
 
 将鼠标移到项目分组或任务行，点击窗口图标 **打开项目窗口**。它只切换／恢复项目窗口，保留未读状态；普通任务点击仍打开对应会话。目标通知组件暂未连接时也能恢复保存的项目 URI，包括多根工作区文件和远端连接地址；已关闭的子项目不会跳到其父目录窗口。
 
@@ -128,16 +128,16 @@ python -B build.py --output dist
 
 状态基于最后采集到的事件，不根据静默或某次工具报错推断任务失败。没有开始事件的旧通知仍显示完成状态，但不会补造 token 用量。用量更新静默，不增加未读。清空已读会保留进行中的任务，以及仍有未读提醒的任务用量。
 
-默认单价来自 [OpenAI 官方价格表](https://developers.openai.com/api/docs/pricing)，核对日期 **2026-10-10**，单位为美元／百万 token。默认使用短上下文价格；有 `service_tier` 时使用该档位，否则按 Standard 估算。可通过 `codexNotifier.pricingContext` 和 `codexNotifier.pricingTier` 覆盖上下文与档位。
+默认单价来自 [OpenAI 官方价格表](https://developers.openai.com/api/docs/pricing)，核对日期 **2026-10-10**，单位为美元／百万 token。默认使用短上下文价格；有 `service_tier` 时使用该档位，否则按 Standard 估算。可通过 `codexBeacon.pricingContext` 和 `codexBeacon.pricingTier` 覆盖上下文与档位。
 
 内置模型：`gpt-6.1-sol`、`gpt-6-astra`、`gpt-6-luna`、`gpt-5.6-sol`、`gpt-5.3-codex`。金额为 **API 估算，不是实际账单**，不包含其他会话、子代理或后台任务。未知模型和未支持档位显示未知；缺少模型单价显示“未配置单价”。推理 token 包含在输出中，缓存命中和缓存写入从普通输入中扣除，避免重复计费；切换模型分别计价。
 
-在 VS Code 设置中编辑 `codexNotifier.modelPrices`，按精确模型名覆盖最终单价，自定义价格不再乘服务档位系数。产生缓存写入 token 时还需要 `cacheWrite`。例如：
+在 VS Code 设置中编辑 `codexBeacon.modelPrices`，按精确模型名覆盖最终单价，自定义价格不再乘服务档位系数。产生缓存写入 token 时还需要 `cacheWrite`。例如：
 
 ```json
 {
-  "codexNotifier.groupBy": "project",
-  "codexNotifier.modelPrices": {
+  "codexBeacon.groupBy": "project",
+  "codexBeacon.modelPrices": {
     "my-model": {"input": 2, "cachedInput": 0.1, "cacheWrite": 2.5, "output": 10}
   }
 }
@@ -158,4 +158,4 @@ python -B build.py --output dist
 
 源代码基于上游提交 `4fa74775c65980a5015e0515b5877bc4ebe51e45`，保留原版权声明及 [MIT 许可证](LICENSE)。[UPSTREAM.md](UPSTREAM.md) 保存原项目介绍。
 
-这是独立维护的衍生项目。为兼容现有本地安装，扩展 ID 暂时保留上游标识；本仓库没有向 VS Code 扩展市场发布新条目。请使用本仓库的构建包获取这里的修复。
+这是独立维护的衍生项目，市场发布准备使用 `Young581.codex-beacon` 与 `Young581.codex-beacon-collector` 两个新 ID；发布者权限确认及市场上传尚待完成。命令、设置、缓存与 Hook 所有者均使用独立标识。迁移及发布说明见 [docs/marketplace.md](docs/marketplace.md)。旧版通知历史不自动迁移；启用新版前，在任务空闲时停用旧通知扩展并重新配置自定义设置。

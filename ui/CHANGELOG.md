@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.0
+
+- Prepare the independent Codex Beacon Marketplace identity and companion.
+- Isolate commands, settings, window title variables, approval hooks and caches from upstream extensions.
+- Add Marketplace branding, current documentation and completion popups enabled by default.
+- Existing task dashboard, custom sounds and per-turn usage remain available.
+
 ## 0.7.0
 
 - 任务卡片默认只显示聊天标题、模型、状态、时间与轮次，单列排列，每条详情独立展开。

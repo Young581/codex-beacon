@@ -50,11 +50,11 @@ def main():
     workspace = runtime / ("thermal-training" if visual else "workspace")
     for directory in (user_data / "User", extensions, home, workspace):
         directory.mkdir(parents=True, exist_ok=False)
-    (home / ".codex-notifier-extension-test").write_text("isolated extension-host fixture\n", encoding="utf-8")
+    (home / ".codex-beacon-extension-test").write_text("isolated extension-host fixture\n", encoding="utf-8")
     settings = {
-        "codexNotifier.language": "zh-CN",
-        "codexNotifier.localCodexHome": str(home), "codexNotifier.localCollectorEnabled": True,
-        "codexNotifier.localPythonPath": sys.executable,
+        "codexBeacon.language": "zh-CN",
+        "codexBeacon.localCodexHome": str(home), "codexBeacon.localCollectorEnabled": True,
+        "codexBeacon.localPythonPath": sys.executable,
         "extensions.confirmedUriHandlerExtensionIds": ["notifier-test.notifier-route-fixture"],
         "security.workspace.trust.enabled": False, "update.mode": "none",
         "extensions.autoCheckUpdates": False, "extensions.autoUpdate": False,
@@ -63,10 +63,10 @@ def main():
     }
     if visual:
         version = json.loads((ROOT / "ui" / "package.json").read_text(encoding="utf-8-sig"))["version"]
-        settings.update({"window.title": "Codex Notifier " + version + " - Visual Review", "codexNotifier.localSourceLabel": "Local test workspace"})
+        settings.update({"window.title": "Codex Notifier " + version + " - Visual Review", "codexBeacon.localSourceLabel": "Local test workspace"})
     (user_data / "User" / "settings.json").write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
     (home / "hooks.json").write_text(json.dumps({"hooks": {"PermissionRequest": [{"hooks": [{
-        "type": "command", "command": "echo codex-notifier-unrelated-fixture", "timeout": 1
+        "type": "command", "command": "echo codex-beacon-unrelated-fixture", "timeout": 1
     }]}]}}, indent=2) + "\n", encoding="utf-8")
     session_id = str(uuid.uuid4())
     now = datetime.datetime.now(datetime.timezone.utc)

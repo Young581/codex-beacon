@@ -1,9 +1,9 @@
 {
-  "name": "codex-notifier-collector",
-  "displayName": "Codex 远端通知采集器（lengmo1996）",
-  "description": "SSH／容器中的 Codex 通知采集器。Remote notification collector for VS Code Codex sessions; inactive locally.",
-  "publisher": "lengmo1996",
-  "version": "0.4.0",
+  "name": "codex-beacon-collector",
+  "displayName": "Codex Beacon Collector",
+  "description": "Remote SSH and container event collection for Codex Beacon. Install the main extension on Windows.",
+  "publisher": "Young581",
+  "version": "0.5.0",
   "license": "MIT",
   "engines": {
     "vscode": "^1.96.0"
@@ -29,65 +29,65 @@
   "contributes": {
     "commands": [
       {
-        "command": "codexNotifier.remote.status",
-        "title": "%command.codexNotifier.remote.status%",
+        "command": "codexBeacon.remote.status",
+        "title": "%command.codexBeacon.remote.status%",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.remote.configureApprovalHook",
-        "title": "%command.codexNotifier.remote.configureApprovalHook%",
+        "command": "codexBeacon.remote.configureApprovalHook",
+        "title": "%command.codexBeacon.remote.configureApprovalHook%",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.remote.removeApprovalHook",
-        "title": "%command.codexNotifier.remote.removeApprovalHook%",
+        "command": "codexBeacon.remote.removeApprovalHook",
+        "title": "%command.codexBeacon.remote.removeApprovalHook%",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.remote.test",
-        "title": "%command.codexNotifier.remote.test%",
+        "command": "codexBeacon.remote.test",
+        "title": "%command.codexBeacon.remote.test%",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.remote.restart",
-        "title": "%command.codexNotifier.remote.restart%",
+        "command": "codexBeacon.remote.restart",
+        "title": "%command.codexBeacon.remote.restart%",
         "category": "Codex Beacon"
       }
     ],
     "configuration": {
       "title": "%configuration.title%",
       "properties": {
-        "codexNotifier.codexHome": {
+        "codexBeacon.codexHome": {
           "type": "string",
           "default": "",
           "scope": "machine-overridable",
-          "description": "%setting.codexNotifier.codexHome%"
+          "description": "%setting.codexBeacon.codexHome%"
         },
-        "codexNotifier.pythonPath": {
+        "codexBeacon.pythonPath": {
           "type": "string",
           "default": "",
           "scope": "machine-overridable",
-          "description": "%setting.codexNotifier.pythonPath%"
+          "description": "%setting.codexBeacon.pythonPath%"
         },
-        "codexNotifier.sourceLabel": {
+        "codexBeacon.sourceLabel": {
           "type": "string",
           "default": "",
           "scope": "window",
-          "description": "%setting.codexNotifier.sourceLabel%"
+          "description": "%setting.codexBeacon.sourceLabel%"
         },
-        "codexNotifier.collectorEnabled": {
+        "codexBeacon.collectorEnabled": {
           "type": "boolean",
           "default": true,
           "scope": "window",
-          "description": "%setting.codexNotifier.collectorEnabled%"
+          "description": "%setting.codexBeacon.collectorEnabled%"
         },
-        "codexNotifier.cacheRetentionDays": {
+        "codexBeacon.cacheRetentionDays": {
           "type": "integer",
           "default": 7,
           "minimum": 1,
           "maximum": 30,
           "scope": "window",
-          "description": "%setting.codexNotifier.cacheRetentionDays%"
+          "description": "%setting.codexBeacon.cacheRetentionDays%"
         }
       }
     }
@@ -100,5 +100,17 @@
   "homepage": "https://github.com/Young581/codex-beacon#readme",
   "bugs": {
     "url": "https://github.com/Young581/codex-beacon/issues"
+  },
+  "icon": "assets/beacon.png",
+  "keywords": [
+    "codex",
+    "notifications",
+    "tasks",
+    "tokens",
+    "dashboard"
+  ],
+  "galleryBanner": {
+    "color": "#17212b",
+    "theme": "dark"
   }
 }

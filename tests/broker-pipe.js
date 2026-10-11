@@ -76,7 +76,7 @@ test('real local pipe: auth, cross-client dedup, restart, bounded input, idle sh
   const id = crypto.randomUUID();
   const storage = path.resolve(__dirname, '.broker-test-data', id);
   fs.mkdirSync(storage, { recursive: true });
-  const pipe = process.platform === 'win32' ? `\\\\.\\pipe\\codex-notifier-test-${id}` : path.join(storage, 'broker.sock');
+  const pipe = process.platform === 'win32' ? `\\\\.\\pipe\\codex-beacon-test-${id}` : path.join(storage, 'broker.sock');
   const processes = [];
   const sockets = [];
   t.after(() => { for (const socket of sockets) socket.destroy(); for (const child of processes) if (child.exitCode === null) child.kill(); });

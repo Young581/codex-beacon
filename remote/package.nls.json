@@ -1,13 +1,13 @@
 {
-  "command.codexNotifier.remote.status": "Show collector status",
-  "command.codexNotifier.remote.configureApprovalHook": "Configure approval reminder hook",
-  "command.codexNotifier.remote.removeApprovalHook": "Remove approval reminder hook",
-  "command.codexNotifier.remote.test": "Test remote notification delivery",
-  "command.codexNotifier.remote.restart": "Restart collector",
+  "command.codexBeacon.remote.status": "Show collector status",
+  "command.codexBeacon.remote.configureApprovalHook": "Configure approval reminder hook",
+  "command.codexBeacon.remote.removeApprovalHook": "Remove approval reminder hook",
+  "command.codexBeacon.remote.test": "Test remote notification delivery",
+  "command.codexBeacon.remote.restart": "Restart collector",
   "configuration.title": "Remote Collector",
-  "setting.codexNotifier.codexHome": "Codex home in this environment. Empty uses CODEX_HOME, then ~/.codex.",
-  "setting.codexNotifier.pythonPath": "Python executable without arguments. Defaults to python3 on Linux/macOS or py -3 on Windows.",
-  "setting.codexNotifier.sourceLabel": "Server/container display label. Empty uses the connection type and hostname; each event carries its own project path.",
-  "setting.codexNotifier.collectorEnabled": "Read Codex event metadata while this trusted workspace is open.",
-  "setting.codexNotifier.cacheRetentionDays": "Collector notification-cache retention in this environment (1–30 days). Expiry runs during collection; original conversations are untouched."
+  "setting.codexBeacon.codexHome": "Codex home in this environment. Empty uses CODEX_HOME, then ~/.codex.",
+  "setting.codexBeacon.pythonPath": "Python executable without arguments. Defaults to python3 on Linux/macOS or py -3 on Windows.",
+  "setting.codexBeacon.sourceLabel": "Server/container display label. Empty uses the connection type and hostname; each event carries its own project path.",
+  "setting.codexBeacon.collectorEnabled": "Read Codex event metadata while this trusted workspace is open.",
+  "setting.codexBeacon.cacheRetentionDays": "Collector notification-cache retention in this environment (1–30 days). Expiry runs during collection; original conversations are untouched."
 }

@@ -279,17 +279,17 @@ const MESSAGES = {
   "隐私清理正在执行，请稍后重试。": "Privacy cleanup is in progress; please retry later.",
   "采集器命令超时；请检查 Python 和 Codex home 设置。": "Collector command timed out; check the Python and Codex Home settings.",
   "采集器返回内容超过允许大小。": "Collector output exceeds the size limit.",
-  "无法运行 Python（{0}）。请检查 codexNotifier.{1}。": "Could not run Python ({0}). Check codexNotifier.{1}.",
+  "无法运行 Python（{0}）。请检查 codexBeacon.{1}。": "Could not run Python ({0}). Check codexBeacon.{1}.",
   "启动失败": "Failed to start",
   "采集器命令失败（退出码 {0}）。请检查 Python、目录权限和 hooks.json 格式。": "Collector command failed (exit code {0}). Check Python, directory permissions, and the hooks.json format.",
   "采集器没有返回有效结果。": "The collector did not return a valid result.",
   "无法启动采集器命令（{0}）。": "Could not start the collector command ({0}).",
-  "审批提醒 Hook 已配置。请在 Codex 设置 → Hooks → PermissionRequest 中核对 vscode-notifier/remote_notifier.py，然后点击 Trust。扩展无法代替你信任 Hook。": "The approval notification hook is configured. In Codex Settings → Hooks → PermissionRequest, verify vscode-notifier/remote_notifier.py and click Trust. This extension cannot trust the hook on your behalf.",
+  "审批提醒 Hook 已配置。请在 Codex 设置 → Hooks → PermissionRequest 中核对 codex-beacon/remote_notifier.py，然后点击 Trust。扩展无法代替你信任 Hook。": "The approval notification hook is configured. In Codex Settings → Hooks → PermissionRequest, verify codex-beacon/remote_notifier.py and click Trust. This extension cannot trust the hook on your behalf.",
   "已移除此扩展管理的审批提醒 Hook；其他配置和备份已保留。": "The approval notification hook managed by this extension was removed; other settings and backups were retained.",
   "采集进程未及时退出；已暂停，未执行数据清理。": "The collector process did not exit in time; collection is paused and data cleanup was not performed.",
   "请先预览本环境的隐私清理清单，再确认清理。": "Preview this environment's privacy cleanup list before confirming cleanup.",
   "无法写入暂停设置；本进程及持久隐私暂停标记仍会阻止采集。": "Could not save the pause setting; this process and the persistent privacy pause marker still prevent collection.",
-  "采集器已暂停。请启用 codexNotifier.{0} 后测试采集链路。": "The collector is paused. Enable codexNotifier.{0} before testing the collector connection.",
+  "采集器已暂停。请启用 codexBeacon.{0} 后测试采集链路。": "The collector is paused. Enable codexBeacon.{0} before testing the collector connection.",
   "Collector is not started.": [
     "采集器尚未启动。",
     "Collector is not started."
@@ -346,9 +346,9 @@ const MESSAGES = {
     "工作区采集器已关闭。",
     "Workspace collector closed."
   ],
-  "Codex Notifier — Collector": [
+  "Codex Beacon — Collector": [
     "Codex 通知 · 采集器",
-    "Codex Notifier — Collector"
+    "Codex Beacon — Collector"
   ],
   "Notification queue reached 500 entries; oldest pending event was dropped.": [
     "通知队列达到 500 条；已丢弃最早的待发送事件。",
@@ -358,9 +358,9 @@ const MESSAGES = {
     "本机组件未确认接收此事件。",
     "Local component did not acknowledge the event."
   ],
-  "Waiting for the local Codex Notifier component; retrying every 2 seconds.": [
+  "Waiting for the local Codex Beacon component; retrying every 2 seconds.": [
     "正在等待本机 Codex 通知组件；每 2 秒重试。",
-    "Waiting for the local Codex Notifier component; retrying every 2 seconds."
+    "Waiting for the local Codex Beacon component; retrying every 2 seconds."
   ],
   "语言已切换为中文。": "Language changed to English.",
   "采集器语言已更新。": "Collector language updated.",

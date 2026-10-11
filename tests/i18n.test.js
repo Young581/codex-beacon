@@ -155,7 +155,7 @@ test('Installation dialog action remains valid when the language changes while o
   await showInstallation({commands: {async executeCommand(cmd) {commands.push(cmd);}}, window: {
     async showInformationMessage(text, button) {assert.equal(button, 'Check again'); language = 'zh-CN'; return button;},
   }}, {remote: true, state: 'missing'});
-  assert.deepEqual(commands, ['workbench.extensions.search', 'codexNotifier.checkInstallation']);
+  assert.deepEqual(commands, ['workbench.extensions.search', 'codexBeacon.checkInstallation']);
 });
 
 test('Packaged collectors and UI use the exact canonical translations', () => {

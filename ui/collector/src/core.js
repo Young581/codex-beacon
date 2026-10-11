@@ -7,9 +7,9 @@ const os = require('node:os');
 const path = require('node:path');
 const { StringDecoder } = require('node:string_decoder');
 
-const RECEIVE_COMMAND = 'codexNotifier.internal.receive';
+const RECEIVE_COMMAND = 'codexBeacon.internal.receive';
 const MAX_LINE_BYTES = 16 * 1024;
-const OWNER = 'codex-vscode-notifier-v1';
+const OWNER = 'codex-beacon-v1';
 const TYPES = new Set(['done', 'approval', 'question', 'test', 'heartbeat', 'task']);
 
 function clean(value, limit) {
@@ -109,7 +109,7 @@ function makeSource(config, {hostname = os.hostname(), remoteName = '', cwd = ''
 function hookIsConfigured(document) {
   return Array.isArray(document?.hooks?.PermissionRequest) && document.hooks.PermissionRequest.some(entry =>
     Array.isArray(entry?.hooks) && entry.hooks.some(hook => hook?.type === 'command' &&
-      typeof hook.command === 'string' && /(?:^|\s)--owner\s+["']?codex-vscode-notifier-v1["']?(?:\s|$)/.test(hook.command)));
+      typeof hook.command === 'string' && /(?:^|\s)--owner\s+["']?codex-beacon-v1["']?(?:\s|$)/.test(hook.command)));
 }
 
 function restartDelay(failureCount) {
@@ -177,7 +177,7 @@ class EventBridge {
       if (this.connected) this.onConnection(false);
       this.connected = false;
       if (!this.reportedUnavailable) {
-        this.log(t('Waiting for the local Codex Notifier component; retrying every 2 seconds.'));
+        this.log(t('Waiting for the local Codex Beacon component; retrying every 2 seconds.'));
         this.reportedUnavailable = true;
       }
     } finally {

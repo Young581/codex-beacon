@@ -40,10 +40,10 @@ class PackageTests(unittest.TestCase):
         self.source = self.runtime / "source"
         self.source.mkdir(parents=True)
         self.output = self.runtime / "output"
-        self.package = {"name": "codex-notifier-ui", "publisher": "lengmo1996", "version": build.VERSIONS["ui"],
+        self.package = {"name": "codex-beacon", "publisher": "Young581", "version": build.VERSIONS["ui"],
                         "engines": {"vscode": "^1.96.0"}, "main": "./extension.js",
                         "displayName": "Codex & 通知 <local>", "description": "Offline test",
-                        "extensionKind": ["ui"], "extensionPack": ["lengmo1996.codex-notifier-collector"]}
+                        "extensionKind": ["ui"], "extensionPack": ["Young581.codex-beacon-collector"]}
         self.fill_files(self.source, policy.EXTENSION_FILES["ui"])
         self.write_package()
         (self.source / "extension.js").write_text("exports.activate = function () {};\n", encoding="utf-8")
@@ -91,7 +91,7 @@ class PackageTests(unittest.TestCase):
 
     def test_unreviewed_pack_members_and_cross_host_dependencies_are_rejected(self):
         for changes in ({"extensionPack": []}, {"extensionPack": ["someone.unreviewed"]},
-                        {"extensionDependencies": ["lengmo1996.codex-notifier-collector"]}):
+                        {"extensionDependencies": ["Young581.codex-beacon-collector"]}):
             with self.assertRaisesRegex(ValueError, "extensionPack"):
                 build.validate_package(dict(self.package, **changes), "ui")
 
@@ -99,7 +99,7 @@ class PackageTests(unittest.TestCase):
         result = build.build_one(self.source, self.output, "ui")
         def change(files):
             files["extension.vsixmanifest"] = files["extension.vsixmanifest"].replace(
-                b'Value="lengmo1996.codex-notifier-collector"', b'Value="someone.unreviewed"')
+                b'Value="Young581.codex-beacon-collector"', b'Value="someone.unreviewed"')
         self.rewrite_archive(result["path"], change)
         with self.assertRaisesRegex(ValueError, "ExtensionPack"):
             build.verify_vsix(result["path"], "ui")
@@ -135,7 +135,7 @@ class PackageTests(unittest.TestCase):
 
     def test_archive_has_standard_metadata_and_readme_asset(self):
         result = build.build_one(self.source, self.output, "ui")
-        self.assertEqual(result["extension_id"], "lengmo1996.codex-notifier-ui")
+        self.assertEqual(result["extension_id"], "Young581.codex-beacon")
         with zipfile.ZipFile(result["path"]) as archive:
             manifest = ET.fromstring(archive.read("extension.vsixmanifest"))
             display = manifest.find("v:Metadata/v:DisplayName", {"v": build.NS})
@@ -204,7 +204,7 @@ class PackageTests(unittest.TestCase):
         package_path = Path(result["path"])
         with zipfile.ZipFile(package_path) as archive:
             files = {name: archive.read(name) for name in archive.namelist()}
-        files["extension.vsixmanifest"] = files["extension.vsixmanifest"].replace(b'Publisher="lengmo1996"', b'Publisher="attacker"')
+        files["extension.vsixmanifest"] = files["extension.vsixmanifest"].replace(b'Publisher="Young581"', b'Publisher="attacker"')
         with zipfile.ZipFile(package_path, "w") as archive:
             for name, data in files.items():
                 archive.writestr(name, data)

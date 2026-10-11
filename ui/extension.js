@@ -19,19 +19,19 @@ const TESTING = process.env.CODEX_NOTIFIER_TEST_MODE === '1';
 let current;
 
 async function activate(context) {
-  configureLanguage(() => resolveLanguage(vscode.workspace.getConfiguration('codexNotifier').get('language', 'auto'), vscode.env.language));
-  await vscode.commands.executeCommand('setContext', 'codexNotifier.menuLanguage', getLanguage());
+  configureLanguage(() => resolveLanguage(vscode.workspace.getConfiguration('codexBeacon').get('language', 'auto'), vscode.env.language));
+  await vscode.commands.executeCommand('setContext', 'codexBeacon.menuLanguage', getLanguage());
   const output = vscode.window.createOutputChannel(t('Codex 会话通知'));
   const client = new BrokerClient(context.globalStorageUri.fsPath, path.join(context.extensionPath, 'lib', 'broker.js'));
   const history = new HistoryView(vscode, client.clientId, () => {
-    const settings = vscode.workspace.getConfiguration('codexNotifier');
+    const settings = vscode.workspace.getConfiguration('codexBeacon');
     return {groupBy: settings.get('groupBy', 'project'), modelPrices: settings.get('modelPrices', {}),
       pricingContext: settings.get('pricingContext', 'short'), pricingTier: settings.get('pricingTier', 'auto')};
   });
-  const view = vscode.window.createTreeView('codexNotifier.history', {treeDataProvider: history, showCollapseAll: true});
+  const view = vscode.window.createTreeView('codexBeacon.history', {treeDataProvider: history, showCollapseAll: true});
   view.title = t('任务');
   const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 50);
-  statusBar.command = 'codexNotifier.dashboard';
+  statusBar.command = 'codexBeacon.dashboard';
   let snapshot = {entries: [], unread: 0};
   let sourceStatus = null;
   let installationState = null;
@@ -50,7 +50,7 @@ async function activate(context) {
   let nextTitleRead = 0;
   let navigating = false;
   const outdatedSources = new Set();
-  const config = () => vscode.workspace.getConfiguration('codexNotifier');
+  const config = () => vscode.workspace.getConfiguration('codexBeacon');
   const log = message => output.appendLine(`${new Date().toLocaleTimeString(getLanguage())} ${diagnostic(message)}`);
   const windowAttention = new WindowAttention(vscode, client, {log, testing: TESTING});
   const dashboard = new Dashboard(vscode, context, {
@@ -64,11 +64,11 @@ async function activate(context) {
       const commands = {sound: 'chooseSound', preview: 'testSound', language: 'chooseLanguage', settings: 'settings',
         status: 'showStatus', pause: 'pause', resume: 'resume', privacy: 'privacy', clearRead: 'clearRead'};
       if (action === 'refresh') {nextTitleRead = 0; queueSessionTitles(); return;}
-      if (commands[action]) return vscode.commands.executeCommand('codexNotifier.' + commands[action]);
+      if (commands[action]) return vscode.commands.executeCommand('codexBeacon.' + commands[action]);
       const row = projectGroups(snapshot.entries || [], client.clientId).flatMap(group => group.entries).find(row => row.key === key);
       if (!row) return;
       if (action === 'open' || action === 'window') return vscode.commands.executeCommand(
-        action === 'open' ? 'codexNotifier.showEntry' : 'codexNotifier.openProjectWindow', row.key);
+        action === 'open' ? 'codexBeacon.showEntry' : 'codexBeacon.openProjectWindow', row.key);
       if (action === 'read') await client.request('markRead', {keys: row.relatedKeys});
       if (action === 'delete') {
         for (const related of row.relatedKeys) {
@@ -103,7 +103,7 @@ async function activate(context) {
     lastRegistration = signature;
     try {
       // Synchronize the current window's remote host without restarting collection.
-      await remoteCommand('codexNotifier.remote.setLanguage', getLanguage()).catch(() => {});
+      await remoteCommand('codexBeacon.remote.setLanguage', getLanguage()).catch(() => {});
       await client.request('retention', {days: config().get('historyRetentionDays', 7)});
       await client.request('window', {window: info});
     }
@@ -152,7 +152,7 @@ async function activate(context) {
     if (signature === titleSignature && Date.now() < nextTitleRead) return;
     titleSignature = signature; nextTitleRead = Date.now() + 15000; titleLookup = true;
     const generation = privacyGeneration;
-    remoteCommand('codexNotifier.remote.sessionTitles', ids).then(async result => {
+    remoteCommand('codexBeacon.remote.sessionTitles', ids).then(async result => {
       if (disposed || generation !== privacyGeneration || sourceId !== sourceStatus?.source?.id || result?.sourceId !== sourceId || !Array.isArray(result.titles)) return;
       const allowed = new Set(ids);
       const titles = result.titles.filter(row => row && allowed.has(row.session_id) && typeof row.title === 'string' && row.title.trim() &&
@@ -187,7 +187,7 @@ async function activate(context) {
     }
   }
   async function remoteCommand(command, ...args) {
-    try { return await vscode.commands.executeCommand(vscode.env.remoteName ? command : command.replace('codexNotifier.remote.', 'codexNotifier.local.'), ...args); }
+    try { return await vscode.commands.executeCommand(vscode.env.remoteName ? command : command.replace('codexBeacon.remote.', 'codexBeacon.local.'), ...args); }
     catch (error) {
       throw new Error((vscode.env.remoteName ? t('当前环境的远端采集组件不可用。请从通知菜单选择“检查／安装当前环境组件”。') :
         t('本地采集器尚未就绪。请打开受信任的本地文件夹，并检查本机 Python 和 Codex Home 设置。')) +
@@ -200,7 +200,7 @@ async function activate(context) {
   // Contributed menu titles are static. Language-specific aliases let menus
   // follow this window's setting immediately while keeping public command IDs.
   for (const command of require('./package.json').contributes.commands) {
-    const match = /^(codexNotifier\..+)\.(zhCN|en)$/.exec(command.command);
+    const match = /^(codexBeacon\..+)\.(zhCN|en)$/.exec(command.command);
     if (match) context.subscriptions.push(vscode.commands.registerCommand(command.command,
       (...args) => vscode.commands.executeCommand(match[1], ...args)));
   }
@@ -209,17 +209,17 @@ async function activate(context) {
     if (!disposed) { installationState = result; updateBadge(); }
     return result;
   }
-  register('codexNotifier.checkInstallation', async () => {
+  register('codexBeacon.checkInstallation', async () => {
     const result = await checkInstallation();
     return TESTING ? result : showInstallation(vscode, result);
   });
-  register('codexNotifier.dashboard', async () => {
+  register('codexBeacon.dashboard', async () => {
     nextTitleRead = 0;
     await refresh(); dashboard.open();
     return {opened: !!dashboard.panel};
   });
 
-  register('codexNotifier.internal.receive', async payload => {
+  register('codexBeacon.internal.receive', async payload => {
     if (!validEnvelope(payload)) return {accepted: false, error: 'Invalid event envelope'};
     if (payload.kind === 'status') {
       sourceStatus = {...payload, status: {...payload.status, message: renderMessage(payload.status.messageSpec, getLanguage(), payload.status.message)}};
@@ -240,7 +240,7 @@ async function activate(context) {
     await refresh();
     return receipt;
   });
-  register('codexNotifier.internal.snapshot', async () => {
+  register('codexBeacon.internal.snapshot', async () => {
     const data = await refresh();
     return {...data, history: data.entries || [], paused: data.privacyPaused || !config().get('notificationsEnabled', true), status: sourceStatus,
       windowId: client.clientId, localUnread: attention(data.entries || [], client.clientId).local.length,
@@ -257,14 +257,14 @@ async function activate(context) {
         }),
         statusColor: statusBar.backgroundColor?.id} : {})};
   });
-  register('codexNotifier.testNotification', async () => {
+  register('codexBeacon.testNotification', async () => {
     const source = {id: `test-${vscode.env.machineId}`, label: t('Windows 本机测试'), host: t('本机'), home: '', cwd: ''};
     const receipt = await client.request('test', {source, options: {desktop: true, sound: config().get('sound', true), soundFile: validateSoundFile(config().get('soundFile', ''))}});
     await refresh();
     log(t('已提交一条本机测试通知；是否可见可听取决于 Windows 通知和音量设置。'));
     return receipt;
   });
-  register('codexNotifier.testSound', async () => {
+  register('codexBeacon.testSound', async () => {
     const soundFile = validateSoundFile(config().get('soundFile', ''));
     await client.connect();
     if (!client.capabilities?.includes('custom-sound-v1')) {
@@ -275,14 +275,14 @@ async function activate(context) {
     return client.request('test', {source, options: {desktop: false, sound: true, soundFile}});
   });
   const soundSettings = new SoundSettings(vscode, {config,
-    preview: () => vscode.commands.executeCommand('codexNotifier.testSound')});
-  register('codexNotifier.chooseSound', () => soundSettings.choose());
-  register('codexNotifier.pause', async () => { await config().update('notificationsEnabled', false, vscode.ConfigurationTarget.Global); updateBadge(); return {paused: true}; });
-  register('codexNotifier.resume', async () => { await config().update('notificationsEnabled', true, vscode.ConfigurationTarget.Global); updateBadge(); return {paused: false}; });
-  register('codexNotifier.showHistory', async () => { await client.request('interact'); await refresh(); await vscode.commands.executeCommand('codexNotifier.history.focus'); });
-  register('codexNotifier.markRead', async () => { await client.request('markRead'); await refresh(); });
-  register('codexNotifier.clearRead', async () => { const result = await client.request('clearRead'); await refresh(); return result; });
-  register('codexNotifier.deleteEntry', async value => {
+    preview: () => vscode.commands.executeCommand('codexBeacon.testSound')});
+  register('codexBeacon.chooseSound', () => soundSettings.choose());
+  register('codexBeacon.pause', async () => { await config().update('notificationsEnabled', false, vscode.ConfigurationTarget.Global); updateBadge(); return {paused: true}; });
+  register('codexBeacon.resume', async () => { await config().update('notificationsEnabled', true, vscode.ConfigurationTarget.Global); updateBadge(); return {paused: false}; });
+  register('codexBeacon.showHistory', async () => { await client.request('interact'); await refresh(); await vscode.commands.executeCommand('codexBeacon.history.focus'); });
+  register('codexBeacon.markRead', async () => { await client.request('markRead'); await refresh(); });
+  register('codexBeacon.clearRead', async () => { const result = await client.request('clearRead'); await refresh(); return result; });
+  register('codexBeacon.deleteEntry', async value => {
     const key = typeof value === 'string' ? value : value?.key;
     if (!key) return;
     let deleted = 0;
@@ -291,16 +291,16 @@ async function activate(context) {
     await refresh();
     return result;
   });
-  register('codexNotifier.clearHistory', async () => { await client.request('clear'); await refresh(); });
-  register('codexNotifier.configureApprovalHook', () => remoteCommand('codexNotifier.remote.configureApprovalHook'));
-  register('codexNotifier.removeApprovalHook', () => remoteCommand('codexNotifier.remote.removeApprovalHook'));
-  register('codexNotifier.settings', () => vscode.commands.executeCommand('workbench.action.openSettings', 'codexNotifier'));
-  register('codexNotifier.toggleGrouping', async () => {
+  register('codexBeacon.clearHistory', async () => { await client.request('clear'); await refresh(); });
+  register('codexBeacon.configureApprovalHook', () => remoteCommand('codexBeacon.remote.configureApprovalHook'));
+  register('codexBeacon.removeApprovalHook', () => remoteCommand('codexBeacon.remote.removeApprovalHook'));
+  register('codexBeacon.settings', () => vscode.commands.executeCommand('workbench.action.openSettings', 'codexBeacon'));
+  register('codexBeacon.toggleGrouping', async () => {
     const next = config().get('groupBy', 'project') === 'project' ? 'history' : 'project';
     await config().update('groupBy', next, vscode.ConfigurationTarget.Global);
     history.update(snapshot.entries || []);
   });
-  register('codexNotifier.chooseLanguage', async () => {
+  register('codexBeacon.chooseLanguage', async () => {
     const selected = await vscode.window.showQuickPick([
       {label: t('跟随 VS Code'), value: 'auto'},
       {label: '中文', value: 'zh-CN'},
@@ -308,7 +308,7 @@ async function activate(context) {
     ], {title: t('通知语言')});
     if (selected) await config().update('language', selected.value, vscode.ConfigurationTarget.Global);
   });
-  register('codexNotifier.chooseOpenLocation', async () => {
+  register('codexBeacon.chooseOpenLocation', async () => {
     const currentLocation = config().get('openLocation', 'sidebar');
     const selected = await vscode.window.showQuickPick([
       {label: t('Codex 插件会话侧栏'), description: currentLocation === 'sidebar' ? t('当前选择 · 默认') : t('默认'), value: 'sidebar'},
@@ -316,24 +316,24 @@ async function activate(context) {
     ], {title: t('点击通知后在哪里打开会话')});
     if (selected) await config().update('openLocation', selected.value, vscode.ConfigurationTarget.Global);
   });
-  register('codexNotifier.showStatus', async () => {
+  register('codexBeacon.showStatus', async () => {
     let remote;
-    try { remote = await remoteCommand('codexNotifier.remote.status'); } catch (error) { remote = {error: error.message}; }
+    try { remote = await remoteCommand('codexBeacon.remote.status'); } catch (error) { remote = {error: error.message}; }
     await refresh();
     log(t('当前环境状态：\n') + JSON.stringify(remote, null, 2));
     output.show(true);
     return {remote, unread: snapshot.unread, paused: !config().get('notificationsEnabled', true)};
   });
-  register('codexNotifier.testCollector', () => remoteCommand('codexNotifier.remote.test'));
-  register('codexNotifier.restartCollector', () => remoteCommand('codexNotifier.remote.restart'));
+  register('codexBeacon.testCollector', () => remoteCommand('codexBeacon.remote.test'));
+  register('codexBeacon.restartCollector', () => remoteCommand('codexBeacon.remote.restart'));
   const privacyActions = new PrivacyActions(vscode, {client,
-    collector: (action, ...args) => remoteCommand('codexNotifier.remote.' + action, ...args),
+    collector: (action, ...args) => remoteCommand('codexBeacon.remote.' + action, ...args),
     clearOutput: () => output.clear(), refresh,
     showPolicy: () => vscode.commands.executeCommand('markdown.showPreview', vscode.Uri.file(path.join(context.extensionPath, 'PRIVACY.md')))});
-  register('codexNotifier.privacy', () => privacyActions.menu());
-  register('codexNotifier.clearPrivateData', () => privacyActions.clear());
-  register('codexNotifier.clearLocalPrivateData', () => privacyActions.clear({localOnly: true}));
-  register('codexNotifier.resumePrivateData', () => privacyActions.resume());
+  register('codexBeacon.privacy', () => privacyActions.menu());
+  register('codexBeacon.clearPrivateData', () => privacyActions.clear());
+  register('codexBeacon.clearLocalPrivateData', () => privacyActions.clear({localOnly: true}));
+  register('codexBeacon.resumePrivateData', () => privacyActions.resume());
   async function openRoutedEntry(entry, generation) {
     navigating = true;
     try { return await navigateEntry(entry, generation); }
@@ -345,7 +345,7 @@ async function activate(context) {
     await client.request('interact');
     if (cancelled()) return;
     if (!entry.event.session_id && entry.event.type === 'test') {
-      await vscode.commands.executeCommand('codexNotifier.history.focus');
+      await vscode.commands.executeCommand('codexBeacon.history.focus');
       if (cancelled()) return;
       await client.request('markRead', {key: entry.key});
       if (cancelled()) return;
@@ -373,7 +373,7 @@ async function activate(context) {
       sourceId: info.sourceId, workspaceUri: info.workspaceUri, roots: info.workspaceCwds},
       {isCancelled: () => generation !== privacyGeneration || disposed});
   }
-  register('codexNotifier.openProjectWindow', async value => {
+  register('codexBeacon.openProjectWindow', async value => {
     const generation = privacyGeneration;
     const key = typeof value === 'string' ? value : value?.key || value?.entries?.[0]?.key;
     await refresh();
@@ -388,7 +388,7 @@ async function activate(context) {
     }
     return {...result, ...opened};
   });
-  register('codexNotifier.showEntry', async value => {
+  register('codexBeacon.showEntry', async value => {
     const generation = privacyGeneration;
     const key = typeof value === 'string' ? value : value?.key;
     await refresh();
@@ -414,19 +414,19 @@ async function activate(context) {
     }
     return result;
   });
-  register('codexNotifier.markEntryRead', async value => {
+  register('codexBeacon.markEntryRead', async value => {
     const key = typeof value === 'string' ? value : value?.key;
     if (key) await client.request('markRead', {keys: history.keysFor(key)});
     await refresh();
   });
-  register('codexNotifier.openNext', async () => {
+  register('codexBeacon.openNext', async () => {
     await refresh();
     const pending = attention(snapshot.entries || [], client.clientId);
     const next = pending.local[0] || pending.unread[0];
-    if (next) return vscode.commands.executeCommand('codexNotifier.showEntry', next.key);
-    return vscode.commands.executeCommand('codexNotifier.showHistory');
+    if (next) return vscode.commands.executeCommand('codexBeacon.showEntry', next.key);
+    return vscode.commands.executeCommand('codexBeacon.showHistory');
   });
-  register('codexNotifier.showEntryDetails', async value => {
+  register('codexBeacon.showEntryDetails', async value => {
     const generation = privacyGeneration;
     const key = typeof value === 'string' ? value : value?.key;
     await client.request('interact');
@@ -440,25 +440,25 @@ async function activate(context) {
       output.show(true);
     }
   });
-  register('codexNotifier.menu', async () => {
+  register('codexBeacon.menu', async () => {
     await client.request('interact');
     const paused = !config().get('notificationsEnabled', true);
     const items = [
-      {label: t('$(dashboard) 打开仪表盘'), command: 'codexNotifier.dashboard'},
-      {label: t('$(globe) 语言'), command: 'codexNotifier.chooseLanguage'},
-      {label: t('$(unmute) 自定义提示音'), command: 'codexNotifier.chooseSound'},
-      {label: t('$(layout-sidebar-right) 选择会话打开位置'), command: 'codexNotifier.chooseOpenLocation'},
-      {label: t('$(extensions) 检查／安装当前环境组件'), command: 'codexNotifier.checkInstallation'},
-      {label: t('$(history) 查看通知历史'), command: 'codexNotifier.showHistory'},
-      {label: t('$(clear-all) 清空已读通知'), command: 'codexNotifier.clearRead'},
-      {label: t('$(trash) 清空全部通知'), command: 'codexNotifier.clearHistory'},
-      {label: t('$(beaker) 测试本机弹窗和声音'), command: 'codexNotifier.testNotification'},
-      {label: t('$(debug-disconnect) 测试当前窗口采集链路'), command: 'codexNotifier.testCollector'},
-      {label: paused ? t('$(bell) 恢复提醒') : t('$(bell-slash) 暂停提醒（继续记录）'), command: paused ? 'codexNotifier.resume' : 'codexNotifier.pause'},
-      {label: t('$(shield) 配置当前环境的审批提醒'), command: 'codexNotifier.configureApprovalHook'},
-      {label: t('$(pulse) 查看连接状态'), command: 'codexNotifier.showStatus'},
-      {label: t('$(settings-gear) 通知设置'), command: 'codexNotifier.settings'},
-      {label: t('$(shield) 隐私与数据清理'), command: 'codexNotifier.privacy'}
+      {label: t('$(dashboard) 打开仪表盘'), command: 'codexBeacon.dashboard'},
+      {label: t('$(globe) 语言'), command: 'codexBeacon.chooseLanguage'},
+      {label: t('$(unmute) 自定义提示音'), command: 'codexBeacon.chooseSound'},
+      {label: t('$(layout-sidebar-right) 选择会话打开位置'), command: 'codexBeacon.chooseOpenLocation'},
+      {label: t('$(extensions) 检查／安装当前环境组件'), command: 'codexBeacon.checkInstallation'},
+      {label: t('$(history) 查看通知历史'), command: 'codexBeacon.showHistory'},
+      {label: t('$(clear-all) 清空已读通知'), command: 'codexBeacon.clearRead'},
+      {label: t('$(trash) 清空全部通知'), command: 'codexBeacon.clearHistory'},
+      {label: t('$(beaker) 测试本机弹窗和声音'), command: 'codexBeacon.testNotification'},
+      {label: t('$(debug-disconnect) 测试当前窗口采集链路'), command: 'codexBeacon.testCollector'},
+      {label: paused ? t('$(bell) 恢复提醒') : t('$(bell-slash) 暂停提醒（继续记录）'), command: paused ? 'codexBeacon.resume' : 'codexBeacon.pause'},
+      {label: t('$(shield) 配置当前环境的审批提醒'), command: 'codexBeacon.configureApprovalHook'},
+      {label: t('$(pulse) 查看连接状态'), command: 'codexBeacon.showStatus'},
+      {label: t('$(settings-gear) 通知设置'), command: 'codexBeacon.settings'},
+      {label: t('$(shield) 隐私与数据清理'), command: 'codexBeacon.privacy'}
     ];
     const selected = await vscode.window.showQuickPick(items, {title: t('Codex 会话通知')});
     if (selected) await vscode.commands.executeCommand(selected.command);
@@ -480,8 +480,8 @@ async function activate(context) {
     const generation = privacyGeneration;
     showWindowAlert(vscode, message, {
       cancelled: () => disposed || generation !== privacyGeneration,
-      open: key => vscode.commands.executeCommand('codexNotifier.showEntry', key),
-      history: () => vscode.commands.executeCommand('codexNotifier.showHistory'),
+      open: key => vscode.commands.executeCommand('codexBeacon.showEntry', key),
+      history: () => vscode.commands.executeCommand('codexBeacon.showHistory'),
     }).catch(error => log(error.message));
   });
   client.on('connected', () => { log(t('本机通知组件已连接')); lastRegistration = ''; windowAttention.reset(); syncWindow().catch(error => log(error.message)); });
@@ -526,15 +526,15 @@ async function activate(context) {
     failure(t('Windows 系统通知显示失败，更新已保存在通知历史。') + clean(message.error, 200)).catch(() => {});
   });
   context.subscriptions.push(output, history, view, statusBar, vscode.workspace.onDidChangeConfiguration(event => {
-    if (event.affectsConfiguration('codexNotifier.soundFile')) soundFallbackWarned = false;
-    if (event.affectsConfiguration('codexNotifier.language')) {
-      vscode.commands.executeCommand('setContext', 'codexNotifier.menuLanguage', getLanguage()).catch(error => log(error.message));
+    if (event.affectsConfiguration('codexBeacon.soundFile')) soundFallbackWarned = false;
+    if (event.affectsConfiguration('codexBeacon.language')) {
+      vscode.commands.executeCommand('setContext', 'codexBeacon.menuLanguage', getLanguage()).catch(error => log(error.message));
       view.title = t('任务');
       history.update(snapshot.entries || []);
       if (sourceStatus) sourceStatus.status.message = renderMessage(sourceStatus.status.messageSpec, getLanguage(), sourceStatus.status.message);
       log(t('语言已切换为中文。'));
     }
-    if (event.affectsConfiguration('codexNotifier')) { history.update(snapshot.entries || []); lastRegistration = ''; updateBadge(); syncWindow().catch(error => log(error.message)); }
+    if (event.affectsConfiguration('codexBeacon')) { history.update(snapshot.entries || []); lastRegistration = ''; updateBadge(); syncWindow().catch(error => log(error.message)); }
   }), vscode.window.onDidChangeWindowState(() => { updateBadge(); syncWindow().catch(error => log(error.message)); }),
   vscode.workspace.onDidChangeWorkspaceFolders(() => { lastRegistration = ''; syncWindow().catch(error => log(error.message)); }),
   {dispose() { disposed = true; windowAttention.dispose(); clearInterval(reconnectTimer); clearTimeout(installationTimer); client.dispose(); }});
@@ -568,7 +568,7 @@ async function activate(context) {
     }
     const {createController} = require('./collector/src/extension');
     createController(vscode, {extensionPath: path.join(context.extensionPath, 'collector'), subscriptions: context.subscriptions},
-      {commandPrefix: 'codexNotifier.local', configKeyPrefix: 'local', outputName: t('Codex 通知 · 本地采集')});
+      {commandPrefix: 'codexBeacon.local', configKeyPrefix: 'local', outputName: t('Codex 通知 · 本地采集')});
   }
   updateBadge();
   syncWindow().then(refresh).catch(error => failure(error.message));

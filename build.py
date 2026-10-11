@@ -23,8 +23,8 @@ from package_policy import (EXTENSION_FILES, archive_snapshot, collect_reviewed,
 DEFAULT_OUTPUT = ROOT / "dist"
 NS = "http://schemas.microsoft.com/developer/vsx-schema/2011"
 CONTENT_NS = "http://schemas.openxmlformats.org/package/2006/content-types"
-IDS = {"ui": "codex-notifier-ui", "remote": "codex-notifier-collector"}
-VERSIONS = {"ui": "0.7.0", "remote": "0.4.0"}
+IDS = {"ui": "codex-beacon", "remote": "codex-beacon-collector"}
+VERSIONS = {"ui": "0.8.0", "remote": "0.5.0"}
 MIMES = {".json": "application/json", ".js": "application/javascript", ".cjs": "application/javascript",
          ".ps1": "text/plain", ".py": "text/plain", ".md": "text/markdown", ".txt": "text/plain",
          ".html": "text/html", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png",
@@ -52,8 +52,8 @@ def validate_package(package, variant):
     if not isinstance(package, dict):
         raise ValueError("package.json must be an object")
     expected = IDS[variant]
-    if package.get("name") != expected or package.get("publisher") != "lengmo1996":
-        raise ValueError("Expected extension ID lengmo1996." + expected)
+    if package.get("name") != expected or package.get("publisher") != "Young581":
+        raise ValueError("Expected extension ID Young581." + expected)
     if package.get("version") != VERSIONS[variant]:
         raise ValueError("Expected extension version " + VERSIONS[variant])
     if package.get("engines", {}).get("vscode") != "^1.96.0":
@@ -64,7 +64,7 @@ def validate_package(package, variant):
         raise ValueError("These extensions must use CommonJS")
     if package.get("extensionKind") != (["ui"] if variant == "ui" else ["workspace"]):
         raise ValueError("Unexpected extensionKind for " + variant)
-    expected_pack = ["lengmo1996.codex-notifier-collector"] if variant == "ui" else []
+    expected_pack = ["Young581.codex-beacon-collector"] if variant == "ui" else []
     if package.get("extensionPack", []) != expected_pack or package.get("extensionDependencies"):
         raise ValueError("Unexpected extensionPack or cross-host dependencies")
     if safe_relative(package.get("main")) != ("extension.js" if variant == "ui" else "src/extension.js"):
@@ -106,6 +106,11 @@ def create_manifest(package, file_names):
         "Microsoft.VisualStudio.Code.ExecutesCode": "true",
         "Microsoft.VisualStudio.Services.GitHubFlavoredMarkdown": "true",
         "Microsoft.VisualStudio.Services.Content.Pricing": "Free",
+        "Microsoft.VisualStudio.Services.Links.Source": package.get("repository", {}).get("url", ""),
+        "Microsoft.VisualStudio.Services.Links.Getstarted": package.get("homepage", ""),
+        "Microsoft.VisualStudio.Services.Links.Support": package.get("bugs", {}).get("url", ""),
+        "Microsoft.VisualStudio.Services.Branding.Color": package.get("galleryBanner", {}).get("color", ""),
+        "Microsoft.VisualStudio.Services.Branding.Theme": package.get("galleryBanner", {}).get("theme", "dark"),
     }.items():
         child(properties, "Property", Id=key, Value=value)
     for name in file_names:
@@ -121,6 +126,8 @@ def create_manifest(package, file_names):
     child(root, "Dependencies")
     assets = child(root, "Assets")
     child(assets, "Asset", Type="Microsoft.VisualStudio.Code.Manifest", Path="extension/package.json", Addressable="true")
+    if package.get("icon"):
+        child(assets, "Asset", Type="Microsoft.VisualStudio.Services.Icons.Default", Path=icon, Addressable="true")
     for name in sorted(file_names):
         asset_type = None
         if name.lower() == "extension/readme.md":

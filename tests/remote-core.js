@@ -88,9 +88,9 @@ test('backoff doubles and caps at sixty seconds', () => {
 
 test('hook detection recognizes only this extension owner and never claims trust', () => {
   const hooks = command => ({hooks: {PermissionRequest: [{hooks: [{type: 'command', command}]}]}});
-  assert.equal(core.hookIsConfigured(hooks('python collector.py hook --owner codex-vscode-notifier-v1 --event approval')), true);
-  assert.equal(core.hookIsConfigured(hooks('python collector.py hook --owner codex-notifier-v1')), false);
-  assert.equal(core.hookIsConfigured(hooks('python collector.py hook --owner codex-vscode-notifier-v1-wrong')), false);
+  assert.equal(core.hookIsConfigured(hooks('python collector.py hook --owner codex-beacon-v1 --event approval')), true);
+  assert.equal(core.hookIsConfigured(hooks('python collector.py hook --owner codex-vscode-notifier-v1')), false);
+  assert.equal(core.hookIsConfigured(hooks('python collector.py hook --owner codex-beacon-v1-wrong')), false);
   assert.equal(core.hookIsConfigured({hooks: []}), false);
 });
 
@@ -99,7 +99,7 @@ test('bridge retains unacknowledged events, retries, deduplicates pending and fo
   const delivered = [];
   const logs = [];
   const bridge = new core.EventBridge(async (command, message) => {
-    assert.equal(command, 'codexNotifier.internal.receive');
+    assert.equal(command, 'codexBeacon.internal.receive');
     if (!available) throw new Error('missing local extension');
     delivered.push(message);
     return {accepted: true};
@@ -150,7 +150,7 @@ function fixture(trusted = true, enabled = true, options = {}) {
         async update(key, value, target) {
           values[key] = value;
           updates.push({key, value, target});
-          changed?.({affectsConfiguration: actual => actual === `codexNotifier.${key}`});
+          changed?.({affectsConfiguration: actual => actual === `codexBeacon.${key}`});
         }}),
       onDidChangeConfiguration: handler => {changed = handler; return subscription();},
       onDidGrantWorkspaceTrust: handler => {granted = handler; return subscription();},
@@ -181,7 +181,7 @@ function fixture(trusted = true, enabled = true, options = {}) {
   const controller = options.autoCreate === false ? null : createController(vscode, context, {spawn, ...options.dependencies});
   return {controller, commands, children, messages, vscode, values, context, outputNames, updates, logs,
     grant() {vscode.workspace.isTrusted = true; granted();},
-    change(key) {changed({affectsConfiguration: actual => actual === `codexNotifier.${key}`});},
+    change(key) {changed({affectsConfiguration: actual => actual === `codexBeacon.${key}`});},
     folders(folders) {vscode.workspace.workspaceFolders = folders; foldersChanged?.();},
   };
 }
@@ -190,7 +190,7 @@ test('workspace trust blocks processes and hook mutation until explicitly grante
   const state = fixture(false);
   try {
     assert.equal(state.children.length, 0);
-    const denied = await state.commands.get('codexNotifier.remote.configureApprovalHook')();
+    const denied = await state.commands.get('codexBeacon.remote.configureApprovalHook')();
     assert.equal(denied.ok, false);
     assert.equal(state.children.length, 0);
     state.grant();
@@ -202,7 +202,7 @@ test('workspace trust blocks processes and hook mutation until explicitly grante
   } finally {state.controller.dispose();}
 });
 
-const localDependencies = {commandPrefix: 'codexNotifier.local', configKeyPrefix: 'local', outputName: 'Codex 通知 · 本地采集'};
+const localDependencies = {commandPrefix: 'codexBeacon.local', configKeyPrefix: 'local', outputName: 'Codex 通知 · 本地采集'};
 const localOptions = values => ({remoteName: undefined, extensionPath: path.join(__dirname, '../ui/collector'),
   dependencies: localDependencies, values: {localCodexHome: path.join(__dirname, 'unused-local-home'), ...values}});
 
@@ -230,13 +230,13 @@ test('embedded local controller registers only local commands and uses the bundl
   try {
     assert.deepEqual([...state.commands.keys()], ['status', 'sessionTitles', 'setLanguage', 'configureApprovalHook', 'removeApprovalHook', 'test', 'restart',
       'privacyStatus', 'previewPrivacyCleanup', 'clearPrivateData', 'resumePrivateData']
-      .map(name => 'codexNotifier.local.' + name));
+      .map(name => 'codexBeacon.local.' + name));
     assert.deepEqual(state.outputNames, ['Codex 通知 · 本地采集']);
     assert.equal(state.children.length, 1);
     assert.equal(state.children[0].command, '/local/python');
     assert.ok(state.children[0].args.includes(path.join(state.context.extensionPath, 'scripts', 'collector.py')));
     assert.equal(state.children[0].args.at(-1), state.values.localCodexHome);
-    const result = await state.commands.get('codexNotifier.local.status')();
+    const result = await state.commands.get('codexBeacon.local.status')();
     assert.equal(result.source.label, '本机');
     assert.equal(result.enabled, true);
     state.change('codexHome');
@@ -248,7 +248,7 @@ test('embedded local controller registers only local commands and uses the bundl
     state.values.localCollectorEnabled = false;
     state.change('localCollectorEnabled');
     assert.equal(state.children[1].process.killed, true);
-    const denied = await state.commands.get('codexNotifier.local.test')();
+    const denied = await state.commands.get('codexBeacon.local.test')();
     assert.equal(denied.ok, false);
     assert.match(denied.error, /localCollectorEnabled/);
     assert.equal(state.children.length, 2);
@@ -259,12 +259,12 @@ test('local collector honors trust before running Python or configuring hooks', 
   const state = fixture(false, true, localOptions());
   try {
     assert.equal(state.children.length, 0);
-    const denied = await state.commands.get('codexNotifier.local.configureApprovalHook')();
+    const denied = await state.commands.get('codexBeacon.local.configureApprovalHook')();
     assert.equal(denied.ok, false);
     assert.equal(state.children.length, 0);
     state.grant();
     assert.equal(state.children.length, 1);
-    const pending = state.commands.get('codexNotifier.local.configureApprovalHook')();
+    const pending = state.commands.get('codexBeacon.local.configureApprovalHook')();
     const action = state.children[1];
     assert.ok(action.args.includes('install'));
     assert.equal(action.args.at(-1), state.values.localCodexHome);
@@ -279,8 +279,8 @@ test('local empty windows stay stopped and respond to workspace folder changes',
   try {
     assert.equal(state.children.length, 0);
     assert.equal((await state.controller.status()).state, 'stopped');
-    assert.equal((await state.commands.get('codexNotifier.local.configureApprovalHook')()).ok, false);
-    assert.equal((await state.commands.get('codexNotifier.local.test')()).ok, false);
+    assert.equal((await state.commands.get('codexBeacon.local.configureApprovalHook')()).ok, false);
+    assert.equal((await state.commands.get('codexBeacon.local.test')()).ok, false);
     assert.equal(state.children.length, 0);
     state.folders([{uri: {fsPath: '/local/workspace'}}]);
     assert.equal(state.children.length, 1);
@@ -315,7 +315,7 @@ test('controller forwards sanitized events and restarts on configured home chang
 test('explicit hook configuration invokes only install and does not return an approval decision', async () => {
   const state = fixture();
   try {
-    const pending = state.commands.get('codexNotifier.remote.configureApprovalHook')();
+    const pending = state.commands.get('codexBeacon.remote.configureApprovalHook')();
     const action = state.children[1];
     assert.ok(action.args.includes('install'));
     action.process.stdout.write(JSON.stringify({installed: true, hook_count: 1}));
@@ -331,7 +331,7 @@ test('disabled collector does not start and refuses misleading pipeline tests', 
   const state = fixture(true, false);
   try {
     assert.equal(state.children.length, 0);
-    const result = await state.commands.get('codexNotifier.remote.test')();
+    const result = await state.commands.get('codexBeacon.remote.test')();
     assert.equal(result.ok, false);
     assert.equal(state.children.length, 0);
   } finally {state.controller.dispose();}
@@ -341,7 +341,7 @@ test('privacy cleanup stops follow, binds preview token, and stays paused until 
   const state = fixture(true, true, localOptions({localCacheRetentionDays: 3}));
   try {
     const token = 'a'.repeat(64);
-    const pending = state.commands.get('codexNotifier.local.clearPrivateData')({previewToken: token});
+    const pending = state.commands.get('codexBeacon.local.clearPrivateData')({previewToken: token});
     await tick();
     await tick();
     assert.equal(state.children[0].process.killed, true);
@@ -351,18 +351,18 @@ test('privacy cleanup stops follow, binds preview token, and stays paused until 
     assert.ok(action.args.includes('clear-private-data'));
     assert.equal(action.args.at(-1), token);
     assert.equal(action.args[action.args.indexOf('--retention-days') + 1], '3');
-    const concurrent = await state.commands.get('codexNotifier.local.clearPrivateData')({previewToken: token});
+    const concurrent = await state.commands.get('codexBeacon.local.clearPrivateData')({previewToken: token});
     assert.equal(concurrent.ok, false);
-    await state.commands.get('codexNotifier.local.restart')();
+    await state.commands.get('codexBeacon.local.restart')();
     assert.equal(state.children.length, 2);
     action.process.stdout.write(JSON.stringify({cleared: true, paused: true, errors: []}));
     action.process.emit('close', 0);
     assert.equal((await pending).cleared, true);
     state.values.localCollectorEnabled = true;
     state.change('localCollectorEnabled');
-    await state.commands.get('codexNotifier.local.restart')();
+    await state.commands.get('codexBeacon.local.restart')();
     assert.equal(state.children.length, 2);
-    const resumed = state.commands.get('codexNotifier.local.resumePrivateData')();
+    const resumed = state.commands.get('codexBeacon.local.resumePrivateData')();
     await tick();
     const resume = state.children[2];
     assert.ok(resume.args.includes('resume-private-data'));
@@ -378,10 +378,10 @@ test('privacy cleanup stops follow, binds preview token, and stays paused until 
 test('privacy preview is read-only and missing tokens or untrusted workspaces cannot clear', async () => {
   const state = fixture();
   try {
-    assert.equal((await state.commands.get('codexNotifier.remote.clearPrivateData')()).ok, false);
+    assert.equal((await state.commands.get('codexBeacon.remote.clearPrivateData')()).ok, false);
     assert.equal(state.children.length, 1);
     assert.equal(state.children[0].process.killed, false);
-    const pending = state.commands.get('codexNotifier.remote.previewPrivacyCleanup')();
+    const pending = state.commands.get('codexBeacon.remote.previewPrivacyCleanup')();
     assert.equal(state.children.length, 2);
     state.children[1].process.stdout.write(JSON.stringify({previewToken: 'a'.repeat(64), files: [], canClear: true}));
     state.children[1].process.emit('close', 0);
@@ -391,7 +391,7 @@ test('privacy preview is read-only and missing tokens or untrusted workspaces ca
   } finally {state.controller.dispose();}
   const untrusted = fixture(false);
   try {
-    assert.equal((await untrusted.commands.get('codexNotifier.remote.clearPrivateData')({previewToken: 'a'.repeat(64)})).ok, false);
+    assert.equal((await untrusted.commands.get('codexBeacon.remote.clearPrivateData')({previewToken: 'a'.repeat(64)})).ok, false);
     assert.equal(untrusted.children.length, 0);
     assert.deepEqual(untrusted.updates, []);
   } finally {untrusted.controller.dispose();}
@@ -414,14 +414,14 @@ test('Language changes translate remote popups, status and logs without restarti
   const state = fixture(false);
   try {
     assert.match(state.logs[0], /工作区尚未受信任/);
-    const choose = state.commands.get('codexNotifier.remote.setLanguage');
+    const choose = state.commands.get('codexBeacon.remote.setLanguage');
     assert.deepEqual(choose('invalid'), {accepted: false});
     assert.deepEqual(choose('en'), {accepted: true, language: 'en'});
     assert.match(state.logs.at(-1), /Collector language updated/);
     const status = await state.controller.status();
     assert.equal(status.state, 'stopped');
     assert.match(status.message, /Workspace is not trusted/);
-    const denied = await state.commands.get('codexNotifier.remote.configureApprovalHook')();
+    const denied = await state.commands.get('codexBeacon.remote.configureApprovalHook')();
     assert.match(denied.error, /Trust this workspace/);
     assert.ok(state.messages.includes(denied.error));
     state.grant();

@@ -6,8 +6,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vscode = require('vscode');
 
-const UI_ID = 'lengmo1996.codex-notifier-ui';
-const REMOTE_ID = 'lengmo1996.codex-notifier-collector';
+const UI_ID = 'Young581.codex-beacon';
+const REMOTE_ID = 'Young581.codex-beacon-collector';
 const REQUIRED = ['testNotification', 'showHistory', 'pause', 'resume',
   'chooseSound', 'testSound',
   'dashboard',
@@ -26,7 +26,7 @@ async function waitFor(operation, predicate, description, timeout = 20000) {
   assert.fail(`${description}; last value: ${JSON.stringify(current).slice(0, 1600)}`);
 }
 
-const command = (name, ...args) => vscode.commands.executeCommand(`codexNotifier.${name}`, ...args);
+const command = (name, ...args) => vscode.commands.executeCommand(`codexBeacon.${name}`, ...args);
 const snapshot = () => command('internal.snapshot');
 const history = value => value.history || value.entries;
 const accepted = receipt => receipt === true || !!(receipt && receipt.accepted);
@@ -37,10 +37,10 @@ exports.run = async function run() {
   const testHome = process.env.CODEX_NOTIFIER_TEST_HOME;
   const fixturePath = process.env.CODEX_NOTIFIER_TEST_ROLLOUT;
   assert.ok(testHome && fixturePath, 'Run packaging/prepare-host-test.py first and pass its environment');
-  assert.equal(path.resolve(vscode.workspace.getConfiguration('codexNotifier').get('localCodexHome', '')),
+  assert.equal(path.resolve(vscode.workspace.getConfiguration('codexBeacon').get('localCodexHome', '')),
     path.resolve(testHome), 'The isolated user-data settings must be written before VS Code starts');
   assert.ok(path.resolve(fixturePath).startsWith(path.resolve(testHome) + path.sep));
-  assert.ok(fs.existsSync(path.join(testHome, '.codex-notifier-extension-test')),
+  assert.ok(fs.existsSync(path.join(testHome, '.codex-beacon-extension-test')),
     'Refuse to test hooks in a directory without the test-only marker');
 
   const results = [];
@@ -59,14 +59,14 @@ exports.run = async function run() {
         assert.ok(extension.isActive, `${id} did not activate`);
       }
       const registered = new Set(await vscode.commands.getCommands(true));
-      for (const name of REQUIRED) assert.ok(registered.has(`codexNotifier.${name}`), `Missing command ${name}`);
-      assert.ok(registered.has('codexNotifier.local.status'));
-      assert.equal(registered.has('codexNotifier.remote.status'), false, 'Remote must not register its collector locally');
+      for (const name of REQUIRED) assert.ok(registered.has(`codexBeacon.${name}`), `Missing command ${name}`);
+      assert.ok(registered.has('codexBeacon.local.status'));
+      assert.equal(registered.has('codexBeacon.remote.status'), false, 'Remote must not register its collector locally');
       assert.deepEqual(vscode.extensions.getExtension(UI_ID).packageJSON.extensionPack, [REMOTE_ID]);
       const installation = await command('checkInstallation');
       assert.equal(installation.remote, false);
       assert.equal(installation.state, 'available');
-      const config = vscode.workspace.getConfiguration('codexNotifier');
+      const config = vscode.workspace.getConfiguration('codexBeacon');
       assert.equal(config.get('autoReadOnWindowFocus'), false, 'Window-wide auto-read must be off by default');
       assert.equal(config.get('openLocation'), 'sidebar', 'Sidebar must be the default open location');
       assert.equal(config.get('groupBy'), 'project', 'Projects must be the default grouping');
@@ -99,7 +99,7 @@ exports.run = async function run() {
     });
 
     await test('Language switches live in the real UI and collector without changing unread state or process', async () => {
-      const settings = vscode.workspace.getConfiguration('codexNotifier');
+      const settings = vscode.workspace.getConfiguration('codexBeacon');
       assert.equal(settings.get('language'), 'zh-CN');
       const before = await snapshot();
       const initial = await command('local.status');
@@ -141,7 +141,7 @@ exports.run = async function run() {
       const preview = await command('testSound');
       assert.ok(accepted(preview), 'Sound-only preview must reach the new broker');
       assert.ok(history(await snapshot()).some(entry => entry.key === preview.key && entry.event.type === 'test'));
-      const settings = vscode.workspace.getConfiguration('codexNotifier');
+      const settings = vscode.workspace.getConfiguration('codexBeacon');
       await settings.update('groupBy', 'project', vscode.ConfigurationTarget.Global);
       const grouped = await snapshot();
       assert.ok(grouped.groups.some(group => group.title === '测试' && group.count >= 2));
@@ -158,10 +158,10 @@ exports.run = async function run() {
     await test('Approval hook installer preserves unrelated hooks in isolated Codex home', async () => {
       const hooksPath = path.join(testHome, 'hooks.json');
       const before = JSON.stringify(JSON.parse(fs.readFileSync(hooksPath, 'utf8')));
-      assert.ok(before.includes('codex-notifier-unrelated-fixture'));
+      assert.ok(before.includes('codex-beacon-unrelated-fixture'));
       await command('configureApprovalHook');
       const installed = JSON.parse(fs.readFileSync(hooksPath, 'utf8'));
-      assert.ok(JSON.stringify(installed).includes('codex-notifier-unrelated-fixture'));
+      assert.ok(JSON.stringify(installed).includes('codex-beacon-unrelated-fixture'));
       assert.notEqual(JSON.stringify(installed), before, 'Installer should append its own hook');
       const first = JSON.stringify(installed);
       await command('configureApprovalHook');
@@ -233,7 +233,7 @@ exports.run = async function run() {
       assert.ok(value.localUnread >= 2);
       assert.ok(value.groups.some(group => group.id === 'current-unread' && group.count >= 2));
       assert.equal(value.statusColor, 'statusBarItem.errorBackground');
-      assert.equal(value.statusCommand, 'codexNotifier.dashboard');
+      assert.equal(value.statusCommand, 'codexBeacon.dashboard');
     });
 
     await test('Default sidebar navigation reads only the clicked reminder and creates no editor tabs', async () => {
@@ -259,7 +259,7 @@ exports.run = async function run() {
     });
 
     await test('The editor setting opens the exact session and leaves other reminders unread', async () => {
-      await vscode.workspace.getConfiguration('codexNotifier').update('openLocation', 'editor', vscode.ConfigurationTarget.Global);
+      await vscode.workspace.getConfiguration('codexBeacon').update('openLocation', 'editor', vscode.ConfigurationTarget.Global);
       const before = await snapshot();
       const entry = history(before).find(item => item.event.session_id === process.env.CODEX_NOTIFIER_TEST_SESSION && item.event.type === 'question');
       assert.ok(entry);
@@ -293,7 +293,7 @@ exports.run = async function run() {
       for (const other of history(before).filter(item => !item.read && item.key !== entry.key)) {
         assert.equal(history(after).find(item => item.key === other.key)?.read, false);
       }
-      await vscode.workspace.getConfiguration('codexNotifier').update('openLocation', 'sidebar', vscode.ConfigurationTarget.Global);
+      await vscode.workspace.getConfiguration('codexBeacon').update('openLocation', 'sidebar', vscode.ConfigurationTarget.Global);
     });
 
     await test('Mark all read preserves history and clears unread indicator', async () => {
@@ -327,7 +327,7 @@ exports.run = async function run() {
         s.windowAttention.displayPrefix?.includes('本轮已回复 1') &&
         (!native || s.windowAttention.bound && s.windowAttention.color === 'yellow'), 'Title and optional native taskbar must be updated', 30000);
       assert.equal(value.windowAttention.count, 1);
-      assert.ok(vscode.workspace.getConfiguration('window').get('title').includes('${codexNotification}'));
+      assert.ok(vscode.workspace.getConfiguration('window').get('title').includes('${codexBeaconNotification}'));
       const first = value.windowAttention.displayPrefix;
       const other = await waitFor(snapshot, s => s.windowAttention.displayPrefix && s.windowAttention.displayPrefix !== first,
         'Unread title should alternate its visible dot', 5000);
@@ -361,13 +361,13 @@ exports.run = async function run() {
     });
 
     await test('Privacy cleanup uses the isolated collector, preserves original data and resumes only explicitly', async () => {
-      const settings = vscode.workspace.getConfiguration('codexNotifier');
+      const settings = vscode.workspace.getConfiguration('codexBeacon');
       assert.equal(settings.get('soundOnDone'), true);
       assert.equal(settings.get('historyRetentionDays'), 7);
       assert.equal(settings.get('localCacheRetentionDays'), 7);
       const originalSession = fs.readFileSync(fixturePath);
       const originalHooks = JSON.parse(fs.readFileSync(path.join(testHome, 'hooks.json'), 'utf8'));
-      const unrelated = originalHooks.hooks.PermissionRequest.filter(group => group.hooks.some(hook => hook.command === 'echo codex-notifier-unrelated-fixture'));
+      const unrelated = originalHooks.hooks.PermissionRequest.filter(group => group.hooks.some(hook => hook.command === 'echo codex-beacon-unrelated-fixture'));
       assert.equal(unrelated.length, 1);
       const preview = await command('local.previewPrivacyCleanup');
       assert.equal(preview.canClear, true);
@@ -390,7 +390,7 @@ exports.run = async function run() {
     });
 
     await test('Real collector drives project task states, token estimates, custom rates and grouped deletion', async () => {
-      const config = vscode.workspace.getConfiguration('codexNotifier');
+      const config = vscode.workspace.getConfiguration('codexBeacon');
       await config.update('groupBy', 'project', vscode.ConfigurationTarget.Global);
       const turn = prefix + '-metrics';
       const append = (type, payload) => fs.appendFileSync(fixturePath, JSON.stringify({
@@ -424,7 +424,7 @@ exports.run = async function run() {
       const recalculate = async () => {
         const value = await snapshot();
         return require(path.join(vscode.extensions.getExtension(UI_ID).extensionPath, 'lib/dashboard')).dashboardData(value, {
-          windowId: value.windowId, options: {modelPrices: vscode.workspace.getConfiguration('codexNotifier').get('modelPrices')}});
+          windowId: value.windowId, options: {modelPrices: vscode.workspace.getConfiguration('codexBeacon').get('modelPrices')}});
       };
       await waitFor(recalculate, s => s.projects.some(project => project.tasks.some(row => Math.abs(row.cost - .0084) < 1e-9)), 'Custom prices should recalculate task details');
       await command('markEntryRead', completedRow.key);
@@ -441,7 +441,10 @@ exports.run = async function run() {
       const runtime = path.dirname(process.env.CODEX_NOTIFIER_TEST_REPORT);
       // Use VS Code's URI spelling (including the Windows drive case), as the
       // production client hashes context.globalStorageUri.fsPath for its pipe.
-      const storage = vscode.Uri.file(path.join(runtime, 'user-data', 'User', 'globalStorage', UI_ID)).fsPath;
+      // VS Code canonicalizes extension IDs to lowercase for global storage,
+      // including publishers whose public ID contains capital letters.
+      const storageId = vscode.extensions.getExtension(UI_ID).id.toLowerCase();
+      const storage = vscode.Uri.file(path.join(runtime, 'user-data', 'User', 'globalStorage', storageId)).fsPath;
       const script = path.join(vscode.extensions.getExtension(UI_ID).extensionPath, 'lib/broker.js');
       const peer = new BrokerClient(storage, script);
       const realSource = (await command('local.status')).source;
@@ -455,10 +458,10 @@ exports.run = async function run() {
       assert.ok(entry && !entry.read);
       assert.equal((await command('openProjectWindow', entry.key)).routed, true);
       // Also exercise the opt-in focus acknowledgement guard.
-      await vscode.workspace.getConfiguration('codexNotifier').update('autoReadOnWindowFocus', true, vscode.ConfigurationTarget.Global);
+      await vscode.workspace.getConfiguration('codexBeacon').update('autoReadOnWindowFocus', true, vscode.ConfigurationTarget.Global);
       await command('openProjectWindow', entry.key);
       assert.equal(history(await snapshot()).find(item => item.key === entry.key).read, false);
-      await vscode.workspace.getConfiguration('codexNotifier').update('autoReadOnWindowFocus', false, vscode.ConfigurationTarget.Global);
+      await vscode.workspace.getConfiguration('codexBeacon').update('autoReadOnWindowFocus', false, vscode.ConfigurationTarget.Global);
       const source = {...realSource, id: prefix + '-disconnected-source'};
       let saved;
       try {
@@ -506,7 +509,7 @@ exports.run = async function run() {
 
     await test('Status bar opens one dashboard tab, preserves unread and follows history and language live', async () => {
       const before = await snapshot();
-      assert.equal(before.statusCommand, 'codexNotifier.dashboard');
+      assert.equal(before.statusCommand, 'codexBeacon.dashboard');
       assert.match(before.statusTooltip, /点击打开管理面板/);
       assert.ok((await vscode.commands.executeCommand(before.statusCommand)).opened);
       const value = await waitFor(snapshot, s => s.dashboard.ready, 'Dashboard webview must acknowledge readiness');
@@ -519,10 +522,10 @@ exports.run = async function run() {
       await command('dashboard'); assert.equal(tabs().length, 1);
       await command('pause');
       const paused = await snapshot();
-      assert.equal(paused.statusCommand, 'codexNotifier.dashboard');
+      assert.equal(paused.statusCommand, 'codexBeacon.dashboard');
       await vscode.commands.executeCommand(paused.statusCommand); assert.equal(tabs().length, 1);
       await command('resume');
-      const settings = vscode.workspace.getConfiguration('codexNotifier');
+      const settings = vscode.workspace.getConfiguration('codexBeacon');
       await settings.update('language', 'en', vscode.ConfigurationTarget.Global);
       const english = await waitFor(snapshot, s => s.dashboard.data.language === 'en', 'Dashboard must update language');
       assert.equal(english.dashboard.data.text.title, 'Project overview');

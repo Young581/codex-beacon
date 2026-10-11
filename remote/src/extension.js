@@ -9,13 +9,13 @@ const {settings, settingKey, makeSource, hookIsConfigured, JsonLines, restartDel
 
 function createController(vscode, context, dependencies = {}) {
   let languageOverride;
-  configureLanguage(() => languageOverride || resolveLanguage(vscode.workspace.getConfiguration('codexNotifier').get('language', 'auto'), vscode.env.language));
+  configureLanguage(() => languageOverride || resolveLanguage(vscode.workspace.getConfiguration('codexBeacon').get('language', 'auto'), vscode.env.language));
   const spawn = dependencies.spawn || childProcess.spawn;
-  const commandPrefix = dependencies.commandPrefix || 'codexNotifier.remote';
+  const commandPrefix = dependencies.commandPrefix || 'codexBeacon.remote';
   const configKeyPrefix = dependencies.configKeyPrefix || '';
   const localMode = configKeyPrefix === 'local';
   const configKey = key => settingKey(key, configKeyPrefix);
-  const output = vscode.window.createOutputChannel(dependencies.outputName || t('Codex Notifier — Collector'));
+  const output = vscode.window.createOutputChannel(dependencies.outputName || t('Codex Beacon — Collector'));
   const script = path.join(context.extensionPath, 'scripts', 'collector.py');
   let config;
   let source;
@@ -34,7 +34,7 @@ function createController(vscode, context, dependencies = {}) {
   const bridge = new EventBridge((...args) => vscode.commands.executeCommand(...args), log);
 
   function updateSettings() {
-    config = settings(vscode.workspace.getConfiguration('codexNotifier'), {}, configKeyPrefix);
+    config = settings(vscode.workspace.getConfiguration('codexBeacon'), {}, configKeyPrefix);
     const folder = vscode.workspace.workspaceFolders?.[0]?.uri;
     source = makeSource(config, {
       hostname: os.hostname(), remoteName: localMode ? '' : vscode.env.remoteName || '', cwd: folder?.fsPath || '',
@@ -182,7 +182,7 @@ function createController(vscode, context, dependencies = {}) {
           } else buffer = Buffer.concat([buffer, chunk]);
         });
         process.stderr.on('data', () => {});
-        process.on('error', error => finish(new Error(t`无法运行 Python（${error.code || t('启动失败')}）。请检查 codexNotifier.${configKey('pythonPath')}。`)));
+        process.on('error', error => finish(new Error(t`无法运行 Python（${error.code || t('启动失败')}）。请检查 codexBeacon.${configKey('pythonPath')}。`)));
         process.on('close', code => {
           if (code !== 0) return finish(new Error(t`采集器命令失败（退出码 ${code}）。请检查 Python、目录权限和 hooks.json 格式。`));
           try { finish(null, JSON.parse(buffer.toString('utf8').trim())); }
@@ -219,7 +219,7 @@ function createController(vscode, context, dependencies = {}) {
     try {
       const result = await runAction(action, parameters);
       if (action === 'install') {
-        void vscode.window.showInformationMessage(t('审批提醒 Hook 已配置。请在 Codex 设置 → Hooks → PermissionRequest 中核对 vscode-notifier/remote_notifier.py，然后点击 Trust。扩展无法代替你信任 Hook。'));
+        void vscode.window.showInformationMessage(t('审批提醒 Hook 已配置。请在 Codex 设置 → Hooks → PermissionRequest 中核对 codex-beacon/remote_notifier.py，然后点击 Trust。扩展无法代替你信任 Hook。'));
       } else if (action === 'uninstall') {
         void vscode.window.showInformationMessage(t('已移除此扩展管理的审批提醒 Hook；其他配置和备份已保留。'));
       }
@@ -231,7 +231,7 @@ function createController(vscode, context, dependencies = {}) {
   }
 
   async function setCollectorEnabled(enabled) {
-    const configuration = vscode.workspace.getConfiguration('codexNotifier');
+    const configuration = vscode.workspace.getConfiguration('codexBeacon');
     const key = configKey('collectorEnabled');
     const inspected = configuration.inspect?.(key);
     const target = inspected?.workspaceFolderValue !== undefined ? 3 : hasWorkspace() ? 2 : 1;
@@ -309,7 +309,7 @@ function createController(vscode, context, dependencies = {}) {
     vscode.commands.registerCommand(`${commandPrefix}.removeApprovalHook`, () => reportAction('uninstall')),
     vscode.commands.registerCommand(`${commandPrefix}.test`, async () => {
       if (!config.enabled) {
-        const error = t`采集器已暂停。请启用 codexNotifier.${configKey('collectorEnabled')} 后测试采集链路。`;
+        const error = t`采集器已暂停。请启用 codexBeacon.${configKey('collectorEnabled')} 后测试采集链路。`;
         void vscode.window.showErrorMessage(error);
         return {ok: false, error};
       }
@@ -321,7 +321,7 @@ function createController(vscode, context, dependencies = {}) {
     vscode.commands.registerCommand(`${commandPrefix}.clearPrivateData`, clearPrivateData),
     vscode.commands.registerCommand(`${commandPrefix}.resumePrivateData`, resumePrivateData),
     vscode.workspace.onDidChangeConfiguration(event => {
-      if (['codexHome', 'pythonPath', 'sourceLabel', 'collectorEnabled', 'cacheRetentionDays'].some(key => event.affectsConfiguration(`codexNotifier.${configKey(key)}`))) restart();
+      if (['codexHome', 'pythonPath', 'sourceLabel', 'collectorEnabled', 'cacheRetentionDays'].some(key => event.affectsConfiguration(`codexBeacon.${configKey(key)}`))) restart();
     }),
     vscode.workspace.onDidGrantWorkspaceTrust(restart),
   ];

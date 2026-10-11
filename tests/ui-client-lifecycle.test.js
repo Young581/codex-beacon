@@ -109,7 +109,7 @@ test('a socket that closes before connect rejects its opening promise promptly',
 test('authenticated protocol uses a separate pipe without touching an older running broker', () => {
   const client = new BrokerClient(path.resolve(__dirname, 'unused-unit-storage'), 'unused-broker.js');
   try {
-    if (process.platform === 'win32') assert.equal(client.pipe.startsWith(`\\\\.\\pipe\\codex-notifier-secure-v1-p${BROKER_PROTOCOL_VERSION}-`), true);
+    if (process.platform === 'win32') assert.equal(client.pipe.startsWith(`\\\\.\\pipe\\codex-beacon-secure-v1-p${BROKER_PROTOCOL_VERSION}-`), true);
     else assert.equal(path.basename(client.pipe), `broker-secure-v1-p${BROKER_PROTOCOL_VERSION}.sock`);
   } finally {client.dispose();}
 });

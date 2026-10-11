@@ -37,7 +37,7 @@ class RemoteTests(unittest.TestCase):
                               input=payload, capture_output=True, timeout=20)
 
     def read_events(self):
-        path = self.home / "vscode-notifier" / "events.jsonl"
+        path = self.home / "codex-beacon" / "events.jsonl"
         return [json.loads(line) for line in path.read_bytes().splitlines()] if path.exists() else []
 
     def privacy_preview(self):
@@ -307,7 +307,7 @@ class RemoteTests(unittest.TestCase):
         self.assertTrue(all(row["originator"] == "codex_vscode" for row in self.read_events()))
         # Simulate an installed older hook that queues every source, with no
         # trusted provenance fields. The new follow must still filter it.
-        event_path = self.home / "vscode-notifier" / "events.jsonl"
+        event_path = self.home / "codex-beacon" / "events.jsonl"
         event_path.write_bytes(b"")
         for session_id, unused_originator, unused_source, unused_allowed in cases:
             for kind in ("done", "question", "approval"):
@@ -418,6 +418,24 @@ class RemoteTests(unittest.TestCase):
         self.assertEqual([row["session_id"] for row in events], ["long-header"])
         self.assertNotIn("PRIVATE", json.dumps(events))
 
+    def test_beacon_install_and_removal_preserve_upstream_hooks_and_cache(self):
+        upstream = self.home / "vscode-notifier"
+        upstream.mkdir()
+        cache = upstream / "events.jsonl"
+        cache.write_bytes(b"UPSTREAM DATA MUST STAY")
+        legacy_hook = {"type": "command", "command": "python collector.py hook --owner codex-vscode-notifier-v1"}
+        original = {"hooks": {"PermissionRequest": [{"hooks": [legacy_hook]}]}}
+        hooks = self.home / "hooks.json"
+        hooks.write_text(json.dumps(original), encoding="utf-8")
+        self.assertEqual(self.run_cli("install").returncode, 0)
+        installed = json.loads(hooks.read_bytes())["hooks"]["PermissionRequest"]
+        self.assertEqual(installed[0]["hooks"], [legacy_hook])
+        self.assertEqual(len(installed), 2)
+        self.assertTrue((self.home / "codex-beacon").is_dir())
+        self.assertEqual(self.run_cli("uninstall").returncode, 0)
+        self.assertEqual(json.loads(hooks.read_bytes()), original)
+        self.assertEqual(cache.read_bytes(), b"UPSTREAM DATA MUST STAY")
+
     def test_install_preserves_existing_and_is_idempotent_then_uninstalls_only_owned(self):
         original = {"description": "retain top-level", "hooks": {
             "Stop": [{"matcher": "abc", "hooks": [{"type": "command", "command": "echo keep"}]}],
@@ -447,7 +465,7 @@ class RemoteTests(unittest.TestCase):
         self.assertEqual(removal.returncode, 0, removal.stderr)
         self.assertEqual(json.loads(path.read_bytes()), original)
         self.assertEqual(len(self.read_events()), 1)
-        self.assertTrue((self.home / "vscode-notifier" / "remote_notifier.py").exists())
+        self.assertTrue((self.home / "codex-beacon" / "remote_notifier.py").exists())
 
     def test_invalid_existing_configuration_is_unchanged(self):
         path = self.home / "hooks.json"
@@ -456,7 +474,7 @@ class RemoteTests(unittest.TestCase):
             outcome = self.run_cli("install")
             self.assertNotEqual(outcome.returncode, 0)
             self.assertEqual(path.read_bytes(), data)
-        self.assertFalse((self.home / "vscode-notifier" / "config.json").exists())
+        self.assertFalse((self.home / "codex-beacon" / "config.json").exists())
 
     def test_hook_metadata_privacy_and_failure_never_control_approval(self):
         self.write_session("s1")
@@ -488,7 +506,7 @@ class RemoteTests(unittest.TestCase):
         events = self.read_events()
         self.assertEqual(len(events), 2)
         self.assertTrue(all(record["type"] == "question" for record in events))
-        for line in (self.home / "vscode-notifier" / "events.jsonl").read_bytes().splitlines(keepends=True):
+        for line in (self.home / "codex-beacon" / "events.jsonl").read_bytes().splitlines(keepends=True):
             self.assertLessEqual(len(line), 4096)
 
     def test_parallel_process_append_integrity(self):
@@ -507,7 +525,7 @@ class RemoteTests(unittest.TestCase):
 
     def test_rotation_and_follow_replay_ignore_old_corrupt_and_extra_fields(self):
         self.write_session("verified-replay")
-        directory = self.home / "vscode-notifier"
+        directory = self.home / "codex-beacon"
         directory.mkdir()
         path = directory / "events.jsonl"
         old, unused = REMOTE.event_record(self.home, "done")
@@ -531,7 +549,7 @@ class RemoteTests(unittest.TestCase):
 
     def test_follow_observes_append_and_rotation(self):
         self.write_session("follow-hook")
-        directory = self.home / "vscode-notifier"
+        directory = self.home / "codex-beacon"
         directory.mkdir()
         captured = self.fixture / "follow.jsonl"
         errors = self.fixture / "follow-errors.txt"
@@ -682,7 +700,7 @@ class RemoteTests(unittest.TestCase):
     def test_installed_script_follows_its_own_home(self):
         self.assertEqual(self.run_cli("install").returncode, 0)
         self.assertEqual(self.run_cli("test").returncode, 0)
-        installed = self.home / "vscode-notifier" / "remote_notifier.py"
+        installed = self.home / "codex-beacon" / "remote_notifier.py"
         wrong_home = self.fixture / "wrong-home"
         outcome = subprocess.run([sys.executable, str(installed), "follow", "--once"],
                                  env={**os.environ, "CODEX_HOME": str(wrong_home)},
@@ -743,9 +761,14 @@ class RemoteTests(unittest.TestCase):
         installed = self.run_cli("install")
         self.assertEqual(installed.returncode, 0, installed.stderr)
         definition = json.loads((self.home / "hooks.json").read_bytes())["hooks"]["PermissionRequest"][0]["hooks"][0]
+        environment = dict(os.environ)
+        # The test launcher may provide a minimal PATH. Exercise the actual
+        # generated shell command with Windows PowerShell available explicitly.
+        powershell = Path(os.environ.get("SystemRoot", "")) / "System32/WindowsPowerShell/v1.0"
+        environment["PATH"] = str(powershell) + os.pathsep + environment.get("PATH", "")
         result = subprocess.run(definition["commandWindows"], shell=True,
                                 input=b'{"session_id":"windows-hook","turn_id":"turn"}',
-                                capture_output=True, timeout=10)
+                                capture_output=True, timeout=10, env=environment)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout.strip(), b"{}")
         self.assertEqual(self.read_events()[-1]["session_id"], "windows-hook")

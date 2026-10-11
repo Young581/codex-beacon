@@ -1,9 +1,9 @@
 {
-  "name": "codex-notifier-ui",
+  "name": "codex-beacon",
   "displayName": "Codex Beacon",
-  "description": "按项目管理 Codex 任务、状态灯、token 与费用估算，以及完成提醒。Project tasks, status, token usage, cost estimates and alerts for Codex.",
-  "version": "0.7.0",
-  "publisher": "lengmo1996",
+  "description": "Track Codex tasks by project with a compact dashboard, colored states, token usage and completion alerts.",
+  "version": "0.8.0",
+  "publisher": "Young581",
   "license": "MIT",
   "engines": {
     "vscode": "^1.96.0"
@@ -13,7 +13,7 @@
     "Other"
   ],
   "extensionPack": [
-    "lengmo1996.codex-notifier-collector"
+    "Young581.codex-beacon-collector"
   ],
   "extensionKind": [
     "ui"
@@ -22,8 +22,8 @@
   "main": "./extension.js",
   "activationEvents": [
     "onStartupFinished",
-    "onCommand:codexNotifier.internal.receive",
-    "onCommand:codexNotifier.internal.snapshot"
+    "onCommand:codexBeacon.internal.receive",
+    "onCommand:codexBeacon.internal.snapshot"
   ],
   "capabilities": {
     "virtualWorkspaces": false,
@@ -34,272 +34,272 @@
   "contributes": {
     "commands": [
       {
-        "command": "codexNotifier.dashboard",
-        "title": "%command.codexNotifier.dashboard%",
+        "command": "codexBeacon.dashboard",
+        "title": "%command.codexBeacon.dashboard%",
         "icon": "$(dashboard)",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.dashboard.zhCN",
+        "command": "codexBeacon.dashboard.zhCN",
         "title": "打开 Codex Beacon 仪表盘",
         "icon": "$(dashboard)"
       },
       {
-        "command": "codexNotifier.dashboard.en",
+        "command": "codexBeacon.dashboard.en",
         "title": "Open Codex Beacon dashboard",
         "icon": "$(dashboard)"
       },
       {
-        "command": "codexNotifier.chooseSound",
-        "title": "%command.codexNotifier.chooseSound%",
+        "command": "codexBeacon.chooseSound",
+        "title": "%command.codexBeacon.chooseSound%",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.testSound",
-        "title": "%command.codexNotifier.testSound%",
+        "command": "codexBeacon.testSound",
+        "title": "%command.codexBeacon.testSound%",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.openProjectWindow",
-        "title": "%command.codexNotifier.openProjectWindow%",
+        "command": "codexBeacon.openProjectWindow",
+        "title": "%command.codexBeacon.openProjectWindow%",
         "icon": "$(window)",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.chooseOpenLocation",
-        "title": "%command.codexNotifier.chooseOpenLocation%",
+        "command": "codexBeacon.chooseOpenLocation",
+        "title": "%command.codexBeacon.chooseOpenLocation%",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.checkInstallation",
-        "title": "%command.codexNotifier.checkInstallation%",
+        "command": "codexBeacon.checkInstallation",
+        "title": "%command.codexBeacon.checkInstallation%",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.menu",
-        "title": "%command.codexNotifier.menu%",
+        "command": "codexBeacon.menu",
+        "title": "%command.codexBeacon.menu%",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.testNotification",
-        "title": "%command.codexNotifier.testNotification%",
+        "command": "codexBeacon.testNotification",
+        "title": "%command.codexBeacon.testNotification%",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.showHistory",
-        "title": "%command.codexNotifier.showHistory%",
+        "command": "codexBeacon.showHistory",
+        "title": "%command.codexBeacon.showHistory%",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.openNext",
-        "title": "%command.codexNotifier.openNext%",
+        "command": "codexBeacon.openNext",
+        "title": "%command.codexBeacon.openNext%",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.showEntry",
-        "title": "%command.codexNotifier.showEntry%",
+        "command": "codexBeacon.showEntry",
+        "title": "%command.codexBeacon.showEntry%",
         "icon": "$(go-to-file)",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.markEntryRead",
-        "title": "%command.codexNotifier.markEntryRead%",
+        "command": "codexBeacon.markEntryRead",
+        "title": "%command.codexBeacon.markEntryRead%",
         "icon": "$(check)",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.showEntryDetails",
-        "title": "%command.codexNotifier.showEntryDetails%",
+        "command": "codexBeacon.showEntryDetails",
+        "title": "%command.codexBeacon.showEntryDetails%",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.pause",
-        "title": "%command.codexNotifier.pause%",
+        "command": "codexBeacon.pause",
+        "title": "%command.codexBeacon.pause%",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.resume",
-        "title": "%command.codexNotifier.resume%",
+        "command": "codexBeacon.resume",
+        "title": "%command.codexBeacon.resume%",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.markRead",
-        "title": "%command.codexNotifier.markRead%",
+        "command": "codexBeacon.markRead",
+        "title": "%command.codexBeacon.markRead%",
         "icon": "$(check-all)",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.clearHistory",
-        "title": "%command.codexNotifier.clearHistory%",
+        "command": "codexBeacon.clearHistory",
+        "title": "%command.codexBeacon.clearHistory%",
         "icon": "$(trash)",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.configureApprovalHook",
-        "title": "%command.codexNotifier.configureApprovalHook%",
+        "command": "codexBeacon.configureApprovalHook",
+        "title": "%command.codexBeacon.configureApprovalHook%",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.removeApprovalHook",
-        "title": "%command.codexNotifier.removeApprovalHook%",
+        "command": "codexBeacon.removeApprovalHook",
+        "title": "%command.codexBeacon.removeApprovalHook%",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.showStatus",
-        "title": "%command.codexNotifier.showStatus%",
+        "command": "codexBeacon.showStatus",
+        "title": "%command.codexBeacon.showStatus%",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.settings",
-        "title": "%command.codexNotifier.settings%",
+        "command": "codexBeacon.settings",
+        "title": "%command.codexBeacon.settings%",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.deleteEntry",
-        "title": "%command.codexNotifier.deleteEntry%",
+        "command": "codexBeacon.deleteEntry",
+        "title": "%command.codexBeacon.deleteEntry%",
         "icon": "$(trash)",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.clearRead",
-        "title": "%command.codexNotifier.clearRead%",
+        "command": "codexBeacon.clearRead",
+        "title": "%command.codexBeacon.clearRead%",
         "icon": "$(clear-all)",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.testCollector",
-        "title": "%command.codexNotifier.testCollector%",
+        "command": "codexBeacon.testCollector",
+        "title": "%command.codexBeacon.testCollector%",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.restartCollector",
-        "title": "%command.codexNotifier.restartCollector%",
+        "command": "codexBeacon.restartCollector",
+        "title": "%command.codexBeacon.restartCollector%",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.privacy",
-        "title": "%command.codexNotifier.privacy%",
+        "command": "codexBeacon.privacy",
+        "title": "%command.codexBeacon.privacy%",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.clearPrivateData",
-        "title": "%command.codexNotifier.clearPrivateData%",
+        "command": "codexBeacon.clearPrivateData",
+        "title": "%command.codexBeacon.clearPrivateData%",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.clearLocalPrivateData",
-        "title": "%command.codexNotifier.clearLocalPrivateData%",
+        "command": "codexBeacon.clearLocalPrivateData",
+        "title": "%command.codexBeacon.clearLocalPrivateData%",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.resumePrivateData",
-        "title": "%command.codexNotifier.resumePrivateData%",
+        "command": "codexBeacon.resumePrivateData",
+        "title": "%command.codexBeacon.resumePrivateData%",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.chooseLanguage",
-        "title": "%command.codexNotifier.chooseLanguage%",
+        "command": "codexBeacon.chooseLanguage",
+        "title": "%command.codexBeacon.chooseLanguage%",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.toggleGrouping",
-        "title": "%command.codexNotifier.toggleGrouping%",
+        "command": "codexBeacon.toggleGrouping",
+        "title": "%command.codexBeacon.toggleGrouping%",
         "icon": "$(list-tree)",
         "category": "Codex Beacon"
       },
       {
-        "command": "codexNotifier.clearHistory.zhCN",
+        "command": "codexBeacon.clearHistory.zhCN",
         "title": "Codex 通知：清空全部通知",
         "icon": "$(trash)"
       },
       {
-        "command": "codexNotifier.clearHistory.en",
+        "command": "codexBeacon.clearHistory.en",
         "title": "Clear all notifications",
         "icon": "$(trash)"
       },
       {
-        "command": "codexNotifier.clearRead.zhCN",
+        "command": "codexBeacon.clearRead.zhCN",
         "title": "Codex 通知：清空已读通知",
         "icon": "$(clear-all)"
       },
       {
-        "command": "codexNotifier.clearRead.en",
+        "command": "codexBeacon.clearRead.en",
         "title": "Clear read notifications",
         "icon": "$(clear-all)"
       },
       {
-        "command": "codexNotifier.deleteEntry.zhCN",
+        "command": "codexBeacon.deleteEntry.zhCN",
         "title": "删除这条通知",
         "icon": "$(trash)"
       },
       {
-        "command": "codexNotifier.deleteEntry.en",
+        "command": "codexBeacon.deleteEntry.en",
         "title": "Delete this notification",
         "icon": "$(trash)"
       },
       {
-        "command": "codexNotifier.markEntryRead.zhCN",
+        "command": "codexBeacon.markEntryRead.zhCN",
         "title": "静默标为已读",
         "icon": "$(check)"
       },
       {
-        "command": "codexNotifier.markEntryRead.en",
+        "command": "codexBeacon.markEntryRead.en",
         "title": "Mark read silently",
         "icon": "$(check)"
       },
       {
-        "command": "codexNotifier.markRead.zhCN",
+        "command": "codexBeacon.markRead.zhCN",
         "title": "Codex 通知：全部标为已读",
         "icon": "$(check-all)"
       },
       {
-        "command": "codexNotifier.markRead.en",
+        "command": "codexBeacon.markRead.en",
         "title": "Mark all read",
         "icon": "$(check-all)"
       },
       {
-        "command": "codexNotifier.menu.zhCN",
+        "command": "codexBeacon.menu.zhCN",
         "title": "Codex 通知：打开菜单"
       },
       {
-        "command": "codexNotifier.menu.en",
+        "command": "codexBeacon.menu.en",
         "title": "Open notification menu"
       },
       {
-        "command": "codexNotifier.openProjectWindow.zhCN",
+        "command": "codexBeacon.openProjectWindow.zhCN",
         "title": "打开项目窗口",
         "icon": "$(window)"
       },
       {
-        "command": "codexNotifier.openProjectWindow.en",
+        "command": "codexBeacon.openProjectWindow.en",
         "title": "Open project window",
         "icon": "$(window)"
       },
       {
-        "command": "codexNotifier.showEntry.zhCN",
+        "command": "codexBeacon.showEntry.zhCN",
         "title": "打开对应会话并标为已读",
         "icon": "$(go-to-file)"
       },
       {
-        "command": "codexNotifier.showEntry.en",
+        "command": "codexBeacon.showEntry.en",
         "title": "Open session and mark this notification read",
         "icon": "$(go-to-file)"
       },
       {
-        "command": "codexNotifier.showEntryDetails.zhCN",
+        "command": "codexBeacon.showEntryDetails.zhCN",
         "title": "查看通知详情"
       },
       {
-        "command": "codexNotifier.showEntryDetails.en",
+        "command": "codexBeacon.showEntryDetails.en",
         "title": "Show notification details"
       },
       {
-        "command": "codexNotifier.toggleGrouping.zhCN",
+        "command": "codexBeacon.toggleGrouping.zhCN",
         "title": "Codex Beacon：切换项目／通知分组",
         "icon": "$(list-tree)"
       },
       {
-        "command": "codexNotifier.toggleGrouping.en",
+        "command": "codexBeacon.toggleGrouping.en",
         "title": "Toggle project or notification grouping",
         "icon": "$(list-tree)"
       }
@@ -307,16 +307,16 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "codexNotifier",
+          "id": "codexBeacon",
           "title": "Codex Beacon",
           "icon": "assets/bell.svg"
         }
       ]
     },
     "views": {
-      "codexNotifier": [
+      "codexBeacon": [
         {
-          "id": "codexNotifier.history",
+          "id": "codexBeacon.history",
           "name": "%view.tasks%"
         }
       ]
@@ -324,245 +324,245 @@
     "menus": {
       "view/title": [
         {
-          "command": "codexNotifier.dashboard.en",
-          "when": "(view == codexNotifier.history) && codexNotifier.menuLanguage == en",
+          "command": "codexBeacon.dashboard.en",
+          "when": "(view == codexBeacon.history) && codexBeacon.menuLanguage == en",
           "group": "navigation@-1"
         },
         {
-          "command": "codexNotifier.dashboard.zhCN",
-          "when": "(view == codexNotifier.history) && codexNotifier.menuLanguage == zh-CN",
+          "command": "codexBeacon.dashboard.zhCN",
+          "when": "(view == codexBeacon.history) && codexBeacon.menuLanguage == zh-CN",
           "group": "navigation@-1"
         },
         {
-          "command": "codexNotifier.toggleGrouping.zhCN",
-          "when": "(view == codexNotifier.history) && codexNotifier.menuLanguage == zh-CN",
+          "command": "codexBeacon.toggleGrouping.zhCN",
+          "when": "(view == codexBeacon.history) && codexBeacon.menuLanguage == zh-CN",
           "group": "navigation@0"
         },
         {
-          "command": "codexNotifier.toggleGrouping.en",
-          "when": "(view == codexNotifier.history) && codexNotifier.menuLanguage == en",
+          "command": "codexBeacon.toggleGrouping.en",
+          "when": "(view == codexBeacon.history) && codexBeacon.menuLanguage == en",
           "group": "navigation@0"
         },
         {
-          "command": "codexNotifier.clearRead.zhCN",
-          "when": "(view == codexNotifier.history) && codexNotifier.menuLanguage == zh-CN",
+          "command": "codexBeacon.clearRead.zhCN",
+          "when": "(view == codexBeacon.history) && codexBeacon.menuLanguage == zh-CN",
           "group": "2_cleanup@1"
         },
         {
-          "command": "codexNotifier.clearRead.en",
-          "when": "(view == codexNotifier.history) && codexNotifier.menuLanguage == en",
+          "command": "codexBeacon.clearRead.en",
+          "when": "(view == codexBeacon.history) && codexBeacon.menuLanguage == en",
           "group": "2_cleanup@1"
         },
         {
-          "command": "codexNotifier.markRead.zhCN",
-          "when": "(view == codexNotifier.history) && codexNotifier.menuLanguage == zh-CN",
+          "command": "codexBeacon.markRead.zhCN",
+          "when": "(view == codexBeacon.history) && codexBeacon.menuLanguage == zh-CN",
           "group": "1_read@1"
         },
         {
-          "command": "codexNotifier.markRead.en",
-          "when": "(view == codexNotifier.history) && codexNotifier.menuLanguage == en",
+          "command": "codexBeacon.markRead.en",
+          "when": "(view == codexBeacon.history) && codexBeacon.menuLanguage == en",
           "group": "1_read@1"
         },
         {
-          "command": "codexNotifier.clearHistory.zhCN",
-          "when": "(view == codexNotifier.history) && codexNotifier.menuLanguage == zh-CN",
+          "command": "codexBeacon.clearHistory.zhCN",
+          "when": "(view == codexBeacon.history) && codexBeacon.menuLanguage == zh-CN",
           "group": "2_cleanup@2"
         },
         {
-          "command": "codexNotifier.clearHistory.en",
-          "when": "(view == codexNotifier.history) && codexNotifier.menuLanguage == en",
+          "command": "codexBeacon.clearHistory.en",
+          "when": "(view == codexBeacon.history) && codexBeacon.menuLanguage == en",
           "group": "2_cleanup@2"
         },
         {
-          "command": "codexNotifier.menu.zhCN",
-          "when": "(view == codexNotifier.history) && codexNotifier.menuLanguage == zh-CN",
+          "command": "codexBeacon.menu.zhCN",
+          "when": "(view == codexBeacon.history) && codexBeacon.menuLanguage == zh-CN",
           "group": "3_tools@1"
         },
         {
-          "command": "codexNotifier.menu.en",
-          "when": "(view == codexNotifier.history) && codexNotifier.menuLanguage == en",
+          "command": "codexBeacon.menu.en",
+          "when": "(view == codexBeacon.history) && codexBeacon.menuLanguage == en",
           "group": "3_tools@1"
         }
       ],
       "view/item/context": [
         {
-          "command": "codexNotifier.openProjectWindow.zhCN",
-          "when": "(view == codexNotifier.history && (viewItem == projectTaskGroup || viewItem == readNotification || viewItem == unreadNotification)) && codexNotifier.menuLanguage == zh-CN",
+          "command": "codexBeacon.openProjectWindow.zhCN",
+          "when": "(view == codexBeacon.history && (viewItem == projectTaskGroup || viewItem == readNotification || viewItem == unreadNotification)) && codexBeacon.menuLanguage == zh-CN",
           "group": "inline@0"
         },
         {
-          "command": "codexNotifier.openProjectWindow.en",
-          "when": "(view == codexNotifier.history && (viewItem == projectTaskGroup || viewItem == readNotification || viewItem == unreadNotification)) && codexNotifier.menuLanguage == en",
+          "command": "codexBeacon.openProjectWindow.en",
+          "when": "(view == codexBeacon.history && (viewItem == projectTaskGroup || viewItem == readNotification || viewItem == unreadNotification)) && codexBeacon.menuLanguage == en",
           "group": "inline@0"
         },
         {
-          "command": "codexNotifier.markEntryRead.zhCN",
-          "when": "(view == codexNotifier.history && viewItem == unreadNotification) && codexNotifier.menuLanguage == zh-CN",
+          "command": "codexBeacon.markEntryRead.zhCN",
+          "when": "(view == codexBeacon.history && viewItem == unreadNotification) && codexBeacon.menuLanguage == zh-CN",
           "group": "inline"
         },
         {
-          "command": "codexNotifier.markEntryRead.en",
-          "when": "(view == codexNotifier.history && viewItem == unreadNotification) && codexNotifier.menuLanguage == en",
+          "command": "codexBeacon.markEntryRead.en",
+          "when": "(view == codexBeacon.history && viewItem == unreadNotification) && codexBeacon.menuLanguage == en",
           "group": "inline"
         },
         {
-          "command": "codexNotifier.showEntry.zhCN",
-          "when": "(view == codexNotifier.history && (viewItem == readNotification || viewItem == unreadNotification)) && codexNotifier.menuLanguage == zh-CN",
+          "command": "codexBeacon.showEntry.zhCN",
+          "when": "(view == codexBeacon.history && (viewItem == readNotification || viewItem == unreadNotification)) && codexBeacon.menuLanguage == zh-CN",
           "group": "navigation"
         },
         {
-          "command": "codexNotifier.showEntry.en",
-          "when": "(view == codexNotifier.history && (viewItem == readNotification || viewItem == unreadNotification)) && codexNotifier.menuLanguage == en",
+          "command": "codexBeacon.showEntry.en",
+          "when": "(view == codexBeacon.history && (viewItem == readNotification || viewItem == unreadNotification)) && codexBeacon.menuLanguage == en",
           "group": "navigation"
         },
         {
-          "command": "codexNotifier.showEntryDetails.zhCN",
-          "when": "(view == codexNotifier.history && (viewItem == readNotification || viewItem == unreadNotification)) && codexNotifier.menuLanguage == zh-CN",
+          "command": "codexBeacon.showEntryDetails.zhCN",
+          "when": "(view == codexBeacon.history && (viewItem == readNotification || viewItem == unreadNotification)) && codexBeacon.menuLanguage == zh-CN",
           "group": "navigation"
         },
         {
-          "command": "codexNotifier.showEntryDetails.en",
-          "when": "(view == codexNotifier.history && (viewItem == readNotification || viewItem == unreadNotification)) && codexNotifier.menuLanguage == en",
+          "command": "codexBeacon.showEntryDetails.en",
+          "when": "(view == codexBeacon.history && (viewItem == readNotification || viewItem == unreadNotification)) && codexBeacon.menuLanguage == en",
           "group": "navigation"
         },
         {
-          "command": "codexNotifier.deleteEntry.zhCN",
-          "when": "(view == codexNotifier.history && (viewItem == readNotification || viewItem == unreadNotification)) && codexNotifier.menuLanguage == zh-CN",
+          "command": "codexBeacon.deleteEntry.zhCN",
+          "when": "(view == codexBeacon.history && (viewItem == readNotification || viewItem == unreadNotification)) && codexBeacon.menuLanguage == zh-CN",
           "group": "inline@2"
         },
         {
-          "command": "codexNotifier.deleteEntry.en",
-          "when": "(view == codexNotifier.history && (viewItem == readNotification || viewItem == unreadNotification)) && codexNotifier.menuLanguage == en",
+          "command": "codexBeacon.deleteEntry.en",
+          "when": "(view == codexBeacon.history && (viewItem == readNotification || viewItem == unreadNotification)) && codexBeacon.menuLanguage == en",
           "group": "inline@2"
         },
         {
-          "command": "codexNotifier.deleteEntry.zhCN",
-          "when": "(view == codexNotifier.history && (viewItem == readNotification || viewItem == unreadNotification)) && codexNotifier.menuLanguage == zh-CN",
+          "command": "codexBeacon.deleteEntry.zhCN",
+          "when": "(view == codexBeacon.history && (viewItem == readNotification || viewItem == unreadNotification)) && codexBeacon.menuLanguage == zh-CN",
           "group": "notification"
         },
         {
-          "command": "codexNotifier.deleteEntry.en",
-          "when": "(view == codexNotifier.history && (viewItem == readNotification || viewItem == unreadNotification)) && codexNotifier.menuLanguage == en",
+          "command": "codexBeacon.deleteEntry.en",
+          "when": "(view == codexBeacon.history && (viewItem == readNotification || viewItem == unreadNotification)) && codexBeacon.menuLanguage == en",
           "group": "notification"
         },
         {
-          "command": "codexNotifier.clearRead.zhCN",
-          "when": "(view == codexNotifier.history && viewItem == readNotificationGroup) && codexNotifier.menuLanguage == zh-CN",
+          "command": "codexBeacon.clearRead.zhCN",
+          "when": "(view == codexBeacon.history && viewItem == readNotificationGroup) && codexBeacon.menuLanguage == zh-CN",
           "group": "inline"
         },
         {
-          "command": "codexNotifier.clearRead.en",
-          "when": "(view == codexNotifier.history && viewItem == readNotificationGroup) && codexNotifier.menuLanguage == en",
+          "command": "codexBeacon.clearRead.en",
+          "when": "(view == codexBeacon.history && viewItem == readNotificationGroup) && codexBeacon.menuLanguage == en",
           "group": "inline"
         }
       ],
       "commandPalette": [
         {
-          "command": "codexNotifier.openProjectWindow",
+          "command": "codexBeacon.openProjectWindow",
           "when": "false"
         },
         {
-          "command": "codexNotifier.showEntry",
+          "command": "codexBeacon.showEntry",
           "when": "false"
         },
         {
-          "command": "codexNotifier.markEntryRead",
+          "command": "codexBeacon.markEntryRead",
           "when": "false"
         },
         {
-          "command": "codexNotifier.showEntryDetails",
+          "command": "codexBeacon.showEntryDetails",
           "when": "false"
         },
         {
-          "command": "codexNotifier.deleteEntry",
+          "command": "codexBeacon.deleteEntry",
           "when": "false"
         },
         {
-          "command": "codexNotifier.clearHistory.zhCN",
+          "command": "codexBeacon.clearHistory.zhCN",
           "when": "false"
         },
         {
-          "command": "codexNotifier.clearHistory.en",
+          "command": "codexBeacon.clearHistory.en",
           "when": "false"
         },
         {
-          "command": "codexNotifier.clearRead.zhCN",
+          "command": "codexBeacon.clearRead.zhCN",
           "when": "false"
         },
         {
-          "command": "codexNotifier.clearRead.en",
+          "command": "codexBeacon.clearRead.en",
           "when": "false"
         },
         {
-          "command": "codexNotifier.deleteEntry.zhCN",
+          "command": "codexBeacon.deleteEntry.zhCN",
           "when": "false"
         },
         {
-          "command": "codexNotifier.deleteEntry.en",
+          "command": "codexBeacon.deleteEntry.en",
           "when": "false"
         },
         {
-          "command": "codexNotifier.markEntryRead.zhCN",
+          "command": "codexBeacon.markEntryRead.zhCN",
           "when": "false"
         },
         {
-          "command": "codexNotifier.markEntryRead.en",
+          "command": "codexBeacon.markEntryRead.en",
           "when": "false"
         },
         {
-          "command": "codexNotifier.markRead.zhCN",
+          "command": "codexBeacon.markRead.zhCN",
           "when": "false"
         },
         {
-          "command": "codexNotifier.markRead.en",
+          "command": "codexBeacon.markRead.en",
           "when": "false"
         },
         {
-          "command": "codexNotifier.menu.zhCN",
+          "command": "codexBeacon.menu.zhCN",
           "when": "false"
         },
         {
-          "command": "codexNotifier.menu.en",
+          "command": "codexBeacon.menu.en",
           "when": "false"
         },
         {
-          "command": "codexNotifier.openProjectWindow.zhCN",
+          "command": "codexBeacon.openProjectWindow.zhCN",
           "when": "false"
         },
         {
-          "command": "codexNotifier.openProjectWindow.en",
+          "command": "codexBeacon.openProjectWindow.en",
           "when": "false"
         },
         {
-          "command": "codexNotifier.showEntry.zhCN",
+          "command": "codexBeacon.showEntry.zhCN",
           "when": "false"
         },
         {
-          "command": "codexNotifier.showEntry.en",
+          "command": "codexBeacon.showEntry.en",
           "when": "false"
         },
         {
-          "command": "codexNotifier.showEntryDetails.zhCN",
+          "command": "codexBeacon.showEntryDetails.zhCN",
           "when": "false"
         },
         {
-          "command": "codexNotifier.showEntryDetails.en",
+          "command": "codexBeacon.showEntryDetails.en",
           "when": "false"
         },
         {
-          "command": "codexNotifier.toggleGrouping.zhCN",
+          "command": "codexBeacon.toggleGrouping.zhCN",
           "when": "false"
         },
         {
-          "command": "codexNotifier.toggleGrouping.en",
+          "command": "codexBeacon.toggleGrouping.en",
           "when": "false"
         },
         {
-          "command": "codexNotifier.dashboard.zhCN",
+          "command": "codexBeacon.dashboard.zhCN",
           "when": "false"
         },
         {
-          "command": "codexNotifier.dashboard.en",
+          "command": "codexBeacon.dashboard.en",
           "when": "false"
         }
       ]
@@ -570,139 +570,139 @@
     "configuration": {
       "title": "%configuration.title%",
       "properties": {
-        "codexNotifier.notificationsEnabled": {
+        "codexBeacon.notificationsEnabled": {
           "type": "boolean",
           "default": true,
           "scope": "application",
-          "description": "%setting.codexNotifier.notificationsEnabled%"
+          "description": "%setting.codexBeacon.notificationsEnabled%"
         },
-        "codexNotifier.desktopNotifications": {
+        "codexBeacon.desktopNotifications": {
           "type": "boolean",
           "default": true,
           "scope": "application",
-          "description": "%setting.codexNotifier.desktopNotifications%"
+          "description": "%setting.codexBeacon.desktopNotifications%"
         },
-        "codexNotifier.sound": {
+        "codexBeacon.sound": {
           "type": "boolean",
           "default": true,
           "scope": "application",
-          "description": "%setting.codexNotifier.sound%"
+          "description": "%setting.codexBeacon.sound%"
         },
-        "codexNotifier.soundFile": {
+        "codexBeacon.soundFile": {
           "type": "string",
           "default": "",
           "scope": "machine",
-          "description": "%setting.codexNotifier.soundFile%"
+          "description": "%setting.codexBeacon.soundFile%"
         },
-        "codexNotifier.taskbarAttention": {
+        "codexBeacon.taskbarAttention": {
           "type": "boolean",
           "default": true,
           "scope": "application",
-          "description": "%setting.codexNotifier.taskbarAttention%"
+          "description": "%setting.codexBeacon.taskbarAttention%"
         },
-        "codexNotifier.blinkWindowTitle": {
+        "codexBeacon.blinkWindowTitle": {
           "type": "boolean",
           "default": true,
           "scope": "application",
-          "description": "%setting.codexNotifier.blinkWindowTitle%"
+          "description": "%setting.codexBeacon.blinkWindowTitle%"
         },
-        "codexNotifier.notifyOnDone": {
+        "codexBeacon.notifyOnDone": {
           "type": "boolean",
           "default": true,
           "scope": "application",
-          "description": "%setting.codexNotifier.notifyOnDone%"
+          "description": "%setting.codexBeacon.notifyOnDone%"
         },
-        "codexNotifier.notifyOnApproval": {
+        "codexBeacon.notifyOnApproval": {
           "type": "boolean",
           "default": true,
           "scope": "application",
-          "description": "%setting.codexNotifier.notifyOnApproval%"
+          "description": "%setting.codexBeacon.notifyOnApproval%"
         },
-        "codexNotifier.notifyOnQuestion": {
+        "codexBeacon.notifyOnQuestion": {
           "type": "boolean",
           "default": true,
           "scope": "application",
-          "description": "%setting.codexNotifier.notifyOnQuestion%"
+          "description": "%setting.codexBeacon.notifyOnQuestion%"
         },
-        "codexNotifier.onlyWhenUnfocused": {
+        "codexBeacon.onlyWhenUnfocused": {
           "type": "boolean",
           "default": false,
           "scope": "application",
-          "description": "%setting.codexNotifier.onlyWhenUnfocused%"
+          "description": "%setting.codexBeacon.onlyWhenUnfocused%"
         },
-        "codexNotifier.autoReadOnWindowFocus": {
+        "codexBeacon.autoReadOnWindowFocus": {
           "type": "boolean",
           "default": false,
           "scope": "application",
-          "description": "%setting.codexNotifier.autoReadOnWindowFocus%"
+          "description": "%setting.codexBeacon.autoReadOnWindowFocus%"
         },
-        "codexNotifier.openLocation": {
+        "codexBeacon.openLocation": {
           "type": "string",
           "enum": [
             "sidebar",
             "editor"
           ],
           "enumDescriptions": [
-            "%setting.codexNotifier.openLocation.option.0%",
-            "%setting.codexNotifier.openLocation.option.1%"
+            "%setting.codexBeacon.openLocation.option.0%",
+            "%setting.codexBeacon.openLocation.option.1%"
           ],
           "default": "sidebar",
           "scope": "application",
-          "description": "%setting.codexNotifier.openLocation%"
+          "description": "%setting.codexBeacon.openLocation%"
         },
-        "codexNotifier.localCodexHome": {
+        "codexBeacon.localCodexHome": {
           "type": "string",
           "default": "",
           "scope": "machine-overridable",
-          "description": "%setting.codexNotifier.localCodexHome%"
+          "description": "%setting.codexBeacon.localCodexHome%"
         },
-        "codexNotifier.localPythonPath": {
+        "codexBeacon.localPythonPath": {
           "type": "string",
           "default": "",
           "scope": "machine-overridable",
-          "description": "%setting.codexNotifier.localPythonPath%"
+          "description": "%setting.codexBeacon.localPythonPath%"
         },
-        "codexNotifier.localSourceLabel": {
+        "codexBeacon.localSourceLabel": {
           "type": "string",
           "default": "",
           "scope": "window",
-          "description": "%setting.codexNotifier.localSourceLabel%"
+          "description": "%setting.codexBeacon.localSourceLabel%"
         },
-        "codexNotifier.localCollectorEnabled": {
+        "codexBeacon.localCollectorEnabled": {
           "type": "boolean",
           "default": true,
           "scope": "window",
-          "description": "%setting.codexNotifier.localCollectorEnabled%"
+          "description": "%setting.codexBeacon.localCollectorEnabled%"
         },
-        "codexNotifier.soundOnDone": {
+        "codexBeacon.soundOnDone": {
           "type": "boolean",
           "default": true,
           "scope": "application",
-          "description": "%setting.codexNotifier.soundOnDone%"
+          "description": "%setting.codexBeacon.soundOnDone%"
         },
-        "codexNotifier.desktopOnDone": {
+        "codexBeacon.desktopOnDone": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "scope": "application",
-          "description": "%setting.codexNotifier.desktopOnDone%"
+          "description": "%setting.codexBeacon.desktopOnDone%"
         },
-        "codexNotifier.localCacheRetentionDays": {
+        "codexBeacon.localCacheRetentionDays": {
           "type": "integer",
           "default": 7,
           "minimum": 1,
           "maximum": 30,
           "scope": "window",
-          "description": "%setting.codexNotifier.localCacheRetentionDays%"
+          "description": "%setting.codexBeacon.localCacheRetentionDays%"
         },
-        "codexNotifier.historyRetentionDays": {
+        "codexBeacon.historyRetentionDays": {
           "type": "integer",
           "default": 7,
           "minimum": 1,
           "maximum": 30,
           "scope": "application",
-          "description": "%setting.codexNotifier.historyRetentionDays%"
+          "description": "%setting.codexBeacon.historyRetentionDays%"
         },
-        "codexNotifier.language": {
+        "codexBeacon.language": {
           "type": "string",
           "enum": [
             "auto",
@@ -716,9 +716,9 @@
             "%language.option.1%",
             "%language.option.2%"
           ],
-          "description": "%setting.codexNotifier.language%"
+          "description": "%setting.codexBeacon.language%"
         },
-        "codexNotifier.groupBy": {
+        "codexBeacon.groupBy": {
           "type": "string",
           "enum": [
             "project",
@@ -726,9 +726,9 @@
           ],
           "default": "project",
           "scope": "application",
-          "description": "%setting.codexNotifier.groupBy%"
+          "description": "%setting.codexBeacon.groupBy%"
         },
-        "codexNotifier.modelPrices": {
+        "codexBeacon.modelPrices": {
           "type": "object",
           "default": {},
           "scope": "application",
@@ -759,9 +759,9 @@
               }
             }
           },
-          "description": "%setting.codexNotifier.modelPrices%"
+          "description": "%setting.codexBeacon.modelPrices%"
         },
-        "codexNotifier.pricingContext": {
+        "codexBeacon.pricingContext": {
           "type": "string",
           "enum": [
             "short",
@@ -769,9 +769,9 @@
           ],
           "default": "short",
           "scope": "application",
-          "description": "%setting.codexNotifier.pricingContext%"
+          "description": "%setting.codexBeacon.pricingContext%"
         },
-        "codexNotifier.pricingTier": {
+        "codexBeacon.pricingTier": {
           "type": "string",
           "enum": [
             "auto",
@@ -783,7 +783,7 @@
           ],
           "default": "auto",
           "scope": "application",
-          "description": "%setting.codexNotifier.pricingTier%"
+          "description": "%setting.codexBeacon.pricingTier%"
         }
       }
     }
@@ -796,5 +796,17 @@
   "homepage": "https://github.com/Young581/codex-beacon#readme",
   "bugs": {
     "url": "https://github.com/Young581/codex-beacon/issues"
+  },
+  "icon": "assets/beacon.png",
+  "keywords": [
+    "codex",
+    "notifications",
+    "tasks",
+    "tokens",
+    "dashboard"
+  ],
+  "galleryBanner": {
+    "color": "#17212b",
+    "theme": "dark"
   }
 }
