@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.3
+
+- 修复异步提问的 `accepted: true` 被误当成用户答复，导致“等待回答”立刻恢复为进行中。
+- 匹配结构化用户答复与问题编号，多道问题全部答完后恢复，保留用量与终态。
+- 异步等待计入“等待处理”汇总及筛选；侧栏统一显示待处理计数。
+- Fix asynchronous question acknowledgements being treated as answers; keep pending questions visible until matching replies arrive.
+
 ## 0.8.2
 
 - 已读任务隐藏“标为已读”按钮和未读圆点；全部列表保留历史，未读筛选移除已读任务。

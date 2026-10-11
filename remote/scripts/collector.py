@@ -898,6 +898,64 @@ class SourceCheckedSpool:
                 del self.pending[key]
 
 
+def input_tool_name(value):
+    if not isinstance(value, str):
+        return ""
+    name = value[len("functions."):] if value.startswith("functions.") else value
+    return name if name in ("request_user_input", "request_user_input_async") else ""
+
+
+def question_acknowledged(payload):
+    output = payload.get("output")
+    try:
+        output = json.loads(output) if isinstance(output, str) else output
+    except (ValueError, TypeError):
+        return False
+    return isinstance(output, dict) and output.get("accepted") is True and "answers" not in output
+
+
+def question_items(payload):
+    try:
+        arguments = payload.get("arguments")
+        arguments = json.loads(arguments) if isinstance(arguments, str) else arguments
+        questions = arguments.get("questions") if isinstance(arguments, dict) else None
+        return set(range(len(questions))) if isinstance(questions, list) and 0 < len(questions) <= 128 else None
+    except (ValueError, TypeError):
+        return None
+
+
+def question_replies(payload):
+    # Match only application-generated user replies, never assistant prose or
+    # tool results. Keep call IDs and item indexes; discard questions/answers.
+    if payload.get("type") != "message" or payload.get("role") != "user":
+        return []
+    content = payload.get("content")
+    if not isinstance(content, list):
+        return []
+    text = "".join(item.get("text", "") for item in content
+                   if isinstance(item, dict) and item.get("type") == "input_text" and isinstance(item.get("text"), str))
+    match = re.fullmatch(r"\s*<send_user_message_question_reply>\s*(.*?)\s*</send_user_message_question_reply>\s*", text, re.DOTALL)
+    if not match:
+        return []
+    try:
+        replies = json.loads(match.group(1))
+        if not isinstance(replies, list) or len(replies) > 128:
+            return []
+        result = []
+        for reply in replies:
+            if not isinstance(reply, dict) or "answer" not in reply:
+                continue
+            item = reply.get("questionItemId")
+            item = json.loads(item) if isinstance(item, str) else item
+            if (isinstance(item, list) and len(item) == 3 and input_tool_name(item[0]) == "request_user_input_async"
+                    and isinstance(item[1], str) and 0 < len(item[1]) <= 128
+                    and isinstance(item[2], int) and not isinstance(item[2], bool) and 0 <= item[2] < 128):
+                result.append((item[1], item[2]))
+        return result
+    except (ValueError, TypeError):
+        return []
+
+
 class RolloutObserver:
     """Read recent active rollout files without scanning the historical corpus.
 
@@ -948,7 +1006,7 @@ class RolloutObserver:
         state["subagent"] = False
         state["originator"] = None
         state["cwd"] = ""
-        for key in ("task", "turn_id", "model", "tier", "previous_usage", "waiting_calls"):
+        for key in ("task", "turn_id", "model", "tier", "previous_usage", "waiting_calls", "question_items"):
             state.pop(key, None)
         state["source_filter_version"] = SOURCE_FILTER_VERSION
         metadata = session_metadata(path)
@@ -980,6 +1038,7 @@ class RolloutObserver:
                 return False
             state["turn_id"] = turn
             state["waiting_calls"] = {}
+            state["question_items"] = {}
             state["task"] = {"state": "running", "sequence": 0, "model": state.get("model", ""),
                              "usage": {"complete": state.get("previous_usage") is not None or state.get("history_complete", False), "segments": []}}
             changed = True
@@ -1034,19 +1093,40 @@ class RolloutObserver:
                                      "usage": {"complete": False, "segments": []}}
                 state["task"]["state"] = {"task_complete": "completed", "turn_aborted": "cancelled", "task_failed": "failed"}[subtype]
                 state["waiting_calls"] = {}
+                state["question_items"] = {}
                 changed = True
         if state.get("task") and kind == "response_item":
-            if subtype == "function_call" and payload.get("name") in ("request_user_input", "request_user_input_async"):
+            if subtype == "function_call" and input_tool_name(payload.get("name")):
                 # A question logged after completion still belongs to that turn.
                 call = clean_text(payload.get("call_id", ""), 128)
                 if len(state.setdefault("waiting_calls", {})) < 128:
-                    state["waiting_calls"][call] = payload["name"] == "request_user_input_async"
+                    state["waiting_calls"][call] = input_tool_name(payload["name"]) == "request_user_input_async"
+                    state.setdefault("question_items", {})[call] = question_items(payload)
                 state["task"]["state"] = "waiting_async" if all(state["waiting_calls"].values()) else "waiting_input"
                 changed = True
             elif subtype == "function_call_output" and payload.get("call_id") in state.get("waiting_calls", set()):
+                if state["waiting_calls"][payload["call_id"]] and question_acknowledged(payload):
+                    return False  # Request accepted is not a user's answer.
                 state["waiting_calls"].pop(payload["call_id"], None)
+                state.get("question_items", {}).pop(payload["call_id"], None)
                 state["task"]["state"] = ("waiting_async" if all(state["waiting_calls"].values()) else "waiting_input") if state["waiting_calls"] else "running"
                 changed = True
+            elif subtype == "message":
+                for call, index in question_replies(payload):
+                    if not state.get("waiting_calls", {}).get(call):
+                        continue
+                    remaining = state.get("question_items", {}).get(call)
+                    if remaining is not None:
+                        if index not in remaining:
+                            continue
+                        remaining.remove(index)
+                        if remaining:
+                            continue
+                    state["waiting_calls"].pop(call, None)
+                    state.get("question_items", {}).pop(call, None)
+                    changed = True
+                if changed:
+                    state["task"]["state"] = ("waiting_async" if all(state["waiting_calls"].values()) else "waiting_input") if state["waiting_calls"] else "running"
         if changed and state.get("task"):
             state["task"]["sequence"] = state.get("line_position", 0)
         return changed and bool(state.get("task"))
@@ -1079,7 +1159,7 @@ class RolloutObserver:
                 event_type = "done"
                 stable_part = clean_text(payload.get("turn_id", outer.get("timestamp")), 128)
             elif (outer.get("type") == "response_item" and payload.get("type") == "function_call"
-                  and payload.get("name") in ("request_user_input", "request_user_input_async")):
+                  and input_tool_name(payload.get("name"))):
                 event_type = "question"
                 stable_part = clean_text(payload.get("call_id", outer.get("timestamp")), 128)
             if event_type is None:

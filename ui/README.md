@@ -13,6 +13,7 @@
 - 按项目和环境分组，显示 Codex 聊天名称、模型、任务状态和时间。
 - 单列紧凑任务卡片；每条详情独立展开，查看每轮 token、API 费用估算和完整编号。
 - 彩色状态：运行、等待回答／审批、本轮完成、失败、取消和状态未确认。
+- 异步提问允许任务继续执行，同时计入“进行中”和“等待处理”；收到用户答复后退出等待。
 - 打开对应 Codex 会话，切换到对应项目窗口或恢复已关闭的项目窗口。
 - 任务右上角直接打开会话；项目名称旁打开项目窗口。标读后隐藏按钮和圆点，历史保留在“全部”，也可用“清空已读”移除已读历史。
 - Windows 桌面通知、任务栏和窗口标题标记，支持本机 WAV／MP3 自定义音效及试听。
@@ -45,6 +46,8 @@ SSH／容器项目需要在目标环境安装并启用 **Codex Beacon Collector*
 
 本轮完成表示 Codex 本次回复结束，不代表训练、部署或其他后台工作完成。状态来自明确事件，静默不会被推断为失败。
 
+等待回答来自结构化提问，普通文字问题无法可靠识别。等待审批需要先运行 **Codex 通知：配置当前环境的审批提醒**，再到 **Codex 设置 → Hooks → PermissionRequest** 核对 Beacon 的脚本并点击 **Trust**。[Codex 官方 Hook 文档](https://developers.openai.com/codex/hooks/)要求用户审核和信任未托管的 Hook；未信任时不会执行，扩展不会代替你作出审批决定。
+
 ### 从旧版迁移
 
 此版本使用独立扩展 ID 和 `codexBeacon.*` 设置。任务空闲时先停用旧通知扩展，再启用 Beacon，以免重复提醒；旧通知历史不自动迁移，Python、音效和自定义价格需要重新配置。Codex 会话和项目文件保留。此前配置过旧审批 Hook 的用户，先通过旧扩展移除，再按需配置和信任 Beacon 的 Hook。
@@ -70,6 +73,8 @@ For SSH/container projects, install **Codex Beacon Collector** (`Young581.codex-
 Choose a local WAV/MP3 file with **Customize notification sound**, preview it, or restore the system sound. Settings include `codexBeacon.soundFile`, language, notification policies and custom model prices (`codexBeacon.modelPrices`, USD per million tokens). Estimated costs are API estimates rather than bills; unknown and partial usage remains labeled.
 
 Colored states distinguish running, waiting for input/approval, response complete, failed, canceled and unknown. Finishing a response does not prove that background work has finished. Pausing alerts keeps recording history; marking read does not approve an action. Approval reminders require a separately configured and trusted hook.
+
+Asynchronous questions count under both Running and Needs attention while work continues; an acknowledgement is not a user answer. Structured replies clear matching pending questions. For approval reminders, run **Configure approval reminders for this environment**, then review and trust the Beacon command under **Codex settings → Hooks → PermissionRequest**. See the [official Codex hook documentation](https://developers.openai.com/codex/hooks/).
 
 ### Migration and privacy
 

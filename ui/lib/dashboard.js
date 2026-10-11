@@ -67,7 +67,7 @@ function dashboardData(snapshot, {windowId, options = {}, paused = false, connec
     connected, collectionState, paused: paused || !!snapshot.privacyPaused, privacyPaused: !!snapshot.privacyPaused,
     totals: {...usageTotals(rows, options), projects: groups.length, tasks: rows.length,
       running: rows.filter(row => ['running', 'waiting_async'].includes(row.taskState)).length,
-      blocked: rows.filter(row => ['waiting_input', 'waiting_approval'].includes(row.taskState)).length,
+      blocked: rows.filter(row => ['waiting_input', 'waiting_approval', 'waiting_async'].includes(row.taskState)).length,
       completed: rows.filter(row => row.taskState === 'completed').length, unread: rows.filter(row => !row.read).length},
     projects};
 }

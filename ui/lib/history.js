@@ -32,11 +32,11 @@ class HistoryView {
         entry.current || entry.active || entry.unread ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed);
       item.id = entry.id;
       const running = entry.entries.filter(row => row.taskState === 'running').length;
-      const waiting = entry.entries.filter(row => ['waiting_input', 'waiting_approval'].includes(row.taskState)).length;
+      const waiting = entry.entries.filter(row => ['waiting_input', 'waiting_approval', 'waiting_async'].includes(row.taskState)).length;
       const segments = entry.entries.flatMap(row => row.telemetry?.usage?.segments || []);
       const complete = entry.entries.every(row => row.telemetry?.usage?.complete && row.telemetry.usage.segments.length);
       item.description = [entry.current ? t('本窗口') : t('其他窗口'), clean(entry.source.label || entry.source.host, 80),
-        ...(running ? [t`${running} 进行中`] : []), ...(waiting ? [t`${waiting} 阻塞`] : [])].join(' · ');
+        ...(running ? [t`${running} 进行中`] : []), ...(waiting ? [t`${waiting} 待处理`] : [])].join(' · ');
       if (entry.test) {
         item.tooltip = `${t('通知测试')}\n${item.description}`;
         item.iconPath = new vscode.ThemeIcon('beaker');

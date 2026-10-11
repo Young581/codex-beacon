@@ -697,6 +697,56 @@ class RemoteTests(unittest.TestCase):
         self.assertFalse(rows[-1]["task"]["usage"]["complete"])
         self.assertEqual(rows[-1]["task"]["usage"]["segments"][0]["input"], 200)
 
+    def test_async_ack_waits_for_all_real_user_replies_and_keeps_usage(self):
+        observer = REMOTE.RolloutObserver(self.home, 300)
+        state = {"originator": "codex_vscode", "subagent": False, "session_id": "async", "cwd": "/fixture",
+                 "history_complete": True, "line_position": 0}
+        def convert(kind, payload):
+            state["line_position"] += 100
+            return observer.convert(json.dumps({"timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                                                 "type": kind, "payload": payload}).encode(), state, 0)
+        def reply(index, call="async-call", role="user"):
+            body = [{"questionItemId": json.dumps(["request_user_input_async", call, index]), "answer": "PRIVATE_ANSWER"}]
+            return {"type": "message", "role": role, "content": [{"type": "input_text",
+                "text": "<send_user_message_question_reply>\n" + json.dumps(body) + "\n</send_user_message_question_reply>"}]}
+        convert("event_msg", {"type": "task_started", "turn_id": "async-turn"})
+        call = convert("response_item", {"type": "function_call", "name": "request_user_input_async", "call_id": "async-call",
+            "arguments": json.dumps({"questions": [{"title": "PRIVATE_QUESTION"}, {"title": "PRIVATE_QUESTION"}]})})
+        self.assertEqual(call["task"]["state"], "waiting_async")
+        self.assertIsNone(convert("response_item", {"type": "function_call_output", "call_id": "async-call", "output": '{"accepted":true}'}))
+        self.assertEqual(state["task"]["state"], "waiting_async")
+        usage = convert("event_msg", {"type": "token_count", "info": {"total_token_usage": {"input_tokens": 100, "output_tokens": 10}}})
+        self.assertEqual(usage["task"]["state"], "waiting_async")
+        self.assertIsNone(convert("response_item", reply(0, role="assistant")))
+        self.assertIsNone(convert("response_item", reply(0, call="different-call")))
+        self.assertIsNone(convert("response_item", reply(0)))
+        self.assertEqual(state["task"]["state"], "waiting_async", "Other unanswered items must remain pending")
+        self.assertIsNone(convert("response_item", reply(0)), "Duplicate replies must not clear another item")
+        result = convert("response_item", reply(1))
+        self.assertEqual(result["type"], "task")
+        self.assertEqual(result["turn_id"], "async-turn")
+        self.assertEqual(result["task"]["state"], "running")
+        self.assertEqual(result["task"]["usage"]["segments"][0]["input"], 100)
+        self.assertNotIn("PRIVATE", json.dumps([call, usage, result]))
+
+    def test_mixed_questions_resume_only_after_both_and_late_answers_do_not_reopen_completed_turn(self):
+        observer = REMOTE.RolloutObserver(self.home, 300)
+        state = {"originator": "codex_vscode", "subagent": False, "session_id": "mixed", "cwd": "/fixture", "line_position": 0}
+        def convert(payload, kind="response_item"):
+            state["line_position"] += 100
+            return observer.convert(json.dumps({"timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                "type": kind, "payload": payload}).encode(), state, 0)
+        convert({"type": "task_started", "turn_id": "mixed-turn"}, "event_msg")
+        convert({"type": "function_call", "name": "functions.request_user_input_async", "call_id": "async"})
+        convert({"type": "function_call_output", "call_id": "async", "output": {"accepted": True}})
+        self.assertEqual(convert({"type": "function_call", "name": "request_user_input", "call_id": "sync"})["task"]["state"], "waiting_input")
+        self.assertEqual(convert({"type": "function_call_output", "call_id": "sync", "output": '{"answers":{}}'})["task"]["state"], "waiting_async")
+        self.assertIsNone(convert({"type": "message", "role": "user", "content": [{"type": "input_text", "text": "<send_user_message_question_reply>invalid</send_user_message_question_reply>"}]}))
+        self.assertEqual(state["task"]["state"], "waiting_async")
+        self.assertEqual(convert({"type": "task_complete", "turn_id": "mixed-turn"}, "event_msg")["task"]["state"], "completed")
+        self.assertIsNone(convert({"type": "function_call_output", "call_id": "async", "output": '{"answers":{}}'}))
+        self.assertEqual(state["task"]["state"], "completed")
+
     def test_installed_script_follows_its_own_home(self):
         self.assertEqual(self.run_cli("install").returncode, 0)
         self.assertEqual(self.run_cli("test").returncode, 0)

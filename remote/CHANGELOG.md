@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.2
+
+- Keep asynchronous questions pending after the immediate acknowledgement; resume only on matching user replies or an actual answer result.
+- Track multiple question indexes without retaining question or answer text; ignore duplicate, unrelated and late replies after completion.
+
 ## 0.5.1
 
 - Detect Windows Python installations when the optional launcher is absent, while keeping explicit settings and Linux/macOS defaults.

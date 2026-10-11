@@ -99,6 +99,7 @@ const MESSAGES = {
   "其他窗口": "Other windows",
   "{0} 进行中": "{0} running",
   "{0} 阻塞": "{0} blocked",
+  "{0} 待处理": "{0} needing attention",
   "已采集任务合计": "Collected task totals",
   "金额为 API 估算，不是实际账单；不包含后台任务和其他会话。": "Amounts are API estimates, not actual bills; background jobs and other sessions are excluded.",
   "完成表示本轮回复结束。": "Completion means the current response ended.",

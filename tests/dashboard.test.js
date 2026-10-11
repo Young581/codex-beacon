@@ -33,6 +33,14 @@ test('dashboard counts each latest turn once, excludes tests and preserves parti
   assert.equal(usageTotals([], {}).amount, null);
 });
 
+test('asynchronous questions count as needing attention while work can continue', () => {
+  const question = entry('1', 'waiting_async', {read: false});
+  const result = dashboardData({entries: [question]}, {windowId: 'window'});
+  assert.equal(result.totals.blocked, 1);
+  assert.equal(result.totals.running, 1);
+  assert.equal(result.projects[0].tasks[0].state, 'waiting_async');
+});
+
 test('custom prices use the sidebar calculator and separate projects with the same name', () => {
   const a = entry('1'), b = entry('2'); b.event.cwd = '/other/a';
   const result = dashboardData({entries: [a, b]}, {windowId: 'window', options: {

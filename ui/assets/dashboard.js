@@ -64,7 +64,7 @@
     return node;
   }
   function matches(task, group) {
-    const states = {running: ['running', 'waiting_async'], blocked: ['waiting_input', 'waiting_approval'],
+    const states = {running: ['running', 'waiting_async'], blocked: ['waiting_input', 'waiting_approval', 'waiting_async'],
       completed: ['completed'], failed: ['failed', 'cancelled']};
     if (filter === 'unread' && !task.unread) return false;
     if (states[filter] && !states[filter].includes(task.state)) return false;

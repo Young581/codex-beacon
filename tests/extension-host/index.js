@@ -412,13 +412,34 @@ exports.run = async function run() {
       const metered = await waitFor(snapshot, s => s.tasks?.some(row => /1.1K tok/.test(row.label)), 'Token counts should refresh while running');
       assert.equal(metered.unread, unreadBefore, 'Usage updates must stay silent and read');
       assert.equal(metered.tasks.find(row => row.taskId === runningRow.taskId).label, '1.1K tok');
+      const localCollector = await command('local.status');
+      const approval = require('node:child_process').spawnSync(localCollector.python,
+        [...localCollector.pythonArgs, path.join(vscode.extensions.getExtension(UI_ID).extensionPath, 'collector/scripts/collector.py'),
+          'hook', '--event', 'approval', '--codex-home', testHome],
+        {input: JSON.stringify({session_id: process.env.CODEX_NOTIFIER_TEST_SESSION, turn_id: turn,
+          cwd: vscode.workspace.workspaceFolders[0].uri.fsPath}), encoding: 'utf8', timeout: 15000, windowsHide: true});
+      assert.equal(approval.status, 0, approval.stderr);
+      await waitFor(snapshot, s => s.tasks?.some(row => row.taskId === runningRow.taskId && row.state === 'waiting_approval' && row.color === 'charts.orange'),
+        'Verified PermissionRequest metadata must make the task orange');
       append('response_item', {type: 'function_call', name: 'request_user_input', call_id: 'metrics-question', arguments: 'PRIVATE'});
       await waitFor(snapshot, s => s.tasks?.some(row => row.state === 'waiting_input' && row.color === 'charts.yellow'), 'Structured question should block the task');
       append('response_item', {type: 'function_call_output', call_id: 'metrics-question', output: 'PRIVATE'});
       await waitFor(snapshot, s => s.tasks?.some(row => row.state === 'running'), 'Answer should resume the same task');
-      append('response_item', {type: 'function_call', name: 'request_user_input_async', call_id: 'async-metrics', arguments: 'PRIVATE'});
+      append('response_item', {type: 'function_call', name: 'request_user_input_async', call_id: 'async-metrics',
+        arguments: JSON.stringify({questions: [{title: 'PRIVATE'}]})});
+      append('response_item', {type: 'function_call_output', call_id: 'async-metrics', output: '{"accepted":true}'});
       await waitFor(snapshot, s => s.tasks?.some(row => row.state === 'waiting_async' && row.color === 'charts.purple'), 'Async questions should not claim the task is blocked');
-      append('response_item', {type: 'function_call_output', call_id: 'async-metrics', output: 'PRIVATE'});
+      append('event_msg', {type: 'token_count', info: {
+        total_token_usage: {input_tokens: 1000, cached_input_tokens: 400, output_tokens: 100, reasoning_output_tokens: 40}}});
+      await new Promise(resolve => setTimeout(resolve, 2500));
+      const pendingQuestion = await snapshot();
+      assert.equal(pendingQuestion.tasks.find(row => row.taskId === runningRow.taskId).state, 'waiting_async');
+      const pendingOverview = require(path.join(vscode.extensions.getExtension(UI_ID).extensionPath, 'lib/dashboard'))
+        .dashboardData(pendingQuestion, {windowId: pendingQuestion.windowId});
+      assert.equal(pendingOverview.totals.blocked, 1, 'Async questions must appear under needs attention');
+      append('response_item', {type: 'message', role: 'user', content: [{type: 'input_text',
+        text: '<send_user_message_question_reply>\n' + JSON.stringify([{questionItemId: JSON.stringify(['request_user_input_async', 'async-metrics', 0]),
+          question: 'PRIVATE', answer: 'PRIVATE'}]) + '\n</send_user_message_question_reply>'}]});
       await waitFor(snapshot, s => s.tasks?.some(row => row.state === 'running'), 'Async answer should clear the pending input state');
       append('event_msg', {type: 'task_complete', turn_id: turn, last_agent_message: 'PRIVATE'});
       const completed = await waitFor(snapshot, s => s.tasks?.some(row => row.state === 'completed'), 'Completion should turn the task green');
@@ -437,8 +458,16 @@ exports.run = async function run() {
       const read = await snapshot();
       assert.equal(read.unread, 0);
       assert.equal(read.tasks[0].state, 'completed');
-      assert.equal((await command('deleteEntry', completedRow.key)).deleted, 4);
+      assert.equal((await command('deleteEntry', completedRow.key)).deleted, 5);
       assert.equal((await snapshot()).tasks.length, 0);
+      for (const [subtype, state, color] of [['turn_aborted', 'cancelled', 'descriptionForeground'], ['task_failed', 'failed', 'charts.red']]) {
+        const terminalTurn = turn + '-' + state;
+        append('event_msg', {type: 'task_started', turn_id: terminalTurn});
+        await waitFor(snapshot, s => s.tasks?.some(row => row.state === 'running'), 'Another turn must start independently');
+        append('event_msg', {type: subtype, turn_id: terminalTurn});
+        const ended = await waitFor(snapshot, s => s.tasks?.some(row => row.state === state && row.color === color), 'Explicit terminal event must update state and color');
+        await command('deleteEntry', ended.tasks.find(row => row.state === state).key);
+      }
       await config.update('modelPrices', {}, vscode.ConfigurationTarget.Global);
     });
 
