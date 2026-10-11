@@ -2,7 +2,7 @@
   "name": "codex-notifier-ui",
   "displayName": "Codex Beacon",
   "description": "按项目管理 Codex 任务、状态灯、token 与费用估算，以及完成提醒。Project tasks, status, token usage, cost estimates and alerts for Codex.",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "publisher": "lengmo1996",
   "license": "MIT",
   "engines": {
@@ -35,122 +35,246 @@
     "commands": [
       {
         "command": "codexNotifier.openProjectWindow",
-        "title": "打开项目窗口 / Open project window",
-        "icon": "$(window)"
+        "title": "%command.codexNotifier.openProjectWindow%",
+        "icon": "$(window)",
+        "category": "Codex Beacon"
       },
       {
         "command": "codexNotifier.chooseOpenLocation",
-        "title": "Codex 通知：选择会话打开位置 / Choose session opening location"
+        "title": "%command.codexNotifier.chooseOpenLocation%",
+        "category": "Codex Beacon"
       },
       {
         "command": "codexNotifier.checkInstallation",
-        "title": "Codex 通知：检查／安装当前环境组件 / Check / install components for this environment"
+        "title": "%command.codexNotifier.checkInstallation%",
+        "category": "Codex Beacon"
       },
       {
         "command": "codexNotifier.menu",
-        "title": "Codex 通知：打开菜单 / Open notification menu"
+        "title": "%command.codexNotifier.menu%",
+        "category": "Codex Beacon"
       },
       {
         "command": "codexNotifier.testNotification",
-        "title": "Codex 通知：测试本机弹窗和声音 / Test desktop notification and sound"
+        "title": "%command.codexNotifier.testNotification%",
+        "category": "Codex Beacon"
       },
       {
         "command": "codexNotifier.showHistory",
-        "title": "Codex 通知：查看通知历史 / Show notification history"
+        "title": "%command.codexNotifier.showHistory%",
+        "category": "Codex Beacon"
       },
       {
         "command": "codexNotifier.openNext",
-        "title": "Codex 通知：打开下一条待处理会话 / Open next unread session"
+        "title": "%command.codexNotifier.openNext%",
+        "category": "Codex Beacon"
       },
       {
         "command": "codexNotifier.showEntry",
-        "title": "打开对应会话并标为已读 / Open session and mark this notification read",
-        "icon": "$(go-to-file)"
+        "title": "%command.codexNotifier.showEntry%",
+        "icon": "$(go-to-file)",
+        "category": "Codex Beacon"
       },
       {
         "command": "codexNotifier.markEntryRead",
-        "title": "静默标为已读 / Mark read silently",
-        "icon": "$(check)"
+        "title": "%command.codexNotifier.markEntryRead%",
+        "icon": "$(check)",
+        "category": "Codex Beacon"
       },
       {
         "command": "codexNotifier.showEntryDetails",
-        "title": "查看通知详情 / Show notification details"
+        "title": "%command.codexNotifier.showEntryDetails%",
+        "category": "Codex Beacon"
       },
       {
         "command": "codexNotifier.pause",
-        "title": "Codex 通知：暂停提醒（继续记录） / Pause alerts (keep recording)"
+        "title": "%command.codexNotifier.pause%",
+        "category": "Codex Beacon"
       },
       {
         "command": "codexNotifier.resume",
-        "title": "Codex 通知：恢复提醒 / Resume alerts"
+        "title": "%command.codexNotifier.resume%",
+        "category": "Codex Beacon"
       },
       {
         "command": "codexNotifier.markRead",
-        "title": "Codex 通知：全部标为已读 / Mark all read",
-        "icon": "$(check-all)"
+        "title": "%command.codexNotifier.markRead%",
+        "icon": "$(check-all)",
+        "category": "Codex Beacon"
       },
       {
         "command": "codexNotifier.clearHistory",
-        "title": "Codex 通知：清空全部通知 / Clear all notifications",
-        "icon": "$(trash)"
+        "title": "%command.codexNotifier.clearHistory%",
+        "icon": "$(trash)",
+        "category": "Codex Beacon"
       },
       {
         "command": "codexNotifier.configureApprovalHook",
-        "title": "Codex 通知：配置当前环境的审批提醒 / Configure approval reminders for this environment"
+        "title": "%command.codexNotifier.configureApprovalHook%",
+        "category": "Codex Beacon"
       },
       {
         "command": "codexNotifier.removeApprovalHook",
-        "title": "Codex 通知：移除当前环境的审批提醒 / Remove approval reminders for this environment"
+        "title": "%command.codexNotifier.removeApprovalHook%",
+        "category": "Codex Beacon"
       },
       {
         "command": "codexNotifier.showStatus",
-        "title": "Codex 通知：查看连接状态 / Show connection status"
+        "title": "%command.codexNotifier.showStatus%",
+        "category": "Codex Beacon"
       },
       {
         "command": "codexNotifier.settings",
-        "title": "Codex 通知：打开设置 / Notification settings"
+        "title": "%command.codexNotifier.settings%",
+        "category": "Codex Beacon"
       },
       {
         "command": "codexNotifier.deleteEntry",
-        "title": "删除这条通知 / Delete this notification",
-        "icon": "$(trash)"
+        "title": "%command.codexNotifier.deleteEntry%",
+        "icon": "$(trash)",
+        "category": "Codex Beacon"
       },
       {
         "command": "codexNotifier.clearRead",
-        "title": "Codex 通知：清空已读通知 / Clear read notifications",
-        "icon": "$(clear-all)"
+        "title": "%command.codexNotifier.clearRead%",
+        "icon": "$(clear-all)",
+        "category": "Codex Beacon"
       },
       {
         "command": "codexNotifier.testCollector",
-        "title": "Codex 通知：测试当前窗口采集链路 / Test collection in this window"
+        "title": "%command.codexNotifier.testCollector%",
+        "category": "Codex Beacon"
       },
       {
         "command": "codexNotifier.restartCollector",
-        "title": "Codex 通知：重启当前窗口采集器 / Restart collection in this window"
+        "title": "%command.codexNotifier.restartCollector%",
+        "category": "Codex Beacon"
       },
       {
         "command": "codexNotifier.privacy",
-        "title": "Codex 通知：隐私与数据清理 / Privacy and data cleanup"
+        "title": "%command.codexNotifier.privacy%",
+        "category": "Codex Beacon"
       },
       {
         "command": "codexNotifier.clearPrivateData",
-        "title": "Codex 通知：清理当前环境及本机通知数据 / Clear notification data in this environment and on this computer"
+        "title": "%command.codexNotifier.clearPrivateData%",
+        "category": "Codex Beacon"
       },
       {
         "command": "codexNotifier.clearLocalPrivateData",
-        "title": "Codex 通知：仅清理本机全部通知缓存 / Clear all local notification caches only"
+        "title": "%command.codexNotifier.clearLocalPrivateData%",
+        "category": "Codex Beacon"
       },
       {
         "command": "codexNotifier.resumePrivateData",
-        "title": "Codex 通知：恢复采集和接收 / Resume collection and reception"
+        "title": "%command.codexNotifier.resumePrivateData%",
+        "category": "Codex Beacon"
       },
       {
         "command": "codexNotifier.chooseLanguage",
-        "title": "Codex 通知: 选择语言 / Choose language"
+        "title": "%command.codexNotifier.chooseLanguage%",
+        "category": "Codex Beacon"
       },
       {
         "command": "codexNotifier.toggleGrouping",
-        "title": "Codex Beacon：切换项目／通知分组 / Toggle project or notification grouping",
+        "title": "%command.codexNotifier.toggleGrouping%",
+        "icon": "$(list-tree)",
+        "category": "Codex Beacon"
+      },
+      {
+        "command": "codexNotifier.clearHistory.zhCN",
+        "title": "Codex 通知：清空全部通知",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "codexNotifier.clearHistory.en",
+        "title": "Clear all notifications",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "codexNotifier.clearRead.zhCN",
+        "title": "Codex 通知：清空已读通知",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "codexNotifier.clearRead.en",
+        "title": "Clear read notifications",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "codexNotifier.deleteEntry.zhCN",
+        "title": "删除这条通知",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "codexNotifier.deleteEntry.en",
+        "title": "Delete this notification",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "codexNotifier.markEntryRead.zhCN",
+        "title": "静默标为已读",
+        "icon": "$(check)"
+      },
+      {
+        "command": "codexNotifier.markEntryRead.en",
+        "title": "Mark read silently",
+        "icon": "$(check)"
+      },
+      {
+        "command": "codexNotifier.markRead.zhCN",
+        "title": "Codex 通知：全部标为已读",
+        "icon": "$(check-all)"
+      },
+      {
+        "command": "codexNotifier.markRead.en",
+        "title": "Mark all read",
+        "icon": "$(check-all)"
+      },
+      {
+        "command": "codexNotifier.menu.zhCN",
+        "title": "Codex 通知：打开菜单"
+      },
+      {
+        "command": "codexNotifier.menu.en",
+        "title": "Open notification menu"
+      },
+      {
+        "command": "codexNotifier.openProjectWindow.zhCN",
+        "title": "打开项目窗口",
+        "icon": "$(window)"
+      },
+      {
+        "command": "codexNotifier.openProjectWindow.en",
+        "title": "Open project window",
+        "icon": "$(window)"
+      },
+      {
+        "command": "codexNotifier.showEntry.zhCN",
+        "title": "打开对应会话并标为已读",
+        "icon": "$(go-to-file)"
+      },
+      {
+        "command": "codexNotifier.showEntry.en",
+        "title": "Open session and mark this notification read",
+        "icon": "$(go-to-file)"
+      },
+      {
+        "command": "codexNotifier.showEntryDetails.zhCN",
+        "title": "查看通知详情"
+      },
+      {
+        "command": "codexNotifier.showEntryDetails.en",
+        "title": "Show notification details"
+      },
+      {
+        "command": "codexNotifier.toggleGrouping.zhCN",
+        "title": "Codex Beacon：切换项目／通知分组",
+        "icon": "$(list-tree)"
+      },
+      {
+        "command": "codexNotifier.toggleGrouping.en",
+        "title": "Toggle project or notification grouping",
         "icon": "$(list-tree)"
       }
     ],
@@ -167,72 +291,132 @@
       "codexNotifier": [
         {
           "id": "codexNotifier.history",
-          "name": "任务"
+          "name": "%view.tasks%"
         }
       ]
     },
     "menus": {
       "view/title": [
         {
-          "command": "codexNotifier.toggleGrouping",
-          "when": "view == codexNotifier.history",
+          "command": "codexNotifier.toggleGrouping.zhCN",
+          "when": "(view == codexNotifier.history) && codexNotifier.menuLanguage == zh-CN",
           "group": "navigation@0"
         },
         {
-          "command": "codexNotifier.clearRead",
-          "when": "view == codexNotifier.history",
+          "command": "codexNotifier.toggleGrouping.en",
+          "when": "(view == codexNotifier.history) && codexNotifier.menuLanguage == en",
+          "group": "navigation@0"
+        },
+        {
+          "command": "codexNotifier.clearRead.zhCN",
+          "when": "(view == codexNotifier.history) && codexNotifier.menuLanguage == zh-CN",
           "group": "2_cleanup@1"
         },
         {
-          "command": "codexNotifier.markRead",
-          "when": "view == codexNotifier.history",
+          "command": "codexNotifier.clearRead.en",
+          "when": "(view == codexNotifier.history) && codexNotifier.menuLanguage == en",
+          "group": "2_cleanup@1"
+        },
+        {
+          "command": "codexNotifier.markRead.zhCN",
+          "when": "(view == codexNotifier.history) && codexNotifier.menuLanguage == zh-CN",
           "group": "1_read@1"
         },
         {
-          "command": "codexNotifier.clearHistory",
-          "when": "view == codexNotifier.history",
+          "command": "codexNotifier.markRead.en",
+          "when": "(view == codexNotifier.history) && codexNotifier.menuLanguage == en",
+          "group": "1_read@1"
+        },
+        {
+          "command": "codexNotifier.clearHistory.zhCN",
+          "when": "(view == codexNotifier.history) && codexNotifier.menuLanguage == zh-CN",
           "group": "2_cleanup@2"
         },
         {
-          "command": "codexNotifier.menu",
-          "when": "view == codexNotifier.history",
+          "command": "codexNotifier.clearHistory.en",
+          "when": "(view == codexNotifier.history) && codexNotifier.menuLanguage == en",
+          "group": "2_cleanup@2"
+        },
+        {
+          "command": "codexNotifier.menu.zhCN",
+          "when": "(view == codexNotifier.history) && codexNotifier.menuLanguage == zh-CN",
+          "group": "3_tools@1"
+        },
+        {
+          "command": "codexNotifier.menu.en",
+          "when": "(view == codexNotifier.history) && codexNotifier.menuLanguage == en",
           "group": "3_tools@1"
         }
       ],
       "view/item/context": [
         {
-          "command": "codexNotifier.openProjectWindow",
-          "when": "view == codexNotifier.history && (viewItem == projectTaskGroup || viewItem == readNotification || viewItem == unreadNotification)",
+          "command": "codexNotifier.openProjectWindow.zhCN",
+          "when": "(view == codexNotifier.history && (viewItem == projectTaskGroup || viewItem == readNotification || viewItem == unreadNotification)) && codexNotifier.menuLanguage == zh-CN",
           "group": "inline@0"
         },
         {
-          "command": "codexNotifier.markEntryRead",
-          "when": "view == codexNotifier.history && viewItem == unreadNotification",
+          "command": "codexNotifier.openProjectWindow.en",
+          "when": "(view == codexNotifier.history && (viewItem == projectTaskGroup || viewItem == readNotification || viewItem == unreadNotification)) && codexNotifier.menuLanguage == en",
+          "group": "inline@0"
+        },
+        {
+          "command": "codexNotifier.markEntryRead.zhCN",
+          "when": "(view == codexNotifier.history && viewItem == unreadNotification) && codexNotifier.menuLanguage == zh-CN",
           "group": "inline"
         },
         {
-          "command": "codexNotifier.showEntry",
-          "when": "view == codexNotifier.history && (viewItem == readNotification || viewItem == unreadNotification)",
+          "command": "codexNotifier.markEntryRead.en",
+          "when": "(view == codexNotifier.history && viewItem == unreadNotification) && codexNotifier.menuLanguage == en",
+          "group": "inline"
+        },
+        {
+          "command": "codexNotifier.showEntry.zhCN",
+          "when": "(view == codexNotifier.history && (viewItem == readNotification || viewItem == unreadNotification)) && codexNotifier.menuLanguage == zh-CN",
           "group": "navigation"
         },
         {
-          "command": "codexNotifier.showEntryDetails",
-          "when": "view == codexNotifier.history && (viewItem == readNotification || viewItem == unreadNotification)",
+          "command": "codexNotifier.showEntry.en",
+          "when": "(view == codexNotifier.history && (viewItem == readNotification || viewItem == unreadNotification)) && codexNotifier.menuLanguage == en",
           "group": "navigation"
         },
         {
-          "command": "codexNotifier.deleteEntry",
-          "when": "view == codexNotifier.history && (viewItem == readNotification || viewItem == unreadNotification)",
+          "command": "codexNotifier.showEntryDetails.zhCN",
+          "when": "(view == codexNotifier.history && (viewItem == readNotification || viewItem == unreadNotification)) && codexNotifier.menuLanguage == zh-CN",
+          "group": "navigation"
+        },
+        {
+          "command": "codexNotifier.showEntryDetails.en",
+          "when": "(view == codexNotifier.history && (viewItem == readNotification || viewItem == unreadNotification)) && codexNotifier.menuLanguage == en",
+          "group": "navigation"
+        },
+        {
+          "command": "codexNotifier.deleteEntry.zhCN",
+          "when": "(view == codexNotifier.history && (viewItem == readNotification || viewItem == unreadNotification)) && codexNotifier.menuLanguage == zh-CN",
           "group": "inline@2"
         },
         {
-          "command": "codexNotifier.deleteEntry",
-          "when": "view == codexNotifier.history && (viewItem == readNotification || viewItem == unreadNotification)",
+          "command": "codexNotifier.deleteEntry.en",
+          "when": "(view == codexNotifier.history && (viewItem == readNotification || viewItem == unreadNotification)) && codexNotifier.menuLanguage == en",
+          "group": "inline@2"
+        },
+        {
+          "command": "codexNotifier.deleteEntry.zhCN",
+          "when": "(view == codexNotifier.history && (viewItem == readNotification || viewItem == unreadNotification)) && codexNotifier.menuLanguage == zh-CN",
           "group": "notification"
         },
         {
-          "command": "codexNotifier.clearRead",
-          "when": "view == codexNotifier.history && viewItem == readNotificationGroup",
+          "command": "codexNotifier.deleteEntry.en",
+          "when": "(view == codexNotifier.history && (viewItem == readNotification || viewItem == unreadNotification)) && codexNotifier.menuLanguage == en",
+          "group": "notification"
+        },
+        {
+          "command": "codexNotifier.clearRead.zhCN",
+          "when": "(view == codexNotifier.history && viewItem == readNotificationGroup) && codexNotifier.menuLanguage == zh-CN",
+          "group": "inline"
+        },
+        {
+          "command": "codexNotifier.clearRead.en",
+          "when": "(view == codexNotifier.history && viewItem == readNotificationGroup) && codexNotifier.menuLanguage == en",
           "group": "inline"
         }
       ],
@@ -256,71 +440,151 @@
         {
           "command": "codexNotifier.deleteEntry",
           "when": "false"
+        },
+        {
+          "command": "codexNotifier.clearHistory.zhCN",
+          "when": "false"
+        },
+        {
+          "command": "codexNotifier.clearHistory.en",
+          "when": "false"
+        },
+        {
+          "command": "codexNotifier.clearRead.zhCN",
+          "when": "false"
+        },
+        {
+          "command": "codexNotifier.clearRead.en",
+          "when": "false"
+        },
+        {
+          "command": "codexNotifier.deleteEntry.zhCN",
+          "when": "false"
+        },
+        {
+          "command": "codexNotifier.deleteEntry.en",
+          "when": "false"
+        },
+        {
+          "command": "codexNotifier.markEntryRead.zhCN",
+          "when": "false"
+        },
+        {
+          "command": "codexNotifier.markEntryRead.en",
+          "when": "false"
+        },
+        {
+          "command": "codexNotifier.markRead.zhCN",
+          "when": "false"
+        },
+        {
+          "command": "codexNotifier.markRead.en",
+          "when": "false"
+        },
+        {
+          "command": "codexNotifier.menu.zhCN",
+          "when": "false"
+        },
+        {
+          "command": "codexNotifier.menu.en",
+          "when": "false"
+        },
+        {
+          "command": "codexNotifier.openProjectWindow.zhCN",
+          "when": "false"
+        },
+        {
+          "command": "codexNotifier.openProjectWindow.en",
+          "when": "false"
+        },
+        {
+          "command": "codexNotifier.showEntry.zhCN",
+          "when": "false"
+        },
+        {
+          "command": "codexNotifier.showEntry.en",
+          "when": "false"
+        },
+        {
+          "command": "codexNotifier.showEntryDetails.zhCN",
+          "when": "false"
+        },
+        {
+          "command": "codexNotifier.showEntryDetails.en",
+          "when": "false"
+        },
+        {
+          "command": "codexNotifier.toggleGrouping.zhCN",
+          "when": "false"
+        },
+        {
+          "command": "codexNotifier.toggleGrouping.en",
+          "when": "false"
         }
       ]
     },
     "configuration": {
-      "title": "Codex 会话通知 / Session Notifier",
+      "title": "%configuration.title%",
       "properties": {
         "codexNotifier.notificationsEnabled": {
           "type": "boolean",
           "default": true,
           "scope": "application",
-          "description": "启用提醒。关闭时仍保存通知历史。 / Enable alerts. Turning this off still records notification history."
+          "description": "%setting.codexNotifier.notificationsEnabled%"
         },
         "codexNotifier.desktopNotifications": {
           "type": "boolean",
           "default": true,
           "scope": "application",
-          "description": "在 Windows 显示系统托盘通知。系统勿扰可能抑制显示。 / Show Windows desktop notifications. Do Not Disturb may suppress them."
+          "description": "%setting.codexNotifier.desktopNotifications%"
         },
         "codexNotifier.sound": {
           "type": "boolean",
           "default": true,
           "scope": "application",
-          "description": "播放 Windows 系统提示音。 / Play the Windows notification sound."
+          "description": "%setting.codexNotifier.sound%"
         },
         "codexNotifier.taskbarAttention": {
           "type": "boolean",
           "default": true,
           "scope": "application",
-          "description": "在 Windows 任务栏显示黄色／红色待处理标记，并在窗口预览标题前显示状态。首次使用会为窗口标题模板添加通知变量；已读后自动清除标记。 / Show yellow/red taskbar attention and a status prefix in window preview titles. Adds a title variable on first use; read notifications clear the indicator."
+          "description": "%setting.codexNotifier.taskbarAttention%"
         },
         "codexNotifier.blinkWindowTitle": {
           "type": "boolean",
           "default": true,
           "scope": "application",
-          "description": "未读时让窗口预览标题的状态圆点每 0.8 秒交替显示彩色和浅色，标为已读后停止。不播放声音，不切换焦点。 / Alternate the unread title dot every 0.8 seconds until read. Does not play sound, steal focus or flash the whole thumbnail background."
+          "description": "%setting.codexNotifier.blinkWindowTitle%"
         },
         "codexNotifier.notifyOnDone": {
           "type": "boolean",
           "default": true,
           "scope": "application",
-          "description": "本轮回复结束时提醒。 / Notify when the current response ends."
+          "description": "%setting.codexNotifier.notifyOnDone%"
         },
         "codexNotifier.notifyOnApproval": {
           "type": "boolean",
           "default": true,
           "scope": "application",
-          "description": "等待批准时提醒。需要配置并信任审批 hook。 / Notify when approval is required. Requires a configured and trusted approval hook."
+          "description": "%setting.codexNotifier.notifyOnApproval%"
         },
         "codexNotifier.notifyOnQuestion": {
           "type": "boolean",
           "default": true,
           "scope": "application",
-          "description": "检测到结构化提问工具调用时提醒。 / Notify when a structured question tool call is detected."
+          "description": "%setting.codexNotifier.notifyOnQuestion%"
         },
         "codexNotifier.onlyWhenUnfocused": {
           "type": "boolean",
           "default": false,
           "scope": "application",
-          "description": "仅当前 VS Code 窗口在后台时发出提醒；前台更新仍进入历史。 / Alert only while the window is in the background; foreground events still enter history."
+          "description": "%setting.codexNotifier.onlyWhenUnfocused%"
         },
         "codexNotifier.autoReadOnWindowFocus": {
           "type": "boolean",
           "default": false,
           "scope": "application",
-          "description": "默认关闭：切回窗口不改变未读，点击通知仅标读该条。开启后，手动切回窗口会标读该窗口全部已有提醒，切换会话编辑器标签会标读对应会话；通知主动跳转期间不批量标读。 / Off by default: returning to a window preserves unread state, and a notification click reads only that item. When enabled, manually returning to a window reads all existing window reminders; switching conversation editor tabs reads that session. Notification navigation suspends bulk acknowledgement."
+          "description": "%setting.codexNotifier.autoReadOnWindowFocus%"
         },
         "codexNotifier.openLocation": {
           "type": "string",
@@ -329,48 +593,48 @@
             "editor"
           ],
           "enumDescriptions": [
-            "Codex 插件会话侧栏（默认） / Codex session sidebar (default)",
-            "中间主编辑器区域 / Main editor area"
+            "%setting.codexNotifier.openLocation.option.0%",
+            "%setting.codexNotifier.openLocation.option.1%"
           ],
           "default": "sidebar",
           "scope": "application",
-          "description": "点击通知后在哪里打开对应会话。侧栏跳转会先聚焦目标窗口，再请求 Codex 打开会话；若窗口焦点改变则保留未读。 / Where notification clicks open the session. Sidebar mode focuses the target window before requesting the Codex session; a detected focus change preserves unread state."
+          "description": "%setting.codexNotifier.openLocation%"
         },
         "codexNotifier.localCodexHome": {
           "type": "string",
           "default": "",
           "scope": "machine-overridable",
-          "description": "VS Code 本地文件夹中 Codex 的配置目录；留空使用 CODEX_HOME 或 ~/.codex。仅采集 VS Code 插件会话。 / Codex home for local VS Code folders. Empty uses CODEX_HOME, then ~/.codex. Only VS Code-origin sessions are collected."
+          "description": "%setting.codexNotifier.localCodexHome%"
         },
         "codexNotifier.localPythonPath": {
           "type": "string",
           "default": "",
           "scope": "machine-overridable",
-          "description": "本机 Python 可执行文件路径，不含参数；留空使用 py -3。 / Local Python executable, without arguments. Empty uses py -3."
+          "description": "%setting.codexNotifier.localPythonPath%"
         },
         "codexNotifier.localSourceLabel": {
           "type": "string",
           "default": "",
           "scope": "window",
-          "description": "本地 VS Code 窗口的通知来源名称。 / Source label for notifications from local VS Code windows."
+          "description": "%setting.codexNotifier.localSourceLabel%"
         },
         "codexNotifier.localCollectorEnabled": {
           "type": "boolean",
           "default": true,
           "scope": "window",
-          "description": "在受信任的本地文件夹中采集 VS Code Codex 插件会话；SSH／容器窗口不会启动本地采集。 / Collect VS Code Codex sessions in trusted local folders. SSH/container windows do not start local collection."
+          "description": "%setting.codexNotifier.localCollectorEnabled%"
         },
         "codexNotifier.soundOnDone": {
           "type": "boolean",
           "default": true,
           "scope": "application",
-          "description": "本轮回复结束时播放声音，默认开启。点击通知或标读仍静音；本轮结束不代表整个项目或后台任务完成。 / Play sound when a response ends (on by default). Clicking and acknowledging are silent. Response completion does not mean the overall goal or a background job has finished."
+          "description": "%setting.codexNotifier.soundOnDone%"
         },
         "codexNotifier.desktopOnDone": {
           "type": "boolean",
           "default": false,
           "scope": "application",
-          "description": "本轮回复结束时显示 Windows 系统弹窗；默认只保留颜色和未读。审批与提问仍按总弹窗开关提醒。 / Show a Windows desktop notification when a response ends. Off by default; color, unread state and sound remain available. Approval/question alerts follow the main desktop notification setting."
+          "description": "%setting.codexNotifier.desktopOnDone%"
         },
         "codexNotifier.localCacheRetentionDays": {
           "type": "integer",
@@ -378,7 +642,7 @@
           "minimum": 1,
           "maximum": 30,
           "scope": "window",
-          "description": "本环境的通知采集缓存保留天数（1–30）。采集运行时清理过期元数据；原始 Codex 对话不受影响。 / Local collector notification-cache retention (1–30 days). Expiry runs while collection is active; original Codex conversations are untouched."
+          "description": "%setting.codexNotifier.localCacheRetentionDays%"
         },
         "codexNotifier.historyRetentionDays": {
           "type": "integer",
@@ -386,21 +650,23 @@
           "minimum": 1,
           "maximum": 30,
           "scope": "application",
-          "description": "本机共享通知历史及去重记录保留天数（1–30），默认 7 天，最多 200 条通知。旧版本缓存按文件修改时间清理。 / Local shared notification-history and deduplication retention (1–30 days). Default: 7 days, at most 200 history entries. Legacy caches expire using file modification time."
+          "description": "%setting.codexNotifier.historyRetentionDays%"
         },
         "codexNotifier.language": {
           "type": "string",
           "enum": [
+            "auto",
             "zh-CN",
             "en"
           ],
-          "default": "zh-CN",
+          "default": "auto",
           "scope": "application",
           "enumDescriptions": [
-            "中文（默认） / Chinese (default)",
-            "英文 / English"
+            "%language.option.0%",
+            "%language.option.1%",
+            "%language.option.2%"
           ],
-          "description": "弹窗、日志及运行时界面的语言，独立于 VS Code 界面语言。更改后立即用于新提示；已有日志保持原文。 / Language for popups, logs, and runtime UI, independent of the VS Code display language. Applies to new messages immediately; existing log lines stay unchanged."
+          "description": "%setting.codexNotifier.language%"
         },
         "codexNotifier.groupBy": {
           "type": "string",
@@ -410,7 +676,7 @@
           ],
           "default": "project",
           "scope": "application",
-          "description": "按项目目录与来源分组，每轮请求显示为一条任务；history 保留原未读／已读通知列表。Group by project directory and source, one task per turn; history keeps the unread/read notification list."
+          "description": "%setting.codexNotifier.groupBy%"
         },
         "codexNotifier.modelPrices": {
           "type": "object",
@@ -443,7 +709,7 @@
               }
             }
           },
-          "description": "按精确模型名覆盖最终单价，单位为美元／百万 token。input 普通输入、cachedInput 缓存命中、cacheWrite 缓存写入、output 输出（含推理）。自定义价格不再乘服务档位系数。Override final USD prices per million tokens by exact model name; custom prices are not multiplied by service-tier factors."
+          "description": "%setting.codexNotifier.modelPrices%"
         },
         "codexNotifier.pricingContext": {
           "type": "string",
@@ -453,7 +719,7 @@
           ],
           "default": "short",
           "scope": "application",
-          "description": "默认按官方短上下文价格估算；使用长上下文价格时选择 long。日志不含可靠的计费上下文档位，该选择用于所有默认模型价格。Default estimates use official short-context prices; choose long for long-context rates. This selection applies to all built-in model prices."
+          "description": "%setting.codexNotifier.pricingContext%"
         },
         "codexNotifier.pricingTier": {
           "type": "string",
@@ -467,7 +733,7 @@
           ],
           "default": "auto",
           "scope": "application",
-          "description": "auto 使用日志的 service_tier；未提供时按 standard 估算。可覆盖为实际使用档位。金额为 API 估算，不等于订阅或服务商账单。auto uses the logged service tier, falling back to standard; override for your actual tier. API estimates are not subscription or provider bills."
+          "description": "%setting.codexNotifier.pricingTier%"
         }
       }
     }

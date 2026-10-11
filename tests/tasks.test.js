@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
-const {projectGroups, estimateCost, taskRows, usageDescription} = require('../ui/lib/tasks');
+const {projectGroups, estimateCost, taskRows, usageDescription, compactUsage} = require('../ui/lib/tasks');
 const {HistoryView} = require('../ui/lib/history');
 const {NotificationStore, validateEvent} = require('../ui/lib/broker-core');
 const {normalizeEvent, EventBridge} = require('../remote/src/core');
@@ -43,13 +43,16 @@ test('a turn is one row, read state stays independent of progress and state colo
   const live = view.getChildren(view.groups[0])[0];
   const runningItem = view.getTreeItem(live);
   assert.equal(runningItem.iconPath.color.id, 'charts.blue');
-  assert.match(runningItem.description, /1,100 tokens.*\$0\.0023/);
+  assert.match(runningItem.label, /1.1K tok.*\$0\.0023/);
+  assert.match(runningItem.tooltip, /1,100 tokens.*\$0\.0023/);
   view.update([running, done]);
   assert.equal(view.groups[0].entries.length, 1);
   const completed = view.groups[0].entries[0];
   const item = view.getTreeItem(completed);
   assert.equal(item.id, runningItem.id);
-  assert.match(item.label.label, /本轮完成/);
+  assert.equal(item.description, '完成');
+  assert.equal(item.label.label.includes('session-1234'), false);
+  assert.match(item.tooltip, /本轮完成/);
   assert.equal(item.contextValue, 'unreadNotification');
   assert.equal(item.iconPath.color.id, 'charts.green');
   assert.match(item.tooltip, /其中推理.*40/);
@@ -58,6 +61,14 @@ test('a turn is one row, read state stays independent of progress and state colo
   view.update([running, {...done, read: true}]);
   assert.equal(view.groups[0].entries[0].taskState, 'completed');
   assert.equal(view.getTreeItem(view.groups[0].entries[0]).iconPath.color.id, 'charts.green');
+});
+
+test('compact usage prioritizes counts and estimates while exact and partial data remain available', () => {
+  const usage = {complete: false, segments: [{...segment(), input: 4475490}]};
+  assert.match(compactUsage({usage}, {}), /^4.48M\* tok · ≈\$/);
+  assert.match(usageDescription({usage}, {}), /4,475,590 tokens.*部分统计/);
+  assert.equal(compactUsage(undefined, {}), '无用量');
+  assert.equal(compactUsage({usage: {complete: true, segments: [segment('unknown')]}}, {}), '1.1K tok · $?');
 });
 test('active unconnected tasks are explicitly unconfirmed; hook approval overrides older telemetry', () => {
   const running = row('live', 10);

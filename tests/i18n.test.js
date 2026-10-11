@@ -3,7 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const {t, translator, configureLanguage, getLanguage, message, renderMessage, MESSAGES} = require('../ui/lib/i18n');
+const {t, translator, configureLanguage, getLanguage, resolveLanguage, message, renderMessage, MESSAGES} = require('../ui/lib/i18n');
 const {formatBatch, BatchScheduler} = require('../ui/lib/broker-core');
 const {eventTitle, historyGroups} = require('../ui/lib/presentation');
 const {WindowRegistry} = require('../ui/lib/routing');
@@ -14,6 +14,37 @@ const sample = (language, type = 'done') => ({record: {key: language + type, not
   event: {type, cwd: '/project/实验', session_id: '12345678-1234-4234-8234-123456789abc'}, read: false, receivedAt: 1},
   options: {desktop: true, sound: true}});
 test.afterEach(() => configureLanguage(() => 'zh-CN'));
+
+test('automatic language follows the VS Code locale while explicit choices override it', () => {
+  assert.equal(resolveLanguage('auto', 'zh-cn'), 'zh-CN');
+  assert.equal(resolveLanguage('auto', 'en-US'), 'en');
+  assert.equal(resolveLanguage('en', 'zh-cn'), 'en');
+  assert.equal(resolveLanguage('zh-CN', 'en'), 'zh-CN');
+});
+
+test('manifest menus select exactly one language and all localization keys resolve', () => {
+  for (const variant of ['ui', 'remote']) {
+    const folder = path.join(__dirname, '..', variant);
+    const manifest = JSON.parse(fs.readFileSync(path.join(folder, 'package.json'), 'utf8'));
+    const en = JSON.parse(fs.readFileSync(path.join(folder, 'package.nls.json'), 'utf8'));
+    const zh = JSON.parse(fs.readFileSync(path.join(folder, 'package.nls.zh-cn.json'), 'utf8'));
+    for (const match of JSON.stringify(manifest).matchAll(/%([^%]+)%/g)) {
+      assert.ok(en[match[1]] && zh[match[1]], match[1]);
+      assert.equal(/[\u3400-\u9fff]/u.test(en[match[1]]), false, match[1]);
+    }
+    if (variant === 'ui') {
+      for (const language of ['zh-CN', 'en']) {
+        const items = manifest.contributes.menus['view/item/context'].filter(item => item.when.endsWith('== ' + language));
+        assert.ok(items.length);
+        for (const item of items) {
+          const command = manifest.contributes.commands.find(cmd => cmd.command === item.command);
+          assert.equal(command.title.includes(' / '), false);
+          assert.equal(/[\u3400-\u9fff]/u.test(command.title), language === 'zh-CN');
+        }
+      }
+    }
+  }
+});
 
 test('Chinese is the independent default; fixed translators and opaque substitutions survive live changes', () => {
   assert.equal(getLanguage(), 'zh-CN');

@@ -1,6 +1,16 @@
 'use strict';
 // Only extension-owned templates are translated. Substitutions are opaque data.
 const MESSAGES = {
+  "跟随 VS Code": "Follow VS Code",
+  "通知语言": "Notification language",
+  "$(globe) 语言": "$(globe) Language",
+  "完成": "Done",
+  "运行": "Running",
+  "等回答": "Awaiting input",
+  "等审批": "Awaiting approval",
+  "异步等待": "Async input",
+  "未知": "Unknown",
+  "无用量": "No usage",
   "选择此项目的连接": "Choose this project's connection",
   "已打开对应项目窗口；通知保持未读。": "Opened the project window; the notification remains unread.",
   "此旧通知缺少项目连接信息。请先打开对应 SSH／容器项目一次，后续即可直接打开窗口。": "This older notification lacks the project connection. Open its SSH/container project once; future notifications can open its window directly.",
@@ -549,6 +559,10 @@ const MESSAGES = {
 };
 let languageProvider = () => 'zh-CN';
 function normalizeLanguage(value) { return value === 'en' ? 'en' : 'zh-CN'; }
+function resolveLanguage(value, locale = 'zh-CN') {
+  if (value === 'en' || value === 'zh-CN') return value;
+  return /^zh(?:-|$)/i.test(locale) ? 'zh-CN' : 'en';
+}
 function configureLanguage(provider) { languageProvider = provider; }
 function getLanguage() { return normalizeLanguage(languageProvider()); }
 function message(input, ...values) {
@@ -589,4 +603,4 @@ function diagnostic(value, language = getLanguage(), depth = 0) {
 }
 // An output channel keeps its name for the current VS Code host lifetime.
 // Its messages always read the current setting; previously written lines remain intact.
-module.exports = {t, getLanguage, configureLanguage, translator, normalizeLanguage, message, renderMessage, diagnostic, MESSAGES};
+module.exports = {t, getLanguage, configureLanguage, translator, normalizeLanguage, resolveLanguage, message, renderMessage, diagnostic, MESSAGES};

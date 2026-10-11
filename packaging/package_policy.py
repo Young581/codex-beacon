@@ -10,7 +10,7 @@ import re
 import stat
 
 
-COMMON_FILES = frozenset({"package.json", "README.md", "LICENSE", "CHANGELOG.md", "PRIVACY.md"})
+COMMON_FILES = frozenset({"package.json", "package.nls.json", "package.nls.zh-cn.json", "README.md", "LICENSE", "CHANGELOG.md", "PRIVACY.md"})
 EXTENSION_FILES = {
     "ui": COMMON_FILES | frozenset({
         "extension.js", "lib/i18n.js", "lib/broker-core.js", "lib/broker.js", "lib/client.js",

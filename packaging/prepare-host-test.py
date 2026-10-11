@@ -52,6 +52,7 @@ def main():
         directory.mkdir(parents=True, exist_ok=False)
     (home / ".codex-notifier-extension-test").write_text("isolated extension-host fixture\n", encoding="utf-8")
     settings = {
+        "codexNotifier.language": "zh-CN",
         "codexNotifier.localCodexHome": str(home), "codexNotifier.localCollectorEnabled": True,
         "codexNotifier.localPythonPath": sys.executable,
         "extensions.confirmedUriHandlerExtensionIds": ["notifier-test.notifier-route-fixture"],

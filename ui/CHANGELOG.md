@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.3
+
+- 右键与顶部菜单只显示所选语言，默认跟随 VS Code；切换插件语言后菜单即时更新。
+- 命令和设置加入 VS Code 标准语言资源，去除固定的中英双语文字。
+- 任务行优先显示精简 token／估算费用及简短状态，完整编号与准确用量保留在悬停详情中。
+- Compact usage-first task rows and single-language menus, with live Chinese/English switching.
+
 ## 0.5.2
 
 - 标题缩短为“任务”（英文界面为 Task），顶部保留切换分组按钮。

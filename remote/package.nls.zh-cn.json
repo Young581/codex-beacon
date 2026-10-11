@@ -1,0 +1,13 @@
+{
+  "command.codexNotifier.remote.status": "Codex Notifier: 查看采集器状态",
+  "command.codexNotifier.remote.configureApprovalHook": "Codex Notifier: 配置审批提醒 Hook",
+  "command.codexNotifier.remote.removeApprovalHook": "Codex Notifier: 移除审批提醒 Hook",
+  "command.codexNotifier.remote.test": "Codex Notifier: 测试远端通知链路",
+  "command.codexNotifier.remote.restart": "Codex Notifier: 重启采集器",
+  "configuration.title": "Codex 远端采集器",
+  "setting.codexNotifier.codexHome": "该环境的 Codex 配置目录；留空依次使用 CODEX_HOME、~/.codex。",
+  "setting.codexNotifier.pythonPath": "Python 可执行文件路径，不含参数；Linux/macOS 默认 python3，Windows 默认 py -3。",
+  "setting.codexNotifier.sourceLabel": "服务器／容器的通知来源名称；留空使用连接类型和主机名，各事件携带自身项目路径。",
+  "setting.codexNotifier.collectorEnabled": "在此受信任工作区打开时读取 Codex 事件元数据。",
+  "setting.codexNotifier.cacheRetentionDays": "本环境通知采集缓存保留天数（1–30）；采集运行时清理过期元数据，不影响原始对话。"
+}

@@ -1,5 +1,5 @@
 'use strict';
-const {t, getLanguage, configureLanguage, message: describe, renderMessage} = require('./i18n');
+const {t, getLanguage, configureLanguage, resolveLanguage, message: describe, renderMessage} = require('./i18n');
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
@@ -9,7 +9,7 @@ const {settings, settingKey, makeSource, hookIsConfigured, JsonLines, restartDel
 
 function createController(vscode, context, dependencies = {}) {
   let languageOverride;
-  configureLanguage(() => languageOverride || vscode.workspace.getConfiguration('codexNotifier').get('language', 'zh-CN'));
+  configureLanguage(() => languageOverride || resolveLanguage(vscode.workspace.getConfiguration('codexNotifier').get('language', 'auto'), vscode.env.language));
   const spawn = dependencies.spawn || childProcess.spawn;
   const commandPrefix = dependencies.commandPrefix || 'codexNotifier.remote';
   const configKeyPrefix = dependencies.configKeyPrefix || '';

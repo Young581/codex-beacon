@@ -1,5 +1,5 @@
 'use strict';
-const {t, getLanguage, configureLanguage, renderMessage, diagnostic} = require('./lib/i18n');
+const {t, getLanguage, configureLanguage, resolveLanguage, renderMessage, diagnostic} = require('./lib/i18n');
 const vscode = require('vscode');
 const path = require('node:path');
 const {BrokerClient} = require('./lib/client');
@@ -16,7 +16,8 @@ const TESTING = process.env.CODEX_NOTIFIER_TEST_MODE === '1';
 let current;
 
 async function activate(context) {
-  configureLanguage(() => vscode.workspace.getConfiguration('codexNotifier').get('language', 'zh-CN'));
+  configureLanguage(() => resolveLanguage(vscode.workspace.getConfiguration('codexNotifier').get('language', 'auto'), vscode.env.language));
+  await vscode.commands.executeCommand('setContext', 'codexNotifier.menuLanguage', getLanguage());
   const output = vscode.window.createOutputChannel(t('Codex 会话通知'));
   const client = new BrokerClient(context.globalStorageUri.fsPath, path.join(context.extensionPath, 'lib', 'broker.js'));
   const history = new HistoryView(vscode, client.clientId, () => {
@@ -141,6 +142,13 @@ async function activate(context) {
   const register = (command, fn) => context.subscriptions.push(vscode.commands.registerCommand(command, async (...args) => {
     try { return await fn(...args); } catch (error) { await failure(error.message); if (TESTING) throw error; return {accepted: false, error: error.message}; }
   }));
+  // Contributed menu titles are static. Language-specific aliases let menus
+  // follow this window's setting immediately while keeping public command IDs.
+  for (const command of require('./package.json').contributes.commands) {
+    const match = /^(codexNotifier\..+)\.(zhCN|en)$/.exec(command.command);
+    if (match) context.subscriptions.push(vscode.commands.registerCommand(command.command,
+      (...args) => vscode.commands.executeCommand(match[1], ...args)));
+  }
   async function checkInstallation() {
     const result = await inspectInstallation(vscode);
     if (!disposed) { installationState = result; updateBadge(); }
@@ -180,6 +188,7 @@ async function activate(context) {
         tasks: history.groups.flatMap(group => group.entries).filter(row => row.taskState).map(row => {
           const item = history.getTreeItem(row);
           return {key: row.key, state: row.taskState, taskId: item.id, description: item.description,
+            label: typeof item.label === 'string' ? item.label : item.label.label,
             icon: item.iconPath.id, color: item.iconPath.color.id, relatedKeys: row.relatedKeys};
         }),
         statusColor: statusBar.backgroundColor?.id} : {})};
@@ -216,9 +225,10 @@ async function activate(context) {
   });
   register('codexNotifier.chooseLanguage', async () => {
     const selected = await vscode.window.showQuickPick([
-      {label: '中文', description: '默认 / Default', value: 'zh-CN'},
+      {label: t('跟随 VS Code'), value: 'auto'},
+      {label: '中文', value: 'zh-CN'},
       {label: 'English', value: 'en'},
-    ], {title: '通知语言 / Notification language', placeHolder: '中文 / English'});
+    ], {title: t('通知语言')});
     if (selected) await config().update('language', selected.value, vscode.ConfigurationTarget.Global);
   });
   register('codexNotifier.chooseOpenLocation', async () => {
@@ -357,7 +367,7 @@ async function activate(context) {
     await client.request('interact');
     const paused = !config().get('notificationsEnabled', true);
     const items = [
-      {label: '$(globe) 语言 / Language', command: 'codexNotifier.chooseLanguage'},
+      {label: t('$(globe) 语言'), command: 'codexNotifier.chooseLanguage'},
       {label: t('$(layout-sidebar-right) 选择会话打开位置'), command: 'codexNotifier.chooseOpenLocation'},
       {label: t('$(extensions) 检查／安装当前环境组件'), command: 'codexNotifier.checkInstallation'},
       {label: t('$(history) 查看通知历史'), command: 'codexNotifier.showHistory'},
@@ -429,6 +439,7 @@ async function activate(context) {
   });
   context.subscriptions.push(output, history, view, statusBar, vscode.workspace.onDidChangeConfiguration(event => {
     if (event.affectsConfiguration('codexNotifier.language')) {
+      vscode.commands.executeCommand('setContext', 'codexNotifier.menuLanguage', getLanguage()).catch(error => log(error.message));
       view.title = t('任务');
       history.update(snapshot.entries || []);
       if (sourceStatus) sourceStatus.status.message = renderMessage(sourceStatus.status.messageSpec, getLanguage(), sourceStatus.status.message);

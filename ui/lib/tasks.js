@@ -117,6 +117,14 @@ function usageDescription(task, options) {
   const price = cost.amount === null ? t(cost.reason === 'no-price' ? '未配置单价' : '费用未知') : `${t('估算')} $${cost.amount.toFixed(4)}`;
   return tokenLabel + ' · ' + price;
 }
+function compactUsage(task, options) {
+  const usage = task?.usage;
+  if (!usage?.segments?.length) return t('无用量');
+  const tokens = usage.segments.reduce((sum, s) => sum + s.input + s.output, 0);
+  const count = new Intl.NumberFormat('en', {notation: 'compact', maximumFractionDigits: 2}).format(tokens);
+  const cost = estimateCost(usage, options);
+  return `${count}${usage.complete ? '' : '*'} tok · ${cost.amount === null ? '$?' : '≈$' + cost.amount.toFixed(4)}`;
+}
 function taskTooltip(row, options) {
   const usage = row.telemetry?.usage;
   const segments = usage?.segments || [];
@@ -136,4 +144,4 @@ function taskTooltip(row, options) {
     t('金额为 API 估算，不是实际账单；不包含后台任务和其他会话。'),
     t('完成表示本轮回复结束。'), date].join('\n');
 }
-module.exports = {STATES, DEFAULT_PRICES, taskIdentity, taskRows, projectGroups, estimateCost, usageDescription, taskTooltip};
+module.exports = {STATES, DEFAULT_PRICES, taskIdentity, taskRows, projectGroups, estimateCost, usageDescription, compactUsage, taskTooltip};

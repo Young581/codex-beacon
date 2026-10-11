@@ -2,7 +2,7 @@
 const crypto = require('node:crypto');
 const {t, getLanguage} = require('./i18n');
 const {clean, projectName, eventTitle, historyGroups} = require('./presentation');
-const {STATES, projectGroups, usageDescription, taskTooltip} = require('./tasks');
+const {STATES, projectGroups, usageDescription, compactUsage, taskTooltip} = require('./tasks');
 
 class HistoryView {
   constructor(vscode, windowId, options = {}) {
@@ -53,17 +53,16 @@ class HistoryView {
     }
     if (entry.taskState) {
       const [state, icon, color] = STATES[entry.taskState] || STATES.unknown;
-      const shortSession = clean(entry.event.session_id, 8);
-      const shortTurn = clean(entry.event.turn_id, 8);
-      const label = `${entry.read ? '' : '● '}${t(state)} · ${t('任务')} ${shortSession}${shortTurn ? '/' + shortTurn : ''}`;
+      const label = `${entry.read ? '' : '● '}${compactUsage(entry.telemetry, this.options())}`;
       const item = new vscode.TreeItem(entry.read ? label : {label, highlights: [[0, label.length]]}, vscode.TreeItemCollapsibleState.None);
       item.id = 'task-' + crypto.createHash('sha256').update(entry.taskId).digest('hex');
-      item.description = usageDescription(entry.telemetry, this.options());
+      item.description = t({completed: '完成', running: '运行', waiting_input: '等回答',
+        waiting_approval: '等审批', waiting_async: '异步等待', unknown: '未知'}[entry.taskState] || state);
       item.tooltip = taskTooltip(entry, this.options());
       item.iconPath = new vscode.ThemeIcon(icon, new vscode.ThemeColor(color));
       item.command = {command: 'codexNotifier.showEntry', title: t('打开对应会话并标为已读'), arguments: [entry.key]};
       item.contextValue = entry.read ? 'readNotification' : 'unreadNotification';
-      item.accessibilityInformation = {label: `${label}，${item.description}`};
+      item.accessibilityInformation = {label: `${t(state)} · ${usageDescription(entry.telemetry, this.options())}`};
       return item;
     }
     const project = projectName(entry.event.cwd);

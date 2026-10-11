@@ -382,9 +382,9 @@ exports.run = async function run() {
       const unreadBefore = running.unread;
       append('event_msg', {type: 'token_count', info: {
         total_token_usage: {input_tokens: 1000, cached_input_tokens: 400, output_tokens: 100, reasoning_output_tokens: 40}}});
-      const metered = await waitFor(snapshot, s => s.tasks?.some(row => /1,100 tokens/.test(row.description)), 'Token counts should refresh while running');
+      const metered = await waitFor(snapshot, s => s.tasks?.some(row => /1.1K tok/.test(row.label)), 'Token counts should refresh while running');
       assert.equal(metered.unread, unreadBefore, 'Usage updates must stay silent and read');
-      assert.match(metered.tasks.find(row => row.taskId === runningRow.taskId).description, /\$0\.0022/);
+      assert.match(metered.tasks.find(row => row.taskId === runningRow.taskId).label, /\$0\.0022/);
       append('response_item', {type: 'function_call', name: 'request_user_input', call_id: 'metrics-question', arguments: 'PRIVATE'});
       await waitFor(snapshot, s => s.tasks?.some(row => row.state === 'waiting_input' && row.color === 'charts.yellow'), 'Structured question should block the task');
       append('response_item', {type: 'function_call_output', call_id: 'metrics-question', output: 'PRIVATE'});
@@ -400,7 +400,7 @@ exports.run = async function run() {
       assert.equal(completed.tasks.length, 1, 'Task telemetry and alerts must form one row');
       assert.equal(JSON.stringify(history(completed)).includes('PRIVATE'), false);
       await config.update('modelPrices', {'gpt-6.1-sol': {input: 10, cachedInput: 1, output: 20}}, vscode.ConfigurationTarget.Global);
-      await waitFor(snapshot, s => s.tasks?.some(row => /\$0\.0084/.test(row.description)), 'Custom prices should recalculate existing tasks');
+      await waitFor(snapshot, s => s.tasks?.some(row => /\$0\.0084/.test(row.label)), 'Custom prices should recalculate existing tasks');
       await command('markEntryRead', completedRow.key);
       const read = await snapshot();
       assert.equal(read.unread, 0);
@@ -468,11 +468,17 @@ exports.run = async function run() {
     console.log(JSON.stringify(report));
     if (process.env.CODEX_NOTIFIER_VISUAL_REVIEW === '1') {
       const realSource = (await command('local.status')).source;
-      for (const [index, type] of ['done'].entries()) {
+      for (const [index, type] of ['done', 'done'].entries()) {
         await command('internal.receive', {version: 1, kind: 'event', source: realSource, event: {
           version: 1, originator: 'codex_vscode', type, id: 'visual-' + Date.now() + '-' + index, timestamp: Date.now() / 1000,
           cwd: realSource.cwd, session_id: process.env.CODEX_NOTIFIER_TEST_SESSION, turn_id: 'visual-turn-' + index,
           host: realSource.host, label: realSource.label}});
+        if (index === 0) await command('internal.receive', {version: 1, kind: 'event', source: realSource, event: {
+          version: 1, originator: 'codex_vscode', type: 'task', id: 'visual-task-' + Date.now(), timestamp: Date.now() / 1000,
+          cwd: realSource.cwd, session_id: process.env.CODEX_NOTIFIER_TEST_SESSION, turn_id: 'visual-turn-' + index,
+          task: {sequence: 1, state: 'completed', model: 'gpt-6.1-sol', usage: {complete: true, segments: [{
+            model: 'gpt-6.1-sol', tier: 'standard', input: 4450490, cachedInput: 4445621, cacheWrite: 0,
+            output: 25100, reasoningOutput: 1000}]}}}});
       }
       await command('showHistory');
       await vscode.commands.executeCommand('workbench.action.closePanel');
