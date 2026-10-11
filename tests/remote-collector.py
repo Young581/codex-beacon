@@ -1,5 +1,6 @@
 """Behavior checks use temporary Codex homes; never access the user's config."""
 import concurrent.futures
+import contextlib
 import datetime
 import importlib.util
 import json
@@ -8,6 +9,7 @@ from pathlib import Path
 import subprocess
 import sys
 import shutil
+import sqlite3
 import time
 import unittest
 import uuid
@@ -42,6 +44,45 @@ class RemoteTests(unittest.TestCase):
         result = self.run_cli("preview-privacy-cleanup")
         self.assertEqual(result.returncode, 0, result.stderr)
         return json.loads(result.stdout)
+
+    def test_session_titles_use_live_wal_names_and_never_return_message_columns(self):
+        session, other = str(uuid.uuid4()), str(uuid.uuid4())
+        (self.home / 'session_index.jsonl').write_text(json.dumps({'id': session, 'thread_name': 'older index name'}) + '\n', encoding='utf-8')
+        with contextlib.closing(sqlite3.connect(self.home / 'state_5.sqlite')) as writer:
+            writer.execute('PRAGMA journal_mode=WAL')
+            writer.execute('CREATE TABLE threads (id TEXT PRIMARY KEY, name TEXT, title TEXT, first_user_message TEXT, preview TEXT)')
+            writer.execute('INSERT INTO threads VALUES (?, ?, ?, ?, ?)', (session, 'Renamed chat', 'Generated title', 'PRIVATE_MESSAGE', 'PRIVATE_PREVIEW'))
+            writer.execute('INSERT INTO threads VALUES (?, ?, ?, ?, ?)', (other, 'Unrequested title', '', 'PRIVATE_OTHER', 'PRIVATE_OTHER'))
+            writer.commit()
+            result = REMOTE.read_session_titles(self.home, [session])
+            self.assertEqual(result, [{'session_id': session, 'title': 'Renamed chat'}])
+            writer.execute('UPDATE threads SET name=? WHERE id=?', ('Updated chat', session))
+            writer.commit()
+            self.assertEqual(REMOTE.read_session_titles(self.home, [session])[0]['title'], 'Updated chat')
+            self.assertEqual(writer.execute('SELECT count(*) FROM threads').fetchone()[0], 2)
+            self.assertNotIn('PRIVATE', json.dumps(result))
+
+    def test_session_titles_fall_back_to_latest_index_and_sanitize_bounded_names(self):
+        session = str(uuid.uuid4())
+        rows = [{'id': [], 'thread_name': 'malformed'}, {'id': session, 'thread_name': 'old'},
+                {'id': session, 'thread_name': 'new\n' + 'x' * 300}]
+        (self.home / 'session_index.jsonl').write_text('invalid-json\n' + '\n'.join(json.dumps(row) for row in rows) + '\n', encoding='utf-8')
+        (self.home / 'state_5.sqlite').write_bytes(b'invalid-database')
+        result = self.run_cli('session-titles', '--session-id', session)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        titles = json.loads(result.stdout)['titles']
+        self.assertEqual(len(titles), 1)
+        self.assertEqual(titles[0]['title'], 'new' + 'x' * 157)
+
+    def test_session_titles_reject_bad_identifiers_and_respect_privacy_pause(self):
+        with self.assertRaises(ValueError):
+            REMOTE.read_session_titles(self.home, ['../private'])
+        with self.assertRaises(ValueError):
+            REMOTE.read_session_titles(self.home, [str(uuid.uuid4()) for unused in range(201)])
+        directory = self.home / REMOTE.DIRECTORY_NAME
+        directory.mkdir()
+        (directory / REMOTE.PRIVACY_FILE).write_text(json.dumps({'version': 1, 'paused': True, 'cutoff': time.time()}), encoding='utf-8')
+        self.assertEqual(REMOTE.read_session_titles(self.home, [str(uuid.uuid4())]), [])
 
     def test_privacy_cleanup_preserves_sessions_auth_other_hooks_and_unproven_backups(self):
         session = self.write_session("private-session")

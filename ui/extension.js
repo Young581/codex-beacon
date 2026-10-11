@@ -45,6 +45,9 @@ async function activate(context) {
   let lastNavigationFailure = null;
   let opening = Promise.resolve();
   let privacyGeneration = 0;
+  let titleLookup = false;
+  let titleSignature = '';
+  let nextTitleRead = 0;
   let navigating = false;
   const outdatedSources = new Set();
   const config = () => vscode.workspace.getConfiguration('codexNotifier');
@@ -60,7 +63,7 @@ async function activate(context) {
       if (disposed || generation !== privacyGeneration) return;
       const commands = {sound: 'chooseSound', preview: 'testSound', language: 'chooseLanguage', settings: 'settings',
         status: 'showStatus', pause: 'pause', resume: 'resume', privacy: 'privacy', clearRead: 'clearRead'};
-      if (action === 'refresh') return;
+      if (action === 'refresh') {nextTitleRead = 0; queueSessionTitles(); return;}
       if (commands[action]) return vscode.commands.executeCommand('codexNotifier.' + commands[action]);
       const row = projectGroups(snapshot.entries || [], client.clientId).flatMap(group => group.entries).find(row => row.key === key);
       if (!row) return;
@@ -139,12 +142,34 @@ async function activate(context) {
     statusBar.show();
     dashboard.update();
   }
+  function queueSessionTitles() {
+    const sourceId = sourceStatus?.source?.id;
+    if (disposed || titleLookup || snapshot.privacyPaused || !sourceId) return;
+    const ids = [...new Set((snapshot.entries || []).filter(row => row.source.id === sourceId && row.event.type !== 'test')
+      .map(row => row.event.session_id).filter(id => /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id)))].sort();
+    if (!ids.length) return;
+    const signature = JSON.stringify([sourceId, ids]);
+    if (signature === titleSignature && Date.now() < nextTitleRead) return;
+    titleSignature = signature; nextTitleRead = Date.now() + 15000; titleLookup = true;
+    const generation = privacyGeneration;
+    remoteCommand('codexNotifier.remote.sessionTitles', ids).then(async result => {
+      if (disposed || generation !== privacyGeneration || sourceId !== sourceStatus?.source?.id || result?.sourceId !== sourceId || !Array.isArray(result.titles)) return;
+      const allowed = new Set(ids);
+      const titles = result.titles.filter(row => row && allowed.has(row.session_id) && typeof row.title === 'string' && row.title.trim() &&
+        row.title.length <= 160 && !/[\u0000-\u001f\u007f]/u.test(row.title));
+      for (let offset = 0; offset < titles.length; offset += 50) {
+        if (disposed || generation !== privacyGeneration || sourceId !== sourceStatus?.source?.id) return;
+        await client.request('sessionTitles', {sourceId, titles: titles.slice(offset, offset + 50)});
+      }
+    }).catch(() => {}).finally(() => {titleLookup = false;});
+  }
+
   async function refresh() {
     if (disposed) return snapshot;
     if (refreshPromise) { refreshAgain = true; return refreshPromise; }
     refreshPromise = (async () => {
       snapshot = await client.request('history');
-      if (!disposed) { history.update(snapshot.entries || []); updateBadge(); }
+      if (!disposed) { history.update(snapshot.entries || []); updateBadge(); queueSessionTitles(); }
       return snapshot;
     })();
     try { return await refreshPromise; } finally {
@@ -189,6 +214,7 @@ async function activate(context) {
     return TESTING ? result : showInstallation(vscode, result);
   });
   register('codexNotifier.dashboard', async () => {
+    nextTitleRead = 0;
     await refresh(); dashboard.open();
     return {opened: !!dashboard.panel};
   });
@@ -200,6 +226,7 @@ async function activate(context) {
       installationState = {state: 'available', remote: !!vscode.env.remoteName};
       await syncWindow();
       updateBadge();
+      queueSessionTitles();
       if (payload.status.state === 'error') failure(`${clean(payload.source.label)}：${clean(sourceStatus.status.message, 1000)}`).catch(() => {});
       return {accepted: true};
     }
@@ -440,6 +467,7 @@ async function activate(context) {
   client.on('diagnostic', log);
   client.on('privacyReset', () => {
     privacyGeneration++;
+    titleSignature = ''; nextTitleRead = 0;
     lastNavigation = null; lastNavigationFailure = null;
     output.clear();
     snapshot = {entries: [], unread: 0, privacyPaused: true};

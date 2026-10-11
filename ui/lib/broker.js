@@ -343,6 +343,10 @@ function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNo
         for (const set of [forcedTests, silencedKeys]) for (const key of set) if (!retained.has(key)) set.delete(key);
         return receipt;
       }
+      case 'sessionTitles': {
+        if (!request.sourceId || windows.windows.get(client.id)?.sourceId !== request.sourceId) throw new Error('Session titles must belong to this window source');
+        return store.setSessionTitles(request.sourceId, request.titles);
+      }
       case 'history': { const result = store.history(); return {...result, entries: result.entries.map(annotated)}; }
       case 'privacyStatus': return store.privacyStatus();
       case 'privacyReset': {
@@ -429,7 +433,7 @@ function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNo
   server.on('listening', () => {
     if (stopping) return;
     try {
-      const legacyFileName = ['broker-state-v6.json', 'broker-state-v5.json', 'broker-state-v4.json', 'broker-state-v3.json', 'broker-state-v2.json', 'broker-state.json']
+      const legacyFileName = ['broker-state-v7.json', 'broker-state-v6.json', 'broker-state-v5.json', 'broker-state-v4.json', 'broker-state-v3.json', 'broker-state-v2.json', 'broker-state.json']
         .find(file => fs.existsSync(path.join(storage, file)));
       store.reload({legacyFileName});
       if (store.needsMigration) { store.save(); store.needsMigration = false; }

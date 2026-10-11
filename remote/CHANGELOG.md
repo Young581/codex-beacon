@@ -1,5 +1,11 @@
 # 0.2.3
 
+## 0.4.0
+
+- 按现有任务会话 ID 读取 Codex 聊天标题索引与只读 SQLite 名称字段，不读取消息列。
+- 标题查询遵循工作区信任与隐私暂停，兼容缺失索引、旧格式和数据库暂时不可读。
+- Read bounded Codex chat display names for requested task sessions, including current WAL updates.
+
 ## 0.3.5
 
 - 同步测试分组与管理面板入口的中英文提示。

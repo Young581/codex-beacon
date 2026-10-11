@@ -18,6 +18,25 @@ function directory() {
   return storage;
 }
 
+test('chat name updates are source scoped, durable and silent without changing times or unread', () => {
+  const storage = directory(), store = new NotificationStore(storage);
+  let alerts = 0; store.on('event', () => alerts++);
+  store.add(source, event('one'), {});
+  store.add({...source, id: 'other-source'}, event('other'), {});
+  const before = store.history();
+  assert.deepEqual(store.setSessionTitles(source.id, [{session_id: 'session-1', title: 'Build notification UI'}]), {updated: 1});
+  assert.equal(alerts, 2);
+  assert.equal(store.history().unread, before.unread);
+  assert.deepEqual(store.history().entries.map(row => [row.key, row.receivedAt, row.event.timestamp]), before.entries.map(row => [row.key, row.receivedAt, row.event.timestamp]));
+  assert.equal(store.history().entries.find(row => row.source.id === 'other-source').event.session_title, undefined);
+  assert.equal(new NotificationStore(storage).entries.find(row => row.source.id === source.id).event.session_title, 'Build notification UI');
+  store.add(source, event('next'), {});
+  assert.equal(store.entries.find(row => row.event.id === 'next').event.session_title, 'Build notification UI');
+  assert.throws(() => store.setSessionTitles(source.id, [{session_id: 'session-1', title: 'x'.repeat(161)}]));
+  store.deleteEntry({key: source.id + ':one'}); store.deleteEntry({key: source.id + ':next'});
+  assert.equal(store.setSessionTitles(source.id, [{session_id: 'session-1', title: 'Rename deleted chat'}]).updated, 0);
+});
+
 test('store deduplicates cross-client event identity and persists only approved metadata', () => {
   const storage = directory();
   const store = new NotificationStore(storage);

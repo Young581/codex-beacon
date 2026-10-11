@@ -4,7 +4,7 @@
 
 ## 中文
 
-适用版本：主扩展 0.3.0–0.6.1、远端采集器 0.2.0–0.3.5。社区扩展，非 OpenAI 或 Microsoft 官方产品。
+适用版本：主扩展 0.3.0–0.7.0、远端采集器 0.2.0–0.4.0。社区扩展，非 OpenAI 或 Microsoft 官方产品。
 
 ## 数据去向与隔离
 
@@ -26,6 +26,8 @@
 采集器从该环境设置的 Codex Home（否则 CODEX_HOME 或该系统用户的 ~/.codex）读取会话日志，以识别回复结束、结构化提问和审批请求。它会在本地解析包含会话正文的日志片段；仅转发经过字段筛选的事件元数据，不转发提示词、回答正文或执行命令参数。
 
 通知元数据包括事件类型、事件时间、主机名、来源标签、工作目录、Codex Home、会话和轮次标识。主机名、目录和活动时间本身也可能敏感。窗口标题、通知面板、系统弹窗和用户主动打开的状态日志可能显示这些信息；屏幕共享和系统通知策略也会影响可见性。
+
+管理面板按保留任务的会话 ID 从当前环境的 `session_index.jsonl` 和只读 `state_*.sqlite` 中匹配聊天名称，只读取名称／标题字段，不读取消息、预览或首条提示词列。名称限 160 个字符，随对应通知保存、过期与删除，可能包含用户在聊天标题中填写的内容。未连接环境沿用已保存的名称，缺失标题时使用短会话编号；隐私暂停时不读取新名称。
 
 只采集能确认由 VS Code Codex 插件发起的会话。Codex App、CLI 和无法确认来源的会话被忽略；在同一个 Codex Home 中，采集范围不是仅限当前打开的项目。
 
@@ -67,7 +69,7 @@ Custom notification sounds read only the selected local Windows WAV/MP3 file. It
 
 Project recovery retains validated folder/workspace URIs and window labels with their notifications, including SSH/container authority identifiers. They follow the same retention/deletion policy; no connection passwords or private keys are stored. Legacy recovery reads VS Code's recent-project list only.
 
-Applies to main-extension versions 0.3.0–0.6.1 and remote-collector versions 0.2.0–0.3.5. This is a community extension, not an official OpenAI or Microsoft product.
+Applies to main-extension versions 0.3.0–0.7.0 and remote-collector versions 0.2.0–0.4.0. This is a community extension, not an official OpenAI or Microsoft product.
 
 ### Data destinations and isolation
 
@@ -84,6 +86,8 @@ Local components use mutual TLS authentication and pinned certificates. Communic
 The collector reads session logs from the configured Codex Home, otherwise `CODEX_HOME` or the OS user's `~/.codex`, to identify response completion, structured questions and approval requests. It locally parses log portions that can contain conversation text. Only allowlisted event metadata is forwarded; prompts, response bodies and executed-command arguments are not forwarded.
 
 Metadata includes event type and time, hostname, source label, working directory, Codex Home, session ID and turn ID. Paths, hostnames and activity times can themselves be sensitive. Window titles, history panels, system popups and status logs opened by the user may display them. Screen sharing and system notification policies affect who can see this information.
+
+The dashboard matches retained task session IDs against `session_index.jsonl` and read-only `state_*.sqlite` display-name fields in the current environment. Message, preview and first-prompt columns are not queried. Names are limited to 160 characters and follow their notifications' storage, expiry and deletion; they may contain text entered in chat titles. Disconnected sources retain cached names, missing titles use short session IDs, and privacy pause prevents new name reads.
 
 Only sessions confirmed to originate in the VS Code Codex extension are collected. Desktop App, CLI and unknown-origin sessions are ignored. Within the same Codex Home, collection is not limited to the project currently open in VS Code.
 

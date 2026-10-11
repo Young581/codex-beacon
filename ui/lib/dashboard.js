@@ -8,19 +8,19 @@ const {STATES, projectGroups, estimateCost, taskTooltip} = require('./tasks');
 const ROW_ACTIONS = new Set(['open', 'window', 'read', 'delete']);
 const GLOBAL_ACTIONS = new Set(['refresh', 'sound', 'preview', 'language', 'settings', 'status', 'pause', 'resume', 'privacy', 'clearRead']);
 const LABELS = {
-  eyebrow: '工作空间动态', title: '项目任务总览', subtitle: '跟踪每个项目的进度，用量与提醒。',
+  eyebrow: '工作空间动态', title: '项目任务总览', subtitle: '查看任务名称、模型与进度，展开查看用量和详情。',
   projects: '项目', allProjects: '全部项目', current: '本窗口', other: '其他窗口',
   tasks: '任务', running: '进行中', blocked: '等待处理', completed: '本轮完成', failed: '失败或取消',
   tokens: '已采集 Token', cost: 'API 费用估算', metered: '有用量记录', unpriced: '任务费用未知', partial: '含部分统计',
-  unread: '未读', all: '全部', search: '搜索项目、模型或会话', searchLabel: '搜索任务',
+  unread: '未读', all: '全部', search: '搜索任务名称、项目或模型', searchLabel: '搜索任务',
   open: '打开会话', window: '打开项目窗口', read: '标为已读', delete: '删除任务记录',
-  details: '任务详情', model: '模型', noUsage: '无用量', unknown: '未知', task: '本轮任务',
+  details: '任务详情', model: '模型', noUsage: '无用量', unknown: '未知', task: '本轮任务', turn: '轮次',
   refresh: '刷新', sound: '提示音', preview: '试听提示音', language: '语言', settings: '设置',
   pause: '暂停提醒', resume: '恢复提醒', privacy: '隐私与恢复', clearRead: '清空已读',
   status: '连接状态', connected: '通知后台已连接', disconnected: '正在重新连接', error: '采集异常',
   paused: '提醒已暂停', privacyPaused: '隐私清理后已暂停接收',
   emptyTitle: '还没有项目任务', emptyText: '在 VS Code 的 Codex 中开始任务，进度和用量会自动出现在这里。',
-  noMatches: '没有匹配的任务', reset: '重置筛选', footer: '仅统计保留的任务记录；金额为 API 估算，完成表示本轮回复结束。',
+  noMatches: '没有匹配的任务', reset: '重置筛选', footer: '完成表示本轮回复结束；用量与估算费用见任务详情。',
   input: '输入', output: '输出', cached: '缓存命中', reasoning: '其中推理',
   updated: '最近更新', showAll: '查看全部任务',
 };
@@ -57,6 +57,8 @@ function dashboardData(snapshot, {windowId, options = {}, paused = false, connec
       return {key: row.key, index: index + 1, state: row.taskState,
         stateLabel: t((STATES[row.taskState] || STATES.unknown)[0]), unread: !row.read,
         model: clean([...new Set(segments.map(segment => segment.model).filter(Boolean))].join(', ') || row.telemetry?.model, 200),
+        title: clean(row.event.session_title, 160) || `${t('会话')} ${clean(row.event.session_id, 8) || t('未提供')}`,
+        turn: clean(row.event.turn_id, 256),
         session: clean(row.event.session_id, 256), time: row.receivedAt,
         tokens: segments.length ? sums.input + sums.output : null, cost: cost.amount,
         complete: !!usage?.complete, counts: sums, details: taskTooltip(row, options)};

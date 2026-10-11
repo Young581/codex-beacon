@@ -14,7 +14,7 @@ const TYPES = new Set(['done', 'approval', 'question', 'test', 'task']);
 const TITLES = { done: 'Codex 本轮已回复', approval: 'Codex 等待审批', question: 'Codex 等待回答', test: 'Codex 通知测试' };
 const MAX_HISTORY = 200;
 const MAX_SEEN = 5000;
-const BROKER_PROTOCOL_VERSION = 7;
+const BROKER_PROTOCOL_VERSION = 8;
 
 function object(value, name) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${name} must be an object`);
@@ -59,6 +59,7 @@ function validateEvent(event) {
     originator: field(event.originator, 'event.originator', 64),
   };
   if (event.task !== undefined) result.task = normalizeTask(event.task);
+  if (event.session_title !== undefined) result.session_title = field(event.session_title, 'event.session_title', 160);
   if (event.type === 'task' && (!result.task || !result.session_id || !result.turn_id)) throw new Error('Invalid task identity');
   return result;
 }
@@ -231,6 +232,10 @@ class NotificationStore extends EventEmitter {
     const event = validateEvent(rawEvent);
     const options = validateOptions(rawOptions);
     this.prune();
+    if (!event.session_title && event.session_id) {
+      const named = this.entries.find(row => row.source.id === source.id && row.event.session_id === event.session_id && row.event.session_title);
+      if (named) event.session_title = named.event.session_title;
+    }
     if (this.control.paused || event.timestamp * 1000 <= this.control.cutoff || event.timestamp * 1000 < this.now() - this.control.retentionDays * privacy.DAY) {
       return {accepted: true, ignored: true, reason: this.control.paused ? 'privacy-paused' : 'expired'};
     }
@@ -266,6 +271,30 @@ class NotificationStore extends EventEmitter {
     this.emit('changed');
     this.emit('event', record, options);
     return { accepted: true, duplicate: false, key };
+  }
+
+  setSessionTitles(sourceId, titles) {
+    field(sourceId, 'sourceId', 256, true);
+    if (!Array.isArray(titles) || titles.length > 200) throw new Error('Invalid session titles');
+    const names = new Map(titles.map(row => {
+      object(row, 'session title');
+      return [field(row.session_id, 'session_id', 256, true), field(row.title, 'title', 160, true)];
+    }));
+    this.prune();
+    if (this.control.paused) return {updated: 0};
+    let updated = 0;
+    const previous = this.entries;
+    this.entries = this.entries.map(row => {
+      const title = row.source.id === sourceId && names.get(row.event.session_id);
+      if (!title || row.event.type === 'test' || row.event.session_title === title) return row;
+      updated++;
+      return {...row, event: {...row.event, session_title: title}};
+    });
+    if (updated) {
+      try {this.save();} catch (error) {this.entries = previous; throw error;}
+      this.emit('changed');
+    }
+    return {updated};
   }
 
   history() {

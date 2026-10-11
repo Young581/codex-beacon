@@ -68,19 +68,21 @@
       completed: ['completed'], failed: ['failed', 'cancelled']};
     if (filter === 'unread' && !task.unread) return false;
     if (states[filter] && !states[filter].includes(task.state)) return false;
-    return !query.trim() || [group.title, group.cwd, group.source, task.model, task.session, task.stateLabel]
+    return !query.trim() || [group.title, group.cwd, group.source, task.title, task.model, task.session, task.stateLabel]
       .some(value => value.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
   }
   function taskCard(task) {
     const text = data.text;
     const card = el('article', 'task-card state-' + task.state + (task.unread ? ' is-unread' : ''));
     card.dataset.key = task.key;
-    const top = el('div', 'task-top');
-    const state = el('span', 'state-badge'); state.append(el('i', 'state-dot'), el('span', '', task.stateLabel));
-    top.append(state, el('span', 'task-time', time(task.time)));
     const heading = el('div', 'task-heading');
-    const title = el('h3', '', task.model || text.task); title.title = task.model || text.task;
-    heading.append(title, el('span', 'task-number', '#' + String(task.index).padStart(2, '0')));
+    const title = el('h3', '', task.title); title.title = task.title;
+    heading.append(title, el('span', 'task-time', time(task.time)));
+    const meta = el('div', 'task-meta');
+    const model = el('span', 'task-model', task.model || text.unknown); model.title = text.model + ': ' + (task.model || text.unknown);
+    const state = el('span', 'state-badge'); state.append(el('i', 'state-dot'), el('span', '', task.stateLabel));
+    meta.append(model, state);
+    if (task.turn) {const turn = el('span', 'task-turn', text.turn + ' ' + task.turn.slice(-8)); turn.title = task.turn; meta.append(turn);}
     const usage = el('div', 'task-usage');
     const tokens = el('div');
     tokens.append(el('span', 'field-label', 'Token'), el('strong', '', task.tokens === null ? '—' : count(task.tokens) + (task.complete ? '' : '*')));
@@ -94,13 +96,13 @@
       action(text.delete, 'trash', 'delete', task.key, 'button icon-button danger'));
     const details = el('details', 'task-details');
     details.open = expanded.has(task.key);
-    details.append(el('summary', '', text.details), el('pre', '', task.details));
+    details.append(el('summary', '', text.details), usage, el('pre', '', task.details), actions);
     details.addEventListener('toggle', () => {if (details.isConnected) details.open ? expanded.add(task.key) : expanded.delete(task.key);});
     if (task.unread) {
       const unread = el('span', 'unread-marker'); unread.title = text.unread;
       unread.setAttribute('aria-label', text.unread); heading.prepend(unread);
     }
-    card.append(top, heading, usage, actions, details);
+    card.append(heading, meta, details);
     return card;
   }
   function render() {
@@ -138,10 +140,7 @@
     const total = data.totals;
     summary.append(metric(text.projects, String(total.projects), total.tasks + ' ' + text.tasks, '', () => {project = 'all'; filter = 'all'; render();}),
       metric(text.running, String(total.running), text.showAll, 'metric-running', () => {filter = 'running'; render();}),
-      metric(text.blocked, String(total.blocked), total.unread + ' ' + text.unread, 'metric-blocked', () => {filter = 'blocked'; render();}),
-      metric(text.tokens, total.tokens === null ? '—' : count(total.tokens) + (total.partial ? '*' : ''),
-        total.metered + '/' + total.tasks + ' ' + text.metered, 'metric-usage'),
-      metric(text.cost, dollars(total.amount), total.unpriced ? total.unpriced + ' ' + text.unpriced : text.completed + ' · ' + total.completed, 'metric-cost'));
+      metric(text.blocked, String(total.blocked), total.unread + ' ' + text.unread, 'metric-blocked', () => {filter = 'blocked'; render();}));
     const workspace = el('div', 'workspace');
     const nav = el('aside', 'project-nav');
     nav.append(el('h2', 'section-label', text.projects));
@@ -192,10 +191,7 @@
       const identity = el('div', 'group-identity'); identity.append(icon('folder'), el('h2', '', group.title),
         el('span', 'group-source', group.source), el('span', 'count-badge', String(tasks.length)));
       identity.title = group.cwd;
-      const groupUsage = el('span', 'group-usage',
-        (group.totals.tokens === null ? '—' : count(group.totals.tokens) + (group.totals.partial ? '*' : '') + ' tok') + ' · ' + dollars(group.totals.amount));
-      groupUsage.title = text.projects + ' · ' + text.tokens + ' / ' + text.cost;
-      groupHeader.append(identity, groupUsage);
+      groupHeader.append(identity);
       const cards = el('div', 'task-grid'); tasks.forEach(task => cards.append(taskCard(task)));
       section.append(groupHeader, cards); list.append(section);
     }

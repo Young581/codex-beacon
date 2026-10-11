@@ -43,7 +43,7 @@ test('a turn is one row, read state stays independent of progress and state colo
   const live = view.getChildren(view.groups[0])[0];
   const runningItem = view.getTreeItem(live);
   assert.equal(runningItem.iconPath.color.id, 'charts.blue');
-  assert.match(runningItem.label, /1.1K tok.*\$0\.0023/);
+  assert.equal(runningItem.label, '1.1K tok');
   assert.match(runningItem.tooltip, /1,100 tokens.*\$0\.0023/);
   view.update([running, done]);
   assert.equal(view.groups[0].entries.length, 1);
@@ -63,12 +63,12 @@ test('a turn is one row, read state stays independent of progress and state colo
   assert.equal(view.getTreeItem(view.groups[0].entries[0]).iconPath.color.id, 'charts.green');
 });
 
-test('compact usage prioritizes counts and estimates while exact and partial data remain available', () => {
+test('compact rows show only tokens while exact usage and cost remain available in details', () => {
   const usage = {complete: false, segments: [{...segment(), input: 4475490}]};
-  assert.match(compactUsage({usage}, {}), /^4.48M\* tok · ≈\$/);
+  assert.equal(compactUsage({usage}, {}), '4.48M* tok');
   assert.match(usageDescription({usage}, {}), /4,475,590 tokens.*部分统计/);
   assert.equal(compactUsage(undefined, {}), '无用量');
-  assert.equal(compactUsage({usage: {complete: true, segments: [segment('unknown')]}}, {}), '1.1K tok · $?');
+  assert.equal(compactUsage({usage: {complete: true, segments: [segment('unknown')]}}, {}), '1.1K tok');
 });
 test('active unconnected tasks are explicitly unconfirmed; hook approval overrides older telemetry', () => {
   const running = row('live', 10);

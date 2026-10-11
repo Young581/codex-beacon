@@ -405,7 +405,7 @@ exports.run = async function run() {
         total_token_usage: {input_tokens: 1000, cached_input_tokens: 400, output_tokens: 100, reasoning_output_tokens: 40}}});
       const metered = await waitFor(snapshot, s => s.tasks?.some(row => /1.1K tok/.test(row.label)), 'Token counts should refresh while running');
       assert.equal(metered.unread, unreadBefore, 'Usage updates must stay silent and read');
-      assert.match(metered.tasks.find(row => row.taskId === runningRow.taskId).label, /\$0\.0022/);
+      assert.equal(metered.tasks.find(row => row.taskId === runningRow.taskId).label, '1.1K tok');
       append('response_item', {type: 'function_call', name: 'request_user_input', call_id: 'metrics-question', arguments: 'PRIVATE'});
       await waitFor(snapshot, s => s.tasks?.some(row => row.state === 'waiting_input' && row.color === 'charts.yellow'), 'Structured question should block the task');
       append('response_item', {type: 'function_call_output', call_id: 'metrics-question', output: 'PRIVATE'});
@@ -421,7 +421,12 @@ exports.run = async function run() {
       assert.equal(completed.tasks.length, 1, 'Task telemetry and alerts must form one row');
       assert.equal(JSON.stringify(history(completed)).includes('PRIVATE'), false);
       await config.update('modelPrices', {'gpt-6.1-sol': {input: 10, cachedInput: 1, output: 20}}, vscode.ConfigurationTarget.Global);
-      await waitFor(snapshot, s => s.tasks?.some(row => /\$0\.0084/.test(row.label)), 'Custom prices should recalculate existing tasks');
+      const recalculate = async () => {
+        const value = await snapshot();
+        return require(path.join(vscode.extensions.getExtension(UI_ID).extensionPath, 'lib/dashboard')).dashboardData(value, {
+          windowId: value.windowId, options: {modelPrices: vscode.workspace.getConfiguration('codexNotifier').get('modelPrices')}});
+      };
+      await waitFor(recalculate, s => s.projects.some(project => project.tasks.some(row => Math.abs(row.cost - .0084) < 1e-9)), 'Custom prices should recalculate task details');
       await command('markEntryRead', completedRow.key);
       const read = await snapshot();
       assert.equal(read.unread, 0);
@@ -476,6 +481,27 @@ exports.run = async function run() {
       assert.equal(vscode.window.tabGroups.all.flatMap(group => group.tabs).length, beforeTabs);
       await command('deleteEntry', saved);
       await command('deleteEntry', entry.key);
+    });
+
+    await test('Collector chat titles reach existing task cards and refresh renamed chats without reading or retiming', async () => {
+      const realSource = (await command('local.status')).source;
+      const session = process.env.CODEX_NOTIFIER_TEST_SESSION;
+      const index = path.join(testHome, 'session_index.jsonl');
+      fs.writeFileSync(index, JSON.stringify({id: session, thread_name: 'Build compact dashboard', updated_at: new Date().toISOString()}) + '\n');
+      await command('internal.receive', {version: 1, kind: 'event', source: realSource, event: {
+        version: 1, originator: 'codex_vscode', type: 'done', id: prefix + '-named-chat', timestamp: Date.now() / 1000,
+        cwd: realSource.cwd, session_id: session, turn_id: prefix + '-named-turn'}});
+      const before = await snapshot();
+      await command('dashboard');
+      const named = await waitFor(snapshot, s => s.dashboard.data?.projects.some(project =>
+        project.tasks.some(row => row.title === 'Build compact dashboard')), 'Chat title must enrich retained task metadata');
+      assert.equal(named.unread, before.unread);
+      assert.deepEqual(history(named).map(row => [row.key, row.receivedAt]), history(before).map(row => [row.key, row.receivedAt]));
+      fs.appendFileSync(index, JSON.stringify({id: session, thread_name: 'Renamed compact dashboard', updated_at: new Date().toISOString()}) + '\n');
+      await command('dashboard');
+      const renamed = await waitFor(snapshot, s => s.dashboard.data.projects.some(project =>
+        project.tasks.some(row => row.title === 'Renamed compact dashboard')), 'Updated names must appear without another model turn');
+      assert.equal(renamed.unread, before.unread);
     });
 
     await test('Status bar opens one dashboard tab, preserves unread and follows history and language live', async () => {
@@ -542,7 +568,8 @@ exports.run = async function run() {
         for (const [index, [project, state, model, input, cachedInput, output, complete]] of fixtures.entries()) {
           const event = {version: 1, originator: 'codex_vscode', type: 'task', id: 'dashboard-visual-' + index,
             timestamp: Date.now() / 1000, cwd: path.join(realSource.cwd, 'examples', project),
-            session_id: process.env.CODEX_NOTIFIER_TEST_SESSION, turn_id: 'dashboard-turn-' + index,
+            session_id: state === 'waiting_approval' ? process.env.CODEX_NOTIFIER_TEST_SESSION : require('node:crypto').randomUUID(), turn_id: 'dashboard-turn-' + index,
+            session_title: ['Implement checkout notifications', 'Confirm input validation', 'Optimize pipeline cache', 'Fix failed data import', 'Review theme permissions', 'Generate icon variants'][index],
             task: {sequence: 1, state, model, usage: {complete, segments: model ? [{
               model, tier: 'standard', input, cachedInput, cacheWrite: 0, output, reasoningOutput: 800}] : []}}};
           await command('internal.receive', {version: 1, kind: 'event', source: realSource, event});

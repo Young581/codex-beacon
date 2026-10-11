@@ -169,13 +169,14 @@ function createController(vscode, context, dependencies = {}) {
         const args = [...config.pythonArgs, '-u', script, action, '--retention-days', String(config.retentionDays), '--codex-home', config.codexHome];
         if (action === 'install' && config.label) args.push('--label', config.label);
         if (parameters.previewToken) args.push('--preview-token', parameters.previewToken);
+        if (parameters.sessionIds) for (const id of parameters.sessionIds) args.push('--session-id', id);
         process = spawn(config.python, args, {
           shell: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'],
           env: {...global.process.env, PYTHONIOENCODING: 'utf-8'},
         });
         operations.add(process);
         process.stdout.on('data', chunk => {
-          if (buffer.length + chunk.length > 64 * 1024) {
+          if (buffer.length + chunk.length > (action === 'session-titles' ? 256 : 64) * 1024) {
             process.kill();
             finish(new Error(t('采集器返回内容超过允许大小。')));
           } else buffer = Buffer.concat([buffer, chunk]);
@@ -291,6 +292,12 @@ function createController(vscode, context, dependencies = {}) {
   updateSettings();
   const subscriptions = [
     vscode.commands.registerCommand(`${commandPrefix}.status`, status),
+    vscode.commands.registerCommand(`${commandPrefix}.sessionTitles`, async ids => {
+      if (!Array.isArray(ids) || ids.length > 200 || ids.some(id => typeof id !== 'string' || !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id))) return {titles: []};
+      if (privacyPaused || cleanupInProgress || !config.enabled) return {titles: []};
+      const result = await runAction('session-titles', {sessionIds: [...new Set(ids)]});
+      return {sourceId: source.id, titles: result.titles};
+    }),
     vscode.commands.registerCommand(`${commandPrefix}.setLanguage`, language => {
       if (!['zh-CN', 'en'].includes(language)) return {accepted: false};
       const changed = getLanguage() !== language;

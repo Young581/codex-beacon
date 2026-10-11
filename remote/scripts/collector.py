@@ -18,6 +18,7 @@ import shlex
 import re
 import shutil
 import socket
+import sqlite3
 import stat
 import subprocess
 import sys
@@ -36,6 +37,7 @@ ROLLOUT_TAIL_BYTES = 256 * 1024
 MAX_ROLLOUT_FILES = 64
 MAX_METADATA_BYTES = 1024 * 1024
 MAX_SOURCE_INDEX_FILES = 10000
+MAX_TITLE_INDEX_BYTES = 8 * 1024 * 1024
 SOURCE_FILTER_VERSION = 1
 # Verified in openai.chatgpt 26.901.22334: the native and WSL app-server
 # launchers both set CODEX_INTERNAL_ORIGINATOR_OVERRIDE to this exact value.
@@ -1246,6 +1248,69 @@ def follow(args):
         time.sleep(0.5)
 
 
+def read_session_titles(home, session_ids):
+    """Read only display names for requested IDs; never read message columns."""
+    if privacy_state(home)["paused"]:
+        return []
+    ids = list(dict.fromkeys(session_ids))
+    if len(ids) > 200 or any(not re.fullmatch(r"[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}", value) for value in ids):
+        raise ValueError("invalid session title request")
+    if not ids:
+        return []
+    requested, titles = set(ids), {}
+    try:
+        index = safe_path(home, "session_index.jsonl")
+        if not stat.S_ISREG(index.stat().st_mode):
+            raise ValueError("session title index must be a regular file")
+        with index.open("rb") as stream:
+            size = index.stat().st_size
+            stream.seek(max(0, size - MAX_TITLE_INDEX_BYTES))
+            chunk = stream.read(MAX_TITLE_INDEX_BYTES)
+        if size > MAX_TITLE_INDEX_BYTES:
+            chunk = chunk.partition(b"\n")[2]
+        for line in chunk.splitlines()[-MAX_SOURCE_INDEX_FILES:]:
+            if len(line) > MAX_METADATA_BYTES:
+                continue
+            try:
+                row = json.loads(line)
+                if isinstance(row, dict) and isinstance(row.get("id"), str) and row["id"] in requested and isinstance(row.get("thread_name"), str):
+                    title = clean_text(row["thread_name"], 160).strip()
+                    if title:
+                        titles[row["id"]] = title
+            except (ValueError, UnicodeDecodeError):
+                continue
+    except (OSError, ValueError):
+        pass
+    # Versioned SQLite state is optional. Read the current WAL through a read-only
+    # connection; immutable mode would miss recent edits. Never create a database.
+    databases = sorted((path for path in home.glob("state_*.sqlite") if re.fullmatch(r"state_\d+\.sqlite", path.name)),
+                       key=lambda path: int(path.stem.split("_")[1]), reverse=True)
+    for database in databases[:3]:
+        try:
+            database = safe_path(home, database.name)
+            with contextlib.closing(sqlite3.connect(database.as_uri() + "?mode=ro", uri=True, timeout=0.1)) as connection:
+                connection.execute("PRAGMA query_only=ON")
+                columns = {row[1] for row in connection.execute("PRAGMA table_info(threads)")}
+                if not {"id", "title"}.issubset(columns):
+                    continue
+                name = "name" if "name" in columns else "NULL"
+                placeholders = ",".join("?" for unused in ids)
+                for session_id, custom, default in connection.execute(
+                        "SELECT id, " + name + ", title FROM threads WHERE id IN (" + placeholders + ")", ids):
+                    title = clean_text(custom or default, 160).strip() if isinstance(custom or default, str) else ""
+                    if title:
+                        titles[session_id] = title
+                break
+        except (OSError, ValueError, sqlite3.Error):
+            continue
+    return [{"session_id": session_id, "title": titles[session_id]} for session_id in ids if session_id in titles]
+
+
+def session_titles(args):
+    home = safe_home(args.codex_home or codex_home())
+    print(json.dumps({"titles": read_session_titles(home, args.session_id)}, ensure_ascii=False))
+
+
 def main(argv=None):
     # SSH stdout is an explicitly UTF-8 JSONL protocol, independent of locale.
     for stream in (sys.stdout, sys.stderr):
@@ -1253,7 +1318,7 @@ def main(argv=None):
             stream.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
-    for name in ("install", "uninstall", "test", "follow", "hook", "privacy-status", "preview-privacy-cleanup", "clear-private-data", "resume-private-data"):
+    for name in ("install", "uninstall", "test", "follow", "hook", "privacy-status", "preview-privacy-cleanup", "clear-private-data", "resume-private-data", "session-titles"):
         subparser = commands.add_parser(name)
         subparser.add_argument("--codex-home", help="Codex config directory (default: CODEX_HOME or ~/.codex)")
         subparser.add_argument("--retention-days", type=retention_days, default=DEFAULT_RETENTION_DAYS)
@@ -1269,6 +1334,8 @@ def main(argv=None):
             subparser.add_argument("--owner", default=OWNER, choices=(OWNER,))
         elif name == "clear-private-data":
             subparser.add_argument("--preview-token", required=True)
+        elif name == "session-titles":
+            subparser.add_argument("--session-id", action="append", default=[])
     args = parser.parse_args(argv)
     try:
         if args.command == "test":

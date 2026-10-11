@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.0
+
+- 任务卡片默认只显示聊天标题、模型、状态、时间与轮次，单列排列，每条详情独立展开。
+- token、估算费用与任务操作收进任务详情；侧栏任务行只显示 token 和状态。
+- 从 Codex 标题索引与只读状态数据库匹配聊天名称，改名可刷新；无标题时显示短会话编号。
+- 仅同步已有任务的标题，保留任务时间与未读；本机协议 v8 从 v7 迁移记录。
+- Compact single-column task cards with Codex chat names; usage and actions live in independent task details.
+
 ## 0.6.1
 
 - 右下角 Codex 状态栏按钮直接打开管理面板，保持未读状态；提示文字同步更新。

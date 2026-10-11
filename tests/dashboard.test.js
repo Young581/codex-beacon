@@ -46,11 +46,14 @@ test('webview projection omits raw sources, prompts and histories while retainin
   const malicious = '<img src=x onerror=alert(1)>';
   const row = entry('1', 'completed', {source: {...source, label: malicious, home: 'PRIVATE_HOME', token: 'PRIVATE_CREDENTIAL'},
     prompt: 'PRIVATE_PROMPT'});
+  row.event.session_title = malicious;
   const model = dashboardData({entries: [row]}, {windowId: 'window'});
   const json = JSON.stringify(model);
   assert.ok(!json.includes('PRIVATE_')); assert.ok(!json.includes('"records"'));
   assert.equal(model.projects[0].source, malicious, 'Metadata remains text, not markup');
   assert.equal(model.projects[0].tasks[0].session, 'session');
+  assert.equal(model.projects[0].tasks[0].title, malicious, 'Chat names remain text, not markup');
+  assert.equal(model.projects[0].tasks[0].turn, 'turn-1');
 });
 
 test('dashboard labels follow one language and privacy-paused receiving stays explicit', () => {

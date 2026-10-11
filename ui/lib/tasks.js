@@ -123,8 +123,7 @@ function compactUsage(task, options) {
   if (!usage?.segments?.length) return t('无用量');
   const tokens = usage.segments.reduce((sum, s) => sum + s.input + s.output, 0);
   const count = new Intl.NumberFormat('en', {notation: 'compact', maximumFractionDigits: 2}).format(tokens);
-  const cost = estimateCost(usage, options);
-  return `${count}${usage.complete ? '' : '*'} tok · ${cost.amount === null ? '$?' : '≈$' + cost.amount.toFixed(4)}`;
+  return `${count}${usage.complete ? '' : '*'} tok`;
 }
 function taskTooltip(row, options) {
   const usage = row.telemetry?.usage;
@@ -135,6 +134,7 @@ function taskTooltip(row, options) {
   }, {input: 0, cachedInput: 0, cacheWrite: 0, output: 0, reasoningOutput: 0});
   const date = new Date(row.receivedAt).toLocaleString(getLanguage());
   return [t(STATES[row.taskState][0]), row.read ? t('已读') : t('未读'),
+    ...(row.event.session_title ? [`${t('聊天名称')}: ${clean(row.event.session_title, 160)}`] : []),
     `${t('项目目录')}: ${clean(row.event.cwd || row.source.cwd, 2048)}`,
     `${t('会话')}: ${clean(row.event.session_id)}`, `${t('任务')}: ${clean(row.event.turn_id) || t('未提供')}`,
     `${t('目标窗口')}: ${clean(row.targetWindowLabel) || t('尚未连接')}`,

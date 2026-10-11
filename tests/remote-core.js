@@ -228,7 +228,7 @@ test('remote activate leaves local windows entirely inactive', () => {
 test('embedded local controller registers only local commands and uses the bundled script', async () => {
   const state = fixture(true, false, localOptions({localPythonPath: '/local/python', localSourceLabel: '本机'}));
   try {
-    assert.deepEqual([...state.commands.keys()], ['status', 'setLanguage', 'configureApprovalHook', 'removeApprovalHook', 'test', 'restart',
+    assert.deepEqual([...state.commands.keys()], ['status', 'sessionTitles', 'setLanguage', 'configureApprovalHook', 'removeApprovalHook', 'test', 'restart',
       'privacyStatus', 'previewPrivacyCleanup', 'clearPrivateData', 'resumePrivateData']
       .map(name => 'codexNotifier.local.' + name));
     assert.deepEqual(state.outputNames, ['Codex 通知 · 本地采集']);
