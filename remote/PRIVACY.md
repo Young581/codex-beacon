@@ -69,7 +69,7 @@ Custom notification sounds read only the selected local Windows WAV/MP3 file. It
 
 Project recovery retains validated folder/workspace URIs and window labels with their notifications, including SSH/container authority identifiers. They follow the same retention/deletion policy; no connection passwords or private keys are stored. Legacy recovery reads VS Code's recent-project list only.
 
-Applies to main-extension versions 0.8.0–0.8.3 and remote-collector versions 0.5.0–0.5.2. This is a community extension, not an official OpenAI or Microsoft product.
+Applies to main-extension versions 0.8.0–0.8.4 and remote-collector versions 0.5.0–0.5.3. This is a community extension, not an official OpenAI or Microsoft product.
 
 ### Data destinations and isolation
 
