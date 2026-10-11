@@ -185,3 +185,21 @@ test('management settings accept only explicit values and return action failures
   assert.equal(panel.messages.at(-1).error, 'Python unavailable');
   dashboard.dispose();
 });
+
+test('sound scenario actions accept only supported event enums and expose filenames without local directories', async () => {
+  const calls = [];
+  const {dashboard, panels} = fixture(async (...args) => calls.push(args));
+  dashboard.open(); const panel = panels[0]; await panel.receive({type: 'ready'});
+  for (const [id, value] of [[1, 'arbitrary.wav'], [2, ['done']], [3, '__proto__'], [4, 'default']]) {
+    await panel.receive({type: 'action', id, action: 'chooseEventSound', value});
+  }
+  assert.deepEqual(calls, []);
+  for (const [id, action, value] of [[5, 'chooseEventSound', 'done'], [6, 'previewEventSound', 'question'], [7, 'resetEventSound', 'approval']]) {
+    await panel.receive({type: 'action', id, action, value});
+  }
+  assert.deepEqual(calls, [['chooseEventSound', undefined, 'done'], ['previewEventSound', undefined, 'question'], ['resetEventSound', undefined, 'approval']]);
+  const model = dashboardData({entries: []}, {preferences: {soundFileOnDone: '/private-folder/complete.wav'}});
+  assert.equal(model.management.eventSounds.done, 'complete.wav');
+  assert.equal(JSON.stringify(model).includes('private-folder'), false);
+  dashboard.dispose();
+});

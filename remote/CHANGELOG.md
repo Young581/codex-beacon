@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.5
+
+- Synchronize localized sound-scenario labels for Beacon's completion, question and approval sound settings.
+
 ## 0.5.4
 
 - Synchronize localized conversation and round labels for the redesigned Beacon dashboard and sidebar.

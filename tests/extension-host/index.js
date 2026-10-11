@@ -621,6 +621,18 @@ exports.run = async function run() {
               type: {waiting_input: 'question', waiting_approval: 'approval', completed: 'done'}[state],
               id: 'dashboard-alert-' + index}});
         }
+        if (process.env.CODEX_NOTIFIER_SOUND_REVIEW === '1') {
+          const audio = Buffer.alloc(44 + 800);
+          audio.write('RIFF'); audio.writeUInt32LE(audio.length - 8, 4); audio.write('WAVEfmt ', 8);
+          audio.writeUInt32LE(16, 16); audio.writeUInt16LE(1, 20); audio.writeUInt16LE(1, 22);
+          audio.writeUInt32LE(8000, 24); audio.writeUInt32LE(16000, 28); audio.writeUInt16LE(2, 32); audio.writeUInt16LE(16, 34);
+          audio.write('data', 36); audio.writeUInt32LE(800, 40);
+          for (const [type, key] of Object.entries(require(path.join(vscode.extensions.getExtension(UI_ID).extensionPath, 'lib/sound')).SOUND_KEYS)) {
+            const file = path.join(process.env.CODEX_NOTIFIER_TEST_HOME, type + '.wav');
+            fs.writeFileSync(file, audio);
+            await vscode.workspace.getConfiguration('codexBeacon').update(key, file, vscode.ConfigurationTarget.Global);
+          }
+        }
         await command('dashboard');
         await waitFor(snapshot, s => s.dashboard.ready, 'Visual dashboard must load');
       } else await command('showHistory');

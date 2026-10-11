@@ -21,7 +21,7 @@ $configuration = Join-Path $PSScriptRoot 'configure-notifications.py'
 & $PythonPath -B $configuration --settings $settings --check
 if ($LASTEXITCODE -ne 0) { throw 'Settings validation failed; nothing installed.' }
 
-foreach ($package in @('codex-beacon-collector-0.5.4.vsix', 'codex-beacon-0.8.5.vsix')) {
+foreach ($package in @('codex-beacon-collector-0.5.5.vsix', 'codex-beacon-0.8.6.vsix')) {
     $archive = Join-Path $PSScriptRoot "dist/$package"
     if (-not (Test-Path -LiteralPath $archive)) { throw "Missing archive: $package" }
     # Windows PowerShell treats native stderr warnings as terminating errors

@@ -1,4 +1,7 @@
 {
+  "setting.codexBeacon.soundFileOnDone": "Local WAV/MP3 sound for response completion. Empty follows the common soundFile. The sound and soundOnDone switches still apply.",
+  "setting.codexBeacon.soundFileOnQuestion": "Local WAV/MP3 sound when Codex needs an answer. Empty follows the common soundFile. Notification and sound switches still apply.",
+  "setting.codexBeacon.soundFileOnApproval": "Local WAV/MP3 sound when Codex needs approval. Empty follows the common soundFile. Requires a registered and trusted approval hook; notification and sound switches still apply.",
   "setting.codexBeacon.localAutoConfigureApprovalHook": "Automatically register the approval notification hook after the local collector starts. Review and trust it in Codex settings → Hooks. Disabling this setting keeps the existing hook.",
   "command.codexBeacon.dashboard": "Open dashboard",
   "command.codexBeacon.chooseSound": "Customize notification sound",

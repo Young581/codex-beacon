@@ -9,7 +9,8 @@ const ROW_ACTIONS = new Set(['open', 'window', 'read', 'delete']);
 const GLOBAL_ACTIONS = new Set(['refresh', 'sound', 'soundFile', 'resetSound', 'preview', 'language', 'settings', 'status', 'pause', 'resume', 'privacy', 'clearRead',
   'openLocation', 'installation', 'history', 'clearHistory', 'markRead', 'testNotification', 'testCollector', 'restartCollector',
   'configureHook', 'removeHook', 'openCodex', 'privacyPolicy', 'clearPrivateData', 'clearLocalPrivateData', 'resumePrivateData']);
-const SETTING_ACTIONS = {setLanguage: ['auto', 'zh-CN', 'en'], setOpenLocation: ['sidebar', 'editor'], setAutoHook: [true, false]};
+const SETTING_ACTIONS = {setLanguage: ['auto', 'zh-CN', 'en'], setOpenLocation: ['sidebar', 'editor'], setAutoHook: [true, false],
+  chooseEventSound: ['done', 'question', 'approval'], previewEventSound: ['done', 'question', 'approval'], resetEventSound: ['done', 'question', 'approval']};
 const LABELS = {
   eyebrow: '工作空间动态', title: '项目任务总览', subtitle: '查看任务名称、模型与进度，展开查看用量和详情。',
   projects: '项目', conversations: '对话', allConversations: '全部对话', roundHint: '轮次按当前保留的对话记录排序，筛选不会改变轮次。',
@@ -30,6 +31,8 @@ const LABELS = {
   management: '管理与设置', alerts: '提醒与显示', tools: '测试与连接', records: '通知与数据', approval: '审批提醒',
   openLocation: '会话打开位置', sidebar: 'Codex 会话侧栏', editor: '主编辑器', autoLanguage: '跟随 VS Code',
   soundFile: '选择音频文件（WAV／MP3）', resetSound: '恢复系统默认提示音', defaultSound: 'Windows 系统默认提示音',
+  soundScenario: '提示音场景', commonSound: '通用提示音', doneSound: '本轮完成提示音', questionSound: '等待回答提示音', approvalSound: '等待审批提示音',
+  inheritSound: '跟随通用提示音', soundHint: '未单独设置的场景使用通用提示音；通用提示音为空时使用系统默认声音。',
   installation: '检查／安装当前环境组件', history: '查看通知历史', clearHistory: '清空全部通知', markRead: '全部标为已读',
   testNotification: '测试本机弹窗和声音', testCollector: '测试当前窗口采集链路', restartCollector: '重启当前环境采集器',
   autoHook: '自动添加审批 Hook', configureHook: '重新配置审批提醒', removeHook: '移除审批提醒', openCodex: '打开 Codex',
@@ -93,7 +96,9 @@ function dashboardData(snapshot, {windowId, options = {}, paused = false, connec
         autoEnabled: approvalHook.autoEnabled !== false, trust: 'unknown'},
       language: ['auto', 'zh-CN', 'en'].includes(preferences.language) ? preferences.language : 'auto',
       openLocation: preferences.openLocation === 'editor' ? 'editor' : 'sidebar',
-      soundName: clean(path.basename(preferences.soundFile || ''), 200)},
+      soundName: clean(path.basename(preferences.soundFile || ''), 200),
+      eventSounds: Object.fromEntries([['done', 'soundFileOnDone'], ['question', 'soundFileOnQuestion'], ['approval', 'soundFileOnApproval']]
+        .map(([type, key]) => [type, clean(path.basename(preferences[key] || ''), 200)]))},
     totals: {...usageTotals(rows, options), projects: groups.length, tasks: rows.length,
       running: rows.filter(row => ['running', 'waiting_async'].includes(row.taskState)).length,
       blocked: rows.filter(row => ['waiting_input', 'waiting_approval', 'waiting_async'].includes(row.taskState)).length,

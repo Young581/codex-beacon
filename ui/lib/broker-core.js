@@ -14,7 +14,7 @@ const TYPES = new Set(['done', 'approval', 'question', 'test', 'task']);
 const TITLES = { done: 'Codex 本轮已回复', approval: 'Codex 等待审批', question: 'Codex 等待回答', test: 'Codex 通知测试' };
 const MAX_HISTORY = 200;
 const MAX_SEEN = 5000;
-const BROKER_PROTOCOL_VERSION = 8;
+const BROKER_PROTOCOL_VERSION = 9;
 
 function object(value, name) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${name} must be an object`);

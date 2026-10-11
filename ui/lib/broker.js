@@ -7,6 +7,7 @@ const crypto = require('node:crypto');
 const { spawn } = require('node:child_process');
 const { EventEmitter } = require('node:events');
 const { NotificationStore, BatchScheduler, validateSource, validateEvent, formatBatch, BROKER_PROTOCOL_VERSION } = require('./broker-core');
+const {resolveSoundFile} = require('./sound');
 const { WindowRegistry } = require('./routing');
 const { notificationOptions } = require('./presentation');
 const {loadIdentity, powershell} = require('./ipc-security');
@@ -166,8 +167,9 @@ function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNo
   function effectiveOptions(record, original) {
     const target = targetFor(record);
     if (forcedTests.has(record.key) || !target?.policy) return original;
-    return {...notificationOptions({get: (key, fallback) => target.policy[key] ?? fallback}, target.focused, record.event.type),
-      soundFile: target.policy.soundFile || ''};
+    const config = {get: (key, fallback) => target.policy[key] ?? fallback};
+    return {...notificationOptions(config, target.focused, record.event.type),
+      soundFile: resolveSoundFile(config, ['done', 'question', 'approval'].includes(record.event.type) ? record.event.type : 'default')};
   }
   function liveItems(items) {
     return items.flatMap(item => {
@@ -318,7 +320,7 @@ function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNo
       client.authenticated = true;
       client.id = request.clientId;
       clearTimeout(client.helloTimer);
-      return { version: BROKER_PROTOCOL_VERSION, pid: process.pid, capabilities: ['notification-language-v1', 'custom-sound-v1'] };
+      return { version: BROKER_PROTOCOL_VERSION, pid: process.pid, capabilities: ['notification-language-v1', 'custom-sound-v1', 'event-sounds-v1'] };
     }
     switch (request.op) {
       case 'window': case 'registerWindow': case 'updateWindow': {
@@ -433,7 +435,7 @@ function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNo
   server.on('listening', () => {
     if (stopping) return;
     try {
-      const legacyFileName = ['broker-state-v7.json', 'broker-state-v6.json', 'broker-state-v5.json', 'broker-state-v4.json', 'broker-state-v3.json', 'broker-state-v2.json', 'broker-state.json']
+      const legacyFileName = ['broker-state-v8.json', 'broker-state-v7.json', 'broker-state-v6.json', 'broker-state-v5.json', 'broker-state-v4.json', 'broker-state-v3.json', 'broker-state-v2.json', 'broker-state.json']
         .find(file => fs.existsSync(path.join(storage, file)));
       store.reload({legacyFileName});
       if (store.needsMigration) { store.save(); store.needsMigration = false; }

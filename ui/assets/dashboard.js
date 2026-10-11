@@ -7,7 +7,8 @@
   const saved = vscode.getState();
   let page = saved?.page === 'management' ? 'management' : 'tasks';
   let management = ['alerts', 'approval', 'tools', 'records'].includes(saved?.management) ? saved.management : 'alerts';
-  function saveView() {vscode.setState({page, management});}
+  let soundType = ['default', 'done', 'question', 'approval'].includes(saved?.soundType) ? saved.soundType : 'default';
+  function saveView() {vscode.setState({page, management, soundType});}
   const expanded = new Set();
   const icons = {
     beacon: '<path d="M12 3v18m-4 0h8M8 8a6 6 0 0 0 0 8m8-8a6 6 0 0 1 0 8M5 5a10 10 0 0 0 0 14m14-14a10 10 0 0 1 0 14"/>',
@@ -140,9 +141,26 @@
     const actions = (...nodes) => {const group = el('div', 'management-actions'); group.append(...nodes); return group;};
     const alerts = card(text.alerts, 'sound');
     alerts.append(choice(text.language, 'setLanguage', settings.language, [['auto', text.autoLanguage], ['zh-CN', '中文'], ['en', 'English']]),
-      choice(text.openLocation, 'setOpenLocation', settings.openLocation, [['sidebar', text.sidebar], ['editor', text.editor]]),
-      el('p', 'management-note', text.sound + ': ' + (settings.soundName || text.defaultSound)),
-      actions(action(text.soundFile, 'sound', 'soundFile'), action(text.preview, 'play', 'preview'), action(text.resetSound, 'refresh', 'resetSound')),
+      choice(text.openLocation, 'setOpenLocation', settings.openLocation, [['sidebar', text.sidebar], ['editor', text.editor]]));
+    const soundField = el('label', 'management-field'); soundField.append(el('span', '', text.soundScenario));
+    const scenarios = el('select'); scenarios.disabled = !!pending; scenarios.dataset.focus = 'soundScenario'; scenarios.dataset.soundScenario = 'true';
+    for (const [type, label] of [['default', text.commonSound], ['done', text.doneSound], ['question', text.questionSound], ['approval', text.approvalSound]]) {
+      const file = type === 'default' ? settings.soundName : settings.eventSounds[type];
+      const option = el('option', '', label + ' · ' + (file || (type === 'default' ? text.defaultSound : text.inheritSound)));
+      option.value = type; option.selected = type === soundType; scenarios.append(option);
+    }
+    scenarios.addEventListener('change', () => {soundType = scenarios.value; saveView(); render();}); soundField.append(scenarios);
+    const soundAction = (label, name, common, event) => {
+      if (soundType === 'default') return action(label, name, common);
+      const node = button(label, name, () => send(event, undefined, soundType));
+      node.dataset.action = event; node.dataset.focus = event; return node;
+    };
+    const selectedSound = soundType === 'default' ? settings.soundName : settings.eventSounds[soundType];
+    alerts.append(soundField, el('p', 'management-note', text.sound + ': ' +
+      (selectedSound || (soundType === 'default' ? '' : text.inheritSound + ' · ') + (settings.soundName || text.defaultSound))),
+      el('p', 'management-note', text.soundHint),
+      actions(soundAction(text.soundFile, 'sound', 'soundFile', 'chooseEventSound'), soundAction(text.preview, 'play', 'preview', 'previewEventSound'),
+        soundAction(soundType === 'default' ? text.resetSound : text.inheritSound, 'refresh', 'resetSound', 'resetEventSound')),
       actions(action(data.privacyPaused ? text.resumePrivateData : data.paused ? text.resume : text.pause,
         data.paused ? 'play' : 'pause', data.privacyPaused ? 'resumePrivateData' : data.paused ? 'resume' : 'pause'),
         action(text.settings, 'settings', 'settings')));

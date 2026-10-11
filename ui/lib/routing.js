@@ -1,5 +1,5 @@
 'use strict';
-const {validateSoundFile} = require('./sound');
+const {SOUND_KEYS, validateSoundFile} = require('./sound');
 
 function text(value, limit, required = false) {
   if (value === undefined && !required) return '';
@@ -40,7 +40,9 @@ class WindowRegistry {
     if (value.policy !== undefined) {
       if (!value.policy || typeof value.policy !== 'object' || Array.isArray(value.policy)) throw new Error('Invalid notification policy');
       window.policy = {};
-      if (value.policy.soundFile !== undefined) window.policy.soundFile = validateSoundFile(value.policy.soundFile);
+      for (const key of Object.values(SOUND_KEYS)) {
+        if (value.policy[key] !== undefined) window.policy[key] = validateSoundFile(value.policy[key]);
+      }
       for (const key of ['notificationsEnabled', 'desktopNotifications', 'sound', 'soundOnDone', 'desktopOnDone', 'notifyOnDone', 'notifyOnApproval', 'notifyOnQuestion', 'onlyWhenUnfocused']) {
         if (value.policy[key] !== undefined) {
           if (typeof value.policy[key] !== 'boolean') throw new Error('Invalid notification policy');

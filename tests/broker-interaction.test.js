@@ -229,8 +229,45 @@ test('routing cancels queued and in-flight alerts permanently while failed navig
   } finally {release(); a.dispose(); b.dispose(); broker.close();}
 });
 
-test('v8 migration prefers v7, falls back through v6/v5/v4/v3/v2/v1, and never rewrites a live older broker state', async () => {
-  for (const legacyFileName of ['broker-state-v7.json', 'broker-state-v6.json', 'broker-state-v5.json', 'broker-state-v4.json', 'broker-state-v3.json', 'broker-state-v2.json', 'broker-state.json']) {
+test('event sounds follow the destination window, live edits, inheritance and merged priority', {timeout: 12000}, async () => {
+  const directory = storage('event-sound-policy');
+  const a = new BrokerClient(directory, path.resolve(__dirname, '../ui/lib/broker.js'));
+  const b = new BrokerClient(directory, path.resolve(__dirname, '../ui/lib/broker.js'));
+  const deliveries = [];
+  const native = new EventEmitter(); native.close = () => {};
+  native.deliver = async (batch, latest) => {deliveries.push(latest());};
+  const broker = startBroker({storage: directory, pipe: a.pipe, nativeNotifier: native, noNative: true,
+    batchOptions: {batchMs: 250, intervalMs: 10}});
+  const common = path.join(directory, 'common.wav');
+  const done = path.join(directory, 'done.wav'), question = path.join(directory, 'question.mp3'), approval = path.join(directory, 'approval.wav');
+  const owner = {id: b.clientId, sourceId: source.id, workspaceCwd: '/b', focused: false,
+    policy: {sound: true, desktopNotifications: false, soundFile: common, soundFileOnDone: done, soundFileOnQuestion: question, soundFileOnApproval: approval}};
+  const send = async (id, type) => a.request('event', {source, event: {...event(id, '/b'), type}, options: {sound: true, desktop: false, soundFile: common}});
+  try {
+    await once(broker.server, 'listening'); await a.connect(); await b.connect();
+    assert.ok(a.capabilities.includes('event-sounds-v1'));
+    await a.request('window', {window: {id: a.clientId, sourceId: source.id, workspaceCwd: '/a', focused: false, policy: {soundFile: common}}});
+    await b.request('window', {window: owner});
+    for (const [type, file] of [['done', done], ['question', question], ['approval', approval]]) {
+      await send('event-' + type, type); await pause(400);
+      assert.equal(deliveries.at(-1).soundFile, file, 'The observing window must not replace the destination sound');
+    }
+    await send('queued-question', 'question');
+    const changed = path.join(directory, 'new-question.wav'); owner.policy.soundFileOnQuestion = changed;
+    await b.request('window', {window: owner}); await pause(400);
+    assert.equal(deliveries.at(-1).soundFile, changed);
+    owner.policy.soundFileOnDone = ''; await b.request('window', {window: owner});
+    await send('inherited-done', 'done'); await pause(400); assert.equal(deliveries.at(-1).soundFile, common);
+    const before = deliveries.length;
+    await Promise.all([send('merged-done', 'done'), send('merged-question', 'question'), send('merged-approval', 'approval')]);
+    await pause(400); assert.equal(deliveries.length, before + 1); assert.equal(deliveries.at(-1).soundFile, approval);
+    owner.policy.sound = false; await b.request('window', {window: owner});
+    await send('muted-approval', 'approval'); await pause(400); assert.equal(deliveries.length, before + 1);
+  } finally {a.dispose(); b.dispose(); broker.close();}
+});
+
+test('v9 migration prefers v8, falls back through older states, and never rewrites a live older broker state', async () => {
+  for (const legacyFileName of ['broker-state-v8.json', 'broker-state-v7.json', 'broker-state-v6.json', 'broker-state-v5.json', 'broker-state-v4.json', 'broker-state-v3.json', 'broker-state-v2.json', 'broker-state.json']) {
     const directory = storage('migration');
     const legacy = new NotificationStore(directory, {fileName: legacyFileName});
     legacy.add(source, event('legacy'), {desktop: false, sound: false});
@@ -247,13 +284,13 @@ test('v8 migration prefers v7, falls back through v6/v5/v4/v3/v2/v1, and never r
     const broker = startBroker({storage: directory, pipe: client.pipe, noNative: true});
     await once(broker.server, 'listening');
     try {
-      assert.equal(path.basename(broker.store.file), 'broker-state-v8.json');
+      assert.equal(path.basename(broker.store.file), 'broker-state-v9.json');
       assert.equal(broker.store.needsMigration, false);
       assert.deepEqual(broker.store.entries.map(record => record.event.id), ['legacy']);
       broker.store.markRead({});
       assert.deepEqual(fs.readFileSync(legacy.file), oldBytes);
       legacy.add(source, event('late-legacy'), {desktop: false, sound: false});
-      const reopened = new NotificationStore(directory, {fileName: 'broker-state-v8.json', legacyFileName});
+      const reopened = new NotificationStore(directory, {fileName: 'broker-state-v9.json', legacyFileName});
       assert.equal(reopened.entries.length, 1);
       assert.equal(reopened.history().unread, 0);
     } finally {client.dispose(); broker.close();}

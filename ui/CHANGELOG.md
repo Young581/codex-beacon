@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.6
+
+- 本轮完成、等待回答、等待审批可以分别设置本机 WAV／MP3 音效，留空跟随原有通用音效。
+- 管理与设置 → 提醒与显示增加提示音场景选择，每类可选择文件、试听及恢复跟随通用音效。
+- 音效按对应项目窗口的设置选择，保留声音总开关、完成声音开关和合并提醒的优先级；文件无法播放时回退系统声音。
+- 更新通知协议至 v9，优先迁移 v8 历史且保留旧版文件，支持新缓存的保护和隐私清理。
+- Configure and preview completion, question and approval sounds independently, with common-sound inheritance and destination-window routing.
+
 ## 0.8.5
 
 - 任务卡片右上角直接提供打开会话、标为已读和删除，无需展开详情。

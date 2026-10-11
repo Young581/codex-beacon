@@ -19,6 +19,7 @@
 - 左侧按对话筛选，原生侧栏显示“项目 → 对话名称 → 第几轮”；窄窗口提供项目和对话下拉列表。轮次按当前保留记录编号，删除或过期后会重新编号。
 - 管理与设置使用分类导航和单列内容，每行一个操作。
 - Windows 桌面通知、任务栏和窗口标题标记，支持本机 WAV／MP3 自定义音效及试听。
+- 完成、等待回答、等待审批可分别设置音效；未单独设置时跟随通用音效。
 - 中文和英文界面随 VS Code 切换，也可手动选择语言。
 - 本机采集内置；SSH／容器通过独立配套组件采集事件。
 
@@ -33,6 +34,10 @@ Windows 会自动识别 `py` 启动器或用户／系统标准目录及 PATH 中
 SSH／容器项目需要在目标环境安装并启用 **Codex Beacon Collector**（`Young581.codex-beacon-collector`），并在那里安装 Python 3.8+。主扩展的 **检查／安装当前环境的组件** 可定位该组件。Windows 本地音效仍在本机播放。远端集成有自动化检查，本次未进行真实 SSH／容器环境验证。
 
 ### 提示音与用量
+
+打开 **管理与设置 → 提醒与显示 → 提示音场景**，选择通用、本轮完成、等待回答或等待审批，再选择音频文件、试听或恢复默认。每类音效独立保存，留空跟随通用音效；通用音效留空使用 Windows 系统声音。仍受声音总开关控制，完成音效还受 `soundOnDone` 控制。
+
+对应设置：`codexBeacon.soundFileOnDone`、`codexBeacon.soundFileOnQuestion`、`codexBeacon.soundFileOnApproval`。SSH／容器项目也使用当前 Windows 电脑的音频。合并提醒只播放一次，按审批、回答、完成的顺序选择最高优先级音效。
 
 在管理面板选择 **自定义提示音**，选取本机 WAV／MP3 文件，也可设置 `codexBeacon.soundFile`。支持试听和恢复系统音；文件失效时回退到系统音。更换音效无需重载。
 
@@ -74,7 +79,7 @@ Local collection is embedded. Windows automatically detects the launcher or Pyth
 
 For SSH/container projects, install **Codex Beacon Collector** (`Young581.codex-beacon-collector`) and Python in that environment. Use **Check / install components for this environment** to locate it. Native audio plays on your Windows computer. Remote integration has automated checks but has not been tested against a live SSH/container host in this release.
 
-Choose a local WAV/MP3 file with **Customize notification sound**, preview it, or restore the system sound. Settings include `codexBeacon.soundFile`, language, notification policies and custom model prices (`codexBeacon.modelPrices`, USD per million tokens). Estimated costs are API estimates rather than bills; unknown and partial usage remains labeled.
+In **Management and settings → Alerts and display → Sound scenario**, select Common, Completion, Question or Approval, then choose a local WAV/MP3 file, preview it or reset it. Each event sound is independent; an empty override inherits `codexBeacon.soundFile`, and an empty common sound uses the Windows system sound. Settings: `codexBeacon.soundFileOnDone`, `codexBeacon.soundFileOnQuestion`, `codexBeacon.soundFileOnApproval`. The global sound switch and completion's `soundOnDone` still apply. Merged alerts play once, preferring approval, then question, then completion. Settings also include language, notification policies and custom model prices (`codexBeacon.modelPrices`, USD per million tokens). Estimated costs are API estimates rather than bills; unknown and partial usage remains labeled.
 
 Colored states distinguish running, waiting for input/approval, response complete, failed, canceled and unknown. Finishing a response does not prove that background work has finished. Pausing alerts keeps recording history; marking read does not approve an action. Approval reminders require a separately configured and trusted hook.
 

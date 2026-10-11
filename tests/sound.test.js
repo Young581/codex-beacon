@@ -6,7 +6,7 @@ const os = require('node:os');
 const path = require('node:path');
 const {spawnSync} = require('node:child_process');
 const {once} = require('node:events');
-const {validateSoundFile, checkSoundFile, SoundSettings} = require('../ui/lib/sound');
+const {validateSoundFile, checkSoundFile, SoundSettings, resolveSoundFile} = require('../ui/lib/sound');
 const {formatBatch, validateOptions} = require('../ui/lib/broker-core');
 const {WindowRegistry} = require('../ui/lib/routing');
 const {powershell} = require('../ui/lib/ipc-security');
@@ -96,6 +96,39 @@ test('window policy rejects invalid sound paths atomically and preserves per-win
   assert.throws(() => windows.update('a', {...info, policy: {soundFile: 'relative.wav'}}));
   assert.equal(windows.windows.get('a').policy.soundFile, wav);
   assert.equal(windows.windows.get('b').policy.soundFile, '');
+});
+
+test('event sound configuration preserves common and other events, inherits when reset, and previews the selected event', async t => {
+  const {wav} = fixture(t);
+  const common = path.join(os.tmpdir(), 'common.mp3');
+  const values = {soundFile: common, soundFileOnQuestion: wav};
+  const previews = [];
+  const config = () => ({get: (key, fallback) => values[key] ?? fallback, update: async (key, value) => {values[key] = value;}});
+  const vscode = {ConfigurationTarget: {Global: 1}, Uri: {file: fsPath => ({scheme: 'file', fsPath})}, window: {
+    showOpenDialog: async () => [{scheme: 'file', fsPath: wav}], showWarningMessage: async () => {},
+    showQuickPick: async items => items.find(item => item.value === 'preview'),
+  }};
+  const controller = new SoundSettings(vscode, {config, preview: async type => {previews.push(type);}});
+  await controller.chooseFile('done');
+  assert.equal(resolveSoundFile(config(), 'done'), wav);
+  assert.equal(resolveSoundFile(config(), 'question'), wav);
+  assert.equal(resolveSoundFile(config(), 'approval'), common);
+  await controller.choose('done'); assert.deepEqual(previews, ['done']);
+  await controller.reset('done');
+  assert.equal(resolveSoundFile(config(), 'done'), common);
+  assert.equal(values.soundFileOnQuestion, wav); assert.equal(values.soundFile, common);
+  values.soundFile = ''; assert.equal(resolveSoundFile(config(), 'done'), '');
+  for (const type of ['failed', '__proto__', ['done'], null]) await assert.rejects(controller.chooseFile(type));
+});
+
+test('invalid event sound policies are rejected atomically without changing prior sounds', () => {
+  const windows = new WindowRegistry();
+  const info = {id: 'a', sourceId: 'local', focused: false, policy: {
+    soundFile: path.join(os.tmpdir(), 'common.wav'), soundFileOnDone: path.join(os.tmpdir(), 'complete.wav')}};
+  windows.update('a', info);
+  assert.throws(() => windows.update('a', {...info, policy: {...info.policy, soundFileOnApproval: 'relative.mp3'}}));
+  assert.equal(windows.windows.get('a').policy.soundFileOnDone, info.policy.soundFileOnDone);
+  assert.equal(windows.windows.get('a').policy.soundFileOnApproval, undefined);
 });
 
 test('a merged batch plays once using the highest-priority audible event, including a system-default override', () => {

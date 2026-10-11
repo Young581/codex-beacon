@@ -1,4 +1,7 @@
 {
+  "setting.codexBeacon.soundFileOnDone": "本轮回复完成时播放的本机 WAV／MP3 文件。留空跟随通用 soundFile；仍受声音总开关与 soundOnDone 控制。",
+  "setting.codexBeacon.soundFileOnQuestion": "Codex 等待回答时播放的本机 WAV／MP3 文件。留空跟随通用 soundFile；仍受提醒与声音总开关控制。",
+  "setting.codexBeacon.soundFileOnApproval": "Codex 等待审批时播放的本机 WAV／MP3 文件。留空跟随通用 soundFile；需要已注册并信任的审批 Hook，仍受提醒与声音总开关控制。",
   "setting.codexBeacon.localAutoConfigureApprovalHook": "本地采集器正常启动后自动注册审批提醒 Hook。请在 Codex 设置 → Hooks 中核对并信任。关闭此设置会保留已有 Hook。",
   "command.codexBeacon.dashboard": "打开仪表盘",
   "command.codexBeacon.chooseSound": "自定义提示音",

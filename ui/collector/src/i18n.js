@@ -1,6 +1,13 @@
 'use strict';
 // Only extension-owned templates are translated. Substitutions are opaque data.
 const MESSAGES = {
+  "提示音场景": "Sound scenario",
+  "通用提示音": "Common sound",
+  "本轮完成提示音": "Completion sound",
+  "等待回答提示音": "Question sound",
+  "等待审批提示音": "Approval sound",
+  "跟随通用提示音": "Use common sound",
+  "未单独设置的场景使用通用提示音；通用提示音为空时使用系统默认声音。": "Scenarios without a custom sound use the common sound. An empty common sound uses the system default.",
   "对话": "Conversations",
   "全部对话": "All conversations",
   "未命名对话": "Untitled conversation",

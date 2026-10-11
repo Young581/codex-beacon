@@ -12,7 +12,7 @@ const {WindowAttention} = require('./lib/window-attention');
 const {ReadTracker} = require('./lib/read-tracking');
 const {PrivacyActions} = require('./lib/privacy');
 const {inspectInstallation, showInstallation} = require('./lib/installation');
-const {SoundSettings, validateSoundFile} = require('./lib/sound');
+const {SOUND_KEYS, SoundSettings, validateSoundFile, resolveSoundFile} = require('./lib/sound');
 const {Dashboard, dashboardData} = require('./lib/dashboard');
 const {projectGroups} = require('./lib/tasks');
 const TESTING = process.env.CODEX_NOTIFIER_TEST_MODE === '1';
@@ -59,7 +59,7 @@ async function activate(context) {
       collectionState: sourceStatus?.status?.state || '', collectionMessage: sourceStatus?.status?.message || '',
       environment: sourceStatus?.source?.label || '', approvalHook: sourceStatus?.status?.approvalHook,
       preferences: {language: config().get('language', 'auto'), openLocation: config().get('openLocation', 'sidebar'),
-        soundFile: config().get('soundFile', '')}}),
+        ...Object.fromEntries(Object.values(SOUND_KEYS).map(key => [key, config().get(key, '')]))}}),
     action: async (action, key, value) => {
       const generation = privacyGeneration;
       const commands = {sound: 'chooseSound', preview: 'testSound', language: 'chooseLanguage', settings: 'settings',
@@ -76,6 +76,9 @@ async function activate(context) {
       if (action === 'setAutoHook') return remoteCommand('codexBeacon.remote.setAutoApprovalHook', value);
       if (action === 'soundFile') return soundSettings.chooseFile();
       if (action === 'resetSound') return soundSettings.reset();
+      if (action === 'chooseEventSound') return soundSettings.chooseFile(value);
+      if (action === 'resetEventSound') return soundSettings.reset(value);
+      if (action === 'previewEventSound') return vscode.commands.executeCommand('codexBeacon.testSound', value);
       if (action === 'privacyPolicy') return vscode.commands.executeCommand('markdown.showPreview', vscode.Uri.file(path.join(context.extensionPath, 'PRIVACY.md')));
       if (action === 'openCodex') return vscode.commands.executeCommand('chatgpt.openSidebar');
       await refresh();
@@ -110,8 +113,10 @@ async function activate(context) {
     const environment = sourceStatus?.source?.label || vscode.env.remoteName || t('本机');
     const policy = Object.fromEntries(['notificationsEnabled', 'desktopNotifications', 'sound', 'soundOnDone', 'desktopOnDone', 'notifyOnDone', 'notifyOnApproval', 'notifyOnQuestion', 'onlyWhenUnfocused']
       .map(key => [key, config().get(key, !['onlyWhenUnfocused', 'desktopOnDone'].includes(key))]));
-    try { policy.soundFile = validateSoundFile(config().get('soundFile', '')); }
-    catch (error) { policy.soundFile = ''; log(error.message); }
+    for (const key of Object.values(SOUND_KEYS)) {
+      try { policy[key] = validateSoundFile(config().get(key, '')); }
+      catch (error) { policy[key] = ''; log(error.message); }
+    }
     return {id: client.clientId, label: clean(`${project} · ${environment}`, 200),
       sourceId: sourceStatus?.source?.id || '', workspaceUri: (vscode.workspace.workspaceFile || folder)?.toString() || '',
       workspaceCwd: cwd, workspaceCwds: paths, focused: vscode.window.state.focused, routeUri: '', policy, language: getLanguage()};
@@ -285,10 +290,10 @@ async function activate(context) {
     log(t('已提交一条本机测试通知；是否可见可听取决于 Windows 通知和音量设置。'));
     return receipt;
   });
-  register('codexBeacon.testSound', async () => {
-    const soundFile = validateSoundFile(config().get('soundFile', ''));
+  register('codexBeacon.testSound', async (type = 'default') => {
+    const soundFile = resolveSoundFile(config(), type);
     await client.connect();
-    if (!client.capabilities?.includes('custom-sound-v1')) {
+    if (!client.capabilities?.includes(type === 'default' ? 'custom-sound-v1' : 'event-sounds-v1')) {
       await vscode.window.showWarningMessage(t('旧版通知后台仍在运行。请在任务空闲后关闭所有 VS Code 窗口，等待 10 秒再重新打开，以启用自定义提示音。'));
       return {unsupported: true};
     }
@@ -296,7 +301,7 @@ async function activate(context) {
     return client.request('test', {source, options: {desktop: false, sound: true, soundFile}});
   });
   const soundSettings = new SoundSettings(vscode, {config,
-    preview: () => vscode.commands.executeCommand('codexBeacon.testSound')});
+    preview: type => vscode.commands.executeCommand('codexBeacon.testSound', type)});
   register('codexBeacon.chooseSound', () => soundSettings.choose());
   register('codexBeacon.pause', async () => { await config().update('notificationsEnabled', false, vscode.ConfigurationTarget.Global); updateBadge(); return {paused: true}; });
   register('codexBeacon.resume', async () => { await config().update('notificationsEnabled', true, vscode.ConfigurationTarget.Global); updateBadge(); return {paused: false}; });
@@ -515,10 +520,11 @@ async function activate(context) {
     failure(t('这条通知对应的窗口尚未连接。请打开对应 SSH／容器窗口，或在升级后重载该窗口。')).catch(() => {});
   });
   client.on('actionError', message => { failure(clean(message.error, 1000)).catch(() => {}); });
-  let soundFallbackWarned = false;
+  const soundFallbackWarned = new Set();
   client.on('soundFallback', message => {
-    if (!message.soundFile || config().get('soundFile', '') !== message.soundFile || soundFallbackWarned) return;
-    soundFallbackWarned = true;
+    if (!message.soundFile || !Object.values(SOUND_KEYS).some(key => config().get(key, '') === message.soundFile) ||
+        soundFallbackWarned.has(message.soundFile)) return;
+    soundFallbackWarned.add(message.soundFile);
     const warning = t('自定义提示音无法播放，已使用系统默认提示音。请重新选择有效的 WAV／MP3 文件。');
     log(warning);
     vscode.window.showWarningMessage(warning).then(() => {}, () => {});
@@ -529,7 +535,7 @@ async function activate(context) {
     failure(t('Windows 系统通知显示失败，更新已保存在通知历史。') + clean(message.error, 200)).catch(() => {});
   });
   context.subscriptions.push(output, history, view, statusBar, vscode.workspace.onDidChangeConfiguration(event => {
-    if (event.affectsConfiguration('codexBeacon.soundFile')) soundFallbackWarned = false;
+    if (Object.values(SOUND_KEYS).some(key => event.affectsConfiguration('codexBeacon.' + key))) soundFallbackWarned.clear();
     if (event.affectsConfiguration('codexBeacon.language')) {
       vscode.commands.executeCommand('setContext', 'codexBeacon.menuLanguage', getLanguage()).catch(error => log(error.message));
       view.title = t('任务');

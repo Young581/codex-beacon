@@ -2,7 +2,7 @@
 
 为 VS Code 中的 Codex 提供按项目分组的任务列表、状态灯、token 与费用估算，以及完成提醒。
 
-基于 [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier) 的 MIT 开源项目，包含 Windows PowerShell 路径修复和安装辅助脚本。当前代码版本为主扩展 **0.8.5**、采集器 **0.5.4**，支持对话分组与轮次显示，并将常用操作集中到仪表盘“管理与设置”。市场当前已确认版本仍为 0.8.0／0.5.0，更新版可从 Releases 获取。
+基于 [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier) 的 MIT 开源项目，包含 Windows PowerShell 路径修复和安装辅助脚本。当前代码版本为主扩展 **0.8.6**、采集器 **0.5.5**，支持分场景音效、对话分组与轮次显示，并将常用操作集中到仪表盘“管理与设置”。市场当前已确认版本仍为 0.8.0／0.5.0，更新版可从 Releases 获取。
 
 ## 当前功能
 
@@ -75,7 +75,9 @@ Windows 勿扰模式、通知权限和静音设置可能影响实际提醒。首
 
 ## 自定义提示音
 
-打开任务面板右上角“…” → 通知菜单 → **自定义提示音**，或在命令面板运行 **Codex Beacon: 自定义提示音**，选择本机 WAV／MP3 文件。该菜单也可 **试听当前提示音** 或 **恢复系统默认提示音**。试听只播放声音，不弹出桌面通知；即使声音总开关关闭，主动试听仍播放。试听会在历史中留下测试记录。
+打开 **管理与设置 → 提醒与显示 → 提示音场景**，分别选择通用、本轮完成、等待回答或等待审批，再选择本机 WAV／MP3 文件、试听或恢复默认。也可运行 **Codex Beacon: 自定义提示音**，在菜单中进入对应场景。试听只播放声音，不弹出桌面通知；即使声音总开关关闭，主动试听仍播放。试听会在历史中留下测试记录。
+
+分场景设置为 `codexBeacon.soundFileOnDone`、`codexBeacon.soundFileOnQuestion`、`codexBeacon.soundFileOnApproval`。留空跟随通用 `codexBeacon.soundFile`，通用留空使用系统声音。各场景独立保存，恢复某一场景不影响其他音效；仍遵守声音总开关与完成声音开关。
 
 所选音频用于本轮完成、等待审批和等待回答的声音提醒。也可在用户设置中填写 `codexBeacon.soundFile` 的本机绝对路径；留空使用系统提示音。SSH／容器项目也读取 Windows 本机音频。修改后无需重载；首次从旧版升级需在任务空闲时关闭全部 VS Code 窗口，等待 10 秒再打开，以更新共享通知后台。
 
