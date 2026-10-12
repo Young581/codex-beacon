@@ -10,12 +10,70 @@ const {normalizeTask} = require('../collector/src/task-data');
 const {destination} = require('./project-window');
 const {validateSoundFile, validateSoundVolume} = require('./sound');
 const {normalizePath} = require('./routing');
+const {clean} = require('./presentation');
 
 const TYPES = new Set(['done', 'approval', 'approval_resolved', 'question', 'test', 'task']);
 const TITLES = { done: 'Codex 本轮已回复', approval: 'Codex 等待审批', question: 'Codex 等待回答', test: 'Codex 通知测试' };
 const MAX_HISTORY = 200;
 const MAX_SEEN = 5000;
-const BROKER_PROTOCOL_VERSION = 12;
+const BROKER_PROTOCOL_VERSION = 13;
+
+// Display and deletion derive state from the complete round; an alert can
+// carry newer telemetry than the stable task event.
+function pathIdentity(cwd) {
+  let result = clean(cwd, 2048).replace(/\\/g, '/').replace(/\/+$/, '');
+  if (/^[a-z]:\//i.test(result) || result.startsWith('//')) result = result.toLowerCase();
+  return result || '/';
+}
+function taskIdentity(entry) {
+  const event = entry.event;
+  return JSON.stringify([entry.source.id, pathIdentity(event.cwd || entry.source.cwd), event.session_id,
+    event.turn_id || event.id]);
+}
+function inferredState(event) {
+  if (event.type === 'question' && event.question_mode === 'async') return 'waiting_async';
+  return {done: 'completed', question: 'waiting_input', approval: 'waiting_approval'}[event.type] || 'unknown';
+}
+function taskRows(entries, {requireConnected = true} = {}) {
+  const tasks = new Map();
+  for (const entry of [...entries].sort((a, b) => a.event.timestamp - b.event.timestamp || a.receivedAt - b.receivedAt)) {
+    const id = taskIdentity(entry);
+    let row = tasks.get(id);
+    if (!row) { row = {id, records: []}; tasks.set(id, row); }
+    row.records.push(entry);
+  }
+  return [...tasks.values()].filter(row => row.records.some(entry => entry.event.type !== 'approval_resolved')).map(row => {
+    const ordered = row.records;
+    const alerts = ordered.filter(entry => !['task', 'approval_resolved'].includes(entry.event.type));
+    const unread = alerts.filter(entry => !entry.read);
+    const representative = unread.at(-1) || alerts.at(-1) || ordered.at(-1);
+    const telemetry = ordered.filter(entry => entry.event.task).sort((a, b) =>
+      a.event.task.sequence - b.event.task.sequence || a.receivedAt - b.receivedAt).at(-1);
+    const latest = ordered.filter(entry => entry.event.type !== 'approval_resolved').at(-1);
+    const resolved = resolvedApprovalKeys(ordered);
+    let state = telemetry?.event.task.state || inferredState(latest.event);
+    // Hook approval can arrive after the most recent rollout snapshot.
+    const pendingApproval = [...ordered].reverse().find(entry => entry.event.type === 'approval' &&
+      entry.event.timestamp > (telemetry?.event.task.continuedAt || 0) && !resolved.has(entry.key));
+    if (pendingApproval && !['completed', 'cancelled', 'failed'].includes(state)) state = 'waiting_approval';
+    else if (latest.event.type === 'approval' && resolved.has(latest.key)) state = telemetry?.event.task.state || 'running';
+    else if (latest.event.type !== 'task' && latest.event.timestamp > (telemetry?.event.timestamp || 0)) state = inferredState(latest.event);
+    const target = latest.targetWindowId || representative.targetWindowId;
+    if (requireConnected && (!target || latest.taskConfirmed === false) && ['running', 'waiting_input', 'waiting_async', 'waiting_approval'].includes(state)) state = 'unknown';
+    return {...representative, taskId: row.id, records: ordered, relatedKeys: ordered.map(entry => entry.key),
+      read: unread.length === 0, taskState: state, telemetry: telemetry?.event.task,
+      receivedAt: Math.max(...ordered.map(entry => entry.receivedAt)), targetWindowId: target};
+  }).map((row, index, rows) => {
+    // A later explicit round start supersedes an unfinished historical round.
+    const active = ['running', 'waiting_input', 'waiting_async', 'waiting_approval'].includes(row.taskState);
+    const start = row.telemetry?.startedAt ?? Math.min(...row.records.map(record => record.event.timestamp));
+    if (active && rows.some(other => other !== row && other.source.id === row.source.id &&
+      other.event.session_id === row.event.session_id && pathIdentity(other.event.cwd || other.source.cwd) === pathIdentity(row.event.cwd || row.source.cwd) &&
+      (other.telemetry?.startedAt > start || other.telemetry?.startedAt === start &&
+        other.telemetry?.startSequence > row.telemetry?.startSequence))) return {...row, taskState: 'unknown'};
+    return row;
+  });
+}
 
 function conversationKey(record) {
   return JSON.stringify([record.source.id, normalizePath(record.event.cwd || record.source.cwd || ''), record.event.session_id]);
@@ -404,12 +462,17 @@ class NotificationStore extends EventEmitter {
     return this.removeMatching(record => record.key === key);
   }
 
-  clearRead() {
-    const pendingTasks = new Set(this.entries.filter(record => !record.read).map(record =>
-      JSON.stringify([record.source.id, record.event.session_id, record.event.turn_id])));
-    return this.removeMatching(record => record.read && (record.event.type !== 'task' ||
-      ['completed', 'failed', 'cancelled'].includes(record.event.task.state) && !pendingTasks.has(
-        JSON.stringify([record.source.id, record.event.session_id, record.event.turn_id]))));
+  clearRead({annotate} = {}) {
+    const protectedKeys = new Set();
+    const entries = annotate ? this.entries.map(annotate) : this.entries;
+    for (const row of taskRows(entries, {requireConnected: !!annotate})) {
+      // Preserve all evidence for active rounds and pending reminders,
+      // including read questions and PostToolUse resolution records.
+      if (!row.read || ['running', 'waiting_input', 'waiting_async', 'waiting_approval'].includes(row.taskState)) {
+        for (const key of row.relatedKeys) protectedKeys.add(key);
+      }
+    }
+    return this.removeMatching(record => record.read && !protectedKeys.has(record.key));
   }
 
   removeMatching(predicate) {
@@ -531,4 +594,4 @@ class BatchScheduler extends EventEmitter {
   }
 }
 
-module.exports = { NotificationStore, BatchScheduler, validateSource, validateEvent, validateOptions, formatBatch, MAX_HISTORY, MAX_SEEN, BROKER_PROTOCOL_VERSION, turnKey, resolvedApprovalKeys };
+module.exports = { NotificationStore, BatchScheduler, validateSource, validateEvent, validateOptions, formatBatch, MAX_HISTORY, MAX_SEEN, BROKER_PROTOCOL_VERSION, turnKey, resolvedApprovalKeys, pathIdentity, taskIdentity, taskRows };

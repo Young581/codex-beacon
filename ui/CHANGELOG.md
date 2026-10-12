@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.2
+
+- 修复“清空已读”只删除完成提醒、留下旧运行记录，导致任务变成“状态未确认”的问题；已读历史按完整轮次移除。
+- 保留正在运行、等待回答、等待审批及仍有未读提醒任务的全部状态记录，包括已读的问题和审批恢复事件。
+- 已读且未确认仍在运行的历史任务可清理；保留删除去重，重放不会恢复已删除轮次。
+- 通知进程升级为 v13 并迁移 v12 历史，使修复在窗口重新加载后生效。
+- Clear read history removes entire read rounds without leaving stale running snapshots. Preserve state evidence for live tasks and unread reminders, and prevent replay from restoring deleted rounds.
+
 ## 0.9.1
 
 - 审批请求与 PostToolUse 工具结果通过操作摘要配对；升级时保留已有 hook，自动补齐结果 hook。

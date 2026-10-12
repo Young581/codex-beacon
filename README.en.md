@@ -6,7 +6,7 @@ Track Codex tasks by project in VS Code with colored status lights, token usage,
 
 为 VS Code 中的 Codex 提供按项目分组的任务列表、状态灯、token 与费用估算，以及完成提醒。[阅读完整中文说明 →](README.md)
 
-Based on the MIT-licensed [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier), with Windows PowerShell path fixes and installation helpers. The current code versions are **Codex Beacon 0.9.1** and **Collector 0.5.10**. Features include sound volume, sounds for different events, conversation grouping, numbered rounds and a dashboard with common management controls. Check the installed extension's details for its Marketplace version; the latest fixes are available from Releases.
+Based on the MIT-licensed [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier), with Windows PowerShell path fixes and installation helpers. The current code versions are **Codex Beacon 0.9.2** and **Collector 0.5.10**. Features include sound volume, sounds for different events, conversation grouping, numbered rounds and a dashboard with common management controls. Check the installed extension's details for its Marketplace version; the latest fixes are available from Releases.
 
 ## Features
 
@@ -144,7 +144,7 @@ For older notifications without a remote address, the extension tries VS Code's 
 | Canceled | Gray | Explicit interruption event |
 | Unknown | Gray | Disconnected source window or no state in the log |
 
-State reflects the latest collected event. Silence or a single tool error is not treated as task failure. Older completion notifications without a start event remain complete, but no token usage is invented. Usage updates are silent and do not add unread reminders. Clearing read history retains running tasks and usage for tasks that still have unread reminders.
+State reflects the latest collected event. Silence or a single tool error is not treated as task failure. Older completion notifications without a start event remain complete, but no token usage is invented. Usage updates are silent and do not add unread reminders. Clearing read history removes entire read rounds, including read historical tasks whose activity is unconfirmed. It preserves every record for confirmed live tasks and tasks with unread reminders so cleanup does not change their states.
 
 Default rates come from the [OpenAI pricing table](https://developers.openai.com/api/docs/pricing), checked on **2026-10-10**, in USD per million tokens. Short-context pricing is the default. A recorded `service_tier` selects that tier; otherwise Standard is used. Override context and tier with `codexBeacon.pricingContext` and `codexBeacon.pricingTier`.
 

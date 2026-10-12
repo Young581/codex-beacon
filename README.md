@@ -6,7 +6,7 @@
 
 Track Codex tasks by project in VS Code with colored status lights, token usage, estimated API costs and completion alerts. [Read the full English guide →](README.en.md)
 
-基于 [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier) 的 MIT 开源项目，包含 Windows PowerShell 路径修复和安装辅助脚本。当前代码版本为主扩展 **0.9.1**、采集器 **0.5.10**，支持音量调节、分场景音效、对话分组与轮次显示，并将常用操作集中到仪表盘“管理与设置”。市场安装版本请以扩展详情为准，最新修复版可从 Releases 获取。
+基于 [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier) 的 MIT 开源项目，包含 Windows PowerShell 路径修复和安装辅助脚本。当前代码版本为主扩展 **0.9.2**、采集器 **0.5.10**，支持音量调节、分场景音效、对话分组与轮次显示，并将常用操作集中到仪表盘“管理与设置”。市场安装版本请以扩展详情为准，最新修复版可从 Releases 获取。
 
 ## 当前功能
 
@@ -144,7 +144,7 @@ python -B build.py --output dist
 | 已取消 | 灰 | 明确的中断事件 |
 | 状态未确认 | 灰 | 来源窗口未连接或日志未提供状态 |
 
-状态基于最后采集到的事件，不根据静默或某次工具报错推断任务失败。没有开始事件的旧通知仍显示完成状态，但不会补造 token 用量。用量更新静默，不增加未读。清空已读会保留进行中的任务，以及仍有未读提醒的任务用量。
+状态基于最后采集到的事件，不根据静默或某次工具报错推断任务失败。没有开始事件的旧通知仍显示完成状态，但不会补造 token 用量。用量更新静默，不增加未读。清空已读会整轮移除已读历史，包括已读且未确认仍在运行的旧任务；保留已确认活跃任务及仍有未读提醒任务的全部记录，避免状态因清理而变化。
 
 默认单价来自 [OpenAI 官方价格表](https://developers.openai.com/api/docs/pricing)，核对日期 **2026-10-10**，单位为美元／百万 token。默认使用短上下文价格；有 `service_tier` 时使用该档位，否则按 Standard 估算。可通过 `codexBeacon.pricingContext` 和 `codexBeacon.pricingTier` 覆盖上下文与档位。
 

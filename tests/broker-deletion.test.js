@@ -7,6 +7,7 @@ const {once} = require('node:events');
 const {startBroker, NativeNotifier} = require('../ui/lib/broker');
 const {NotificationStore, BROKER_PROTOCOL_VERSION} = require('../ui/lib/broker-core');
 const {BrokerClient} = require('../ui/lib/client');
+const {taskRows} = require('../ui/lib/tasks');
 
 const source = {id: 'shared-source', label: 'shared', host: 'host', home: '/codex', cwd: '/project'};
 const event = id => ({version: 1, type: 'done', id, timestamp: Date.now() / 1000,
@@ -81,6 +82,43 @@ test('deletion cancels in-flight retries, queued alerts and CLICK keys while cle
   assert.deepEqual(await f.b.request('clear'), {unread: 0});
   assert.equal(native.clicks.size, 0);
   assert.deepEqual((await f.a.request('history')).entries, []);
+});
+
+test('clear-read removes completed and unconfirmed read rounds while preserving live states and unread history', {timeout: 15000}, async t => {
+  const f = await fixture(t);
+  await f.a.request('window', {window: {id: f.a.clientId, label: 'project', sourceId: source.id,
+    workspaceCwd: '/project', workspaceCwds: ['/project'], focused: false}});
+  const send = value => f.a.request('event', {source, event: value, options: silent});
+  const snapshot = (id, turn, state = 'running', sequence = 10, type = 'task') => ({...event(id),
+    turn_id: turn, type, task: {state, sequence}});
+  const activeStates = ['running', 'waiting_input', 'waiting_async', 'waiting_approval'];
+  for (const state of activeStates) {
+    await send(snapshot('live-' + state, state, state));
+    if (state !== 'running') {
+      const type = state === 'waiting_approval' ? 'approval' : 'question';
+      await send({...snapshot('alert-' + state, state, state, 20, type),
+        ...(type === 'question' ? {question_mode: state === 'waiting_async' ? 'async' : 'blocking'} : {})});
+    }
+  }
+  for (const turn of ['read-completion', 'unread-completion']) {
+    await send(snapshot(turn + '-live', turn));
+    await send(snapshot(turn + '-done', turn, 'completed', 20, 'done'));
+  }
+  await send({...snapshot('stale-read', 'stale-read'), replayed: true});
+  await send({...snapshot('stale-unread-live', 'stale-unread'), replayed: true});
+  await send({...snapshot('stale-unread-question', 'stale-unread', 'waiting_input', 20, 'question'), replayed: true});
+  const before = (await f.a.request('history')).entries;
+  await f.a.request('markRead', {keys: before.filter(row => !['unread-completion', 'stale-unread'].includes(row.event.turn_id)).map(row => row.key)});
+  assert.equal(taskRows((await f.a.request('history')).entries).find(row => row.event.turn_id === 'stale-read').taskState, 'unknown');
+  assert.deepEqual(await f.a.request('clearRead'), {deleted: 3, unread: 2});
+  const after = (await f.a.request('history')).entries;
+  const tasks = taskRows(after);
+  for (const state of activeStates) assert.equal(tasks.find(row => row.event.turn_id === state).taskState, state);
+  assert.equal(tasks.find(row => row.event.turn_id === 'unread-completion').records.length, 2);
+  assert.equal(tasks.find(row => row.event.turn_id === 'stale-unread').records.length, 2);
+  assert.equal(tasks.some(row => ['stale-read', 'read-completion'].includes(row.event.turn_id)), false);
+  assert.equal((await send(snapshot('read-completion-live', 'read-completion'))).duplicate, true);
+  assert.deepEqual(await f.a.request('clearRead'), {deleted: 0, unread: 2});
 });
 
 test('default done alerts sound and remain unread while approval also displays', {timeout: 15000}, async t => {

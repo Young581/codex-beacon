@@ -493,6 +493,42 @@ exports.run = async function run() {
       await config.update('modelPrices', {}, vscode.ConfigurationTarget.Global);
     });
 
+    await test('Clear-read removes complete rounds and preserves the live read question in the sidebar and dashboard', async () => {
+      const append = (type, payload) => fs.appendFileSync(fixturePath, JSON.stringify({
+        timestamp: new Date().toISOString(), type, payload}) + '\n');
+      const finished = prefix + '-clear-read-finished', live = prefix + '-clear-read-live';
+      append('event_msg', {type: 'task_started', turn_id: finished});
+      await waitFor(snapshot, s => history(s).some(row => row.event.turn_id === finished), 'The first task must start');
+      append('event_msg', {type: 'task_complete', turn_id: finished});
+      const completed = await waitFor(snapshot, s => s.tasks?.some(row => row.state === 'completed'), 'The first round must complete');
+      await command('markEntryRead', completed.tasks.find(row => row.state === 'completed').key);
+      append('event_msg', {type: 'task_started', turn_id: live});
+      await waitFor(snapshot, s => s.tasks?.some(row => row.state === 'running'), 'The current round must start');
+      append('response_item', {type: 'function_call', name: 'request_user_input', call_id: 'clear-read-question'});
+      const waiting = await waitFor(snapshot, s => s.tasks?.some(row => row.state === 'waiting_input'), 'The current question must block');
+      const waitingRow = waiting.tasks.find(row => row.state === 'waiting_input');
+      await command('markEntryRead', waitingRow.key);
+      const removed = history(await snapshot()).filter(row => row.event.turn_id === finished);
+      assert.ok(removed.length >= 2, 'The finished round must include both running and completion records');
+      assert.equal((await command('clearRead')).deleted, removed.length);
+      const after = await snapshot();
+      assert.equal(after.tasks.length, 1, 'Clearing read history must leave only the live round');
+      assert.equal(after.tasks[0].state, 'waiting_input');
+      const data = require(path.join(vscode.extensions.getExtension(UI_ID).extensionPath, 'lib/dashboard'))
+        .dashboardData(after, {windowId: after.windowId});
+      assert.equal(data.totals.blocked, 1);
+      for (const record of removed) assert.ok(accepted(await command('internal.receive', {
+        version: 1, kind: 'event', source: record.source, event: record.event})));
+      assert.equal((await snapshot()).tasks.length, 1, 'Deleted events must not return through collector replay');
+      append('response_item', {type: 'function_call_output', call_id: 'clear-read-question', output: 'PRIVATE'});
+      await waitFor(snapshot, s => s.tasks?.some(row => row.state === 'running'), 'Answer must still restore running');
+      append('event_msg', {type: 'task_complete', turn_id: live});
+      const ended = await waitFor(snapshot, s => s.tasks?.some(row => row.state === 'completed'), 'The current round must complete');
+      await command('markEntryRead', ended.tasks[0].key);
+      await command('clearRead');
+      assert.equal((await snapshot()).tasks.length, 0, 'Read completion must not leave an unknown task');
+    });
+
     await test('Restarting collection does not revive historical running tasks without fresh activity', async () => {
       const turn = prefix + '-restore-active';
       const append = (type, payload) => fs.appendFileSync(fixturePath, JSON.stringify({

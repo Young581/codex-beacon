@@ -90,10 +90,10 @@ test('single deletion accepts read and unread entries, preserves other entries a
   assert.equal(restarted.history().unread, 1);
 });
 
-test('clearRead removes only read entries, preserves dedup tombstones, and clear still removes all history', () => {
+test('clearRead removes read rounds, preserves unread rounds and dedup tombstones, and clear still removes all history', () => {
   const storage = directory();
   const store = new NotificationStore(storage);
-  const read = store.add(source, event('read'), {});
+  const read = store.add(source, {...event('read'), turn_id: 'read-turn'}, {});
   const unread = store.add(source, event('unread'), {});
   store.markRead({key: read.key});
   assert.deepEqual(store.clearRead(), {deleted: 1, unread: 1});
@@ -109,7 +109,7 @@ test('clearRead removes only read entries, preserves dedup tombstones, and clear
 test('invalid delete requests and failed persistence cannot partially remove history or emit cancellation', () => {
   const store = new NotificationStore(directory());
   const a = store.add(source, event('a'), {});
-  const b = store.add(source, event('b'), {});
+  const b = store.add(source, {...event('b'), turn_id: 'read-turn'}, {});
   store.markRead({key: b.key});
   for (const request of [undefined, null, [], {}, {key: ''}, {key: 1}, {key: '\n'}, {key: 'x'.repeat(514)}]) {
     assert.throws(() => store.deleteEntry(request));

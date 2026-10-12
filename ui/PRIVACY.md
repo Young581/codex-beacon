@@ -4,7 +4,7 @@
 
 ## 中文
 
-适用版本：主扩展 0.8.0–0.9.1、远端采集器 0.5.0–0.5.10。社区扩展，非 OpenAI 或 Microsoft 官方产品。
+适用版本：主扩展 0.8.0–0.9.2、远端采集器 0.5.0–0.5.10。社区扩展，非 OpenAI 或 Microsoft 官方产品。
 
 ## 数据去向与隔离
 
@@ -69,7 +69,7 @@ Custom notification sounds read only the selected local WAV/MP3 file. Its path i
 
 Project recovery retains validated folder/workspace URIs and window labels with their notifications, including SSH/container authority identifiers. They follow the same retention/deletion policy; no connection passwords or private keys are stored. Legacy recovery reads VS Code's recent-project list only.
 
-Applies to main-extension versions 0.8.0–0.9.1 and remote-collector versions 0.5.0–0.5.10. This is a community extension, not an official OpenAI or Microsoft product.
+Applies to main-extension versions 0.8.0–0.9.2 and remote-collector versions 0.5.0–0.5.10. This is a community extension, not an official OpenAI or Microsoft product.
 
 ### Data destinations and isolation
 

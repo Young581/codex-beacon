@@ -294,6 +294,88 @@ test('clear-read preserves telemetry for active tasks and tasks with pending ale
   store.markRead({});
   assert.equal(store.clearRead().deleted, 2);
 });
+
+test('clear-read removes the whole read round when only the completion alert has terminal telemetry', () => {
+  for (const state of ['completed', 'failed', 'cancelled']) {
+    const directory = path.join(__dirname, '.broker-test-data', crypto.randomUUID());
+    const store = new NotificationStore(directory);
+    const live = event('live');
+    const done = event('done', 'done', 20, state);
+    store.add(source, live, {});
+    store.add(source, done, {});
+    store.markRead({});
+    assert.equal(taskRows(store.history().entries)[0].taskState, state);
+    assert.deepEqual(store.clearRead(), {deleted: 2, unread: 0});
+    assert.deepEqual(taskRows(store.history().entries), []);
+    const restarted = new NotificationStore(directory);
+    assert.equal(restarted.add(source, live, {}).duplicate, true);
+    assert.equal(restarted.add(source, done, {}).duplicate, true);
+    assert.equal(restarted.add(source, event('live', 'task', 30, state), {}).duplicate, true);
+    assert.deepEqual(restarted.history().entries, []);
+  }
+});
+
+test('clear-read preserves read questions and resolved approvals that still determine an active round', () => {
+  for (const mode of ['blocking', 'async']) {
+    const store = new NotificationStore(path.join(__dirname, '.broker-test-data', crypto.randomUUID()));
+    store.add(source, event('live'), {});
+    const question = {...event('question', 'question', 20, mode === 'async' ? 'waiting_async' : 'waiting_input'), question_mode: mode};
+    store.add(source, question, {});
+    store.markRead({});
+    const before = taskRows(store.history().entries.map(record => ({...record, targetWindowId: 'this-window', taskConfirmed: true})));
+    assert.equal(store.clearRead().deleted, 0);
+    const after = taskRows(store.history().entries.map(record => ({...record, targetWindowId: 'this-window', taskConfirmed: true})));
+    assert.equal(after[0].taskState, before[0].taskState);
+    assert.deepEqual(after[0].relatedKeys, before[0].relatedKeys);
+  }
+  const store = new NotificationStore(path.join(__dirname, '.broker-test-data', crypto.randomUUID()));
+  const timestamp = Date.now() / 1000;
+  const approval = {...event('approval', 'approval'), timestamp: timestamp - 1, action_key: 'a'.repeat(64)};
+  delete approval.task;
+  const resolution = {...approval, id: 'resolution', type: 'approval_resolved', timestamp};
+  store.add(source, approval, {});
+  store.add(source, resolution, {});
+  assert.equal(store.history().unread, 0);
+  assert.equal(store.clearRead().deleted, 0);
+  const remaining = store.history().entries.map(record => ({...record, targetWindowId: 'this-window', taskConfirmed: true}));
+  assert.equal(taskRows(remaining)[0].taskState, 'running');
+  assert.equal(remaining.length, 2);
+});
+
+test('clear-read preserves an unread round in full and isolates projects, sources and rounds', () => {
+  const store = new NotificationStore(path.join(__dirname, '.broker-test-data', crypto.randomUUID()));
+  store.add(source, event('read-live'), {});
+  store.add(source, event('read-done', 'done', 20, 'completed'), {});
+  store.markRead({});
+  const variants = [
+    {source, change: {cwd: '/other/project'}},
+    {source: {...source, id: 'other-source'}, change: {}},
+    {source, change: {turn_id: 'other-turn'}},
+    {source, change: {session_id: 'other-session'}},
+  ];
+  for (const [index, variant] of variants.entries()) {
+    store.add(variant.source, {...event('pending-live-' + index), ...variant.change}, {});
+    store.add(variant.source, {...event('pending-done-' + index, 'done', 20, 'completed'), ...variant.change}, {});
+  }
+  assert.deepEqual(store.clearRead(), {deleted: 2, unread: variants.length});
+  assert.equal(store.history().entries.length, variants.length * 2);
+  assert.equal(taskRows(store.history().entries).every(row => row.taskState === 'completed' && !row.read), true);
+});
+
+test('clear-read rolls back an entire round when saving fails', () => {
+  const store = new NotificationStore(path.join(__dirname, '.broker-test-data', crypto.randomUUID()));
+  store.add(source, event('live'), {});
+  store.add(source, event('done', 'done', 20, 'completed'), {});
+  store.markRead({});
+  const before = store.history().entries;
+  let removed = false;
+  store.on('removed', () => {removed = true;});
+  store.save = () => {throw new Error('fixture save failure');};
+  assert.throws(() => store.clearRead(), /fixture save failure/);
+  assert.deepEqual(store.history().entries, before);
+  assert.equal(removed, false);
+  assert.equal(taskRows(store.history().entries)[0].taskState, 'completed');
+});
 test('metadata validators drop private fields and reject invalid subsets, counters and task identities', () => {
   const input = event('fixture'); input.task.prompt = 'PRIVATE'; input.task.usage.segments[0].command = 'PRIVATE';
   assert.equal(JSON.stringify(validateEvent(input)).includes('PRIVATE'), false);
