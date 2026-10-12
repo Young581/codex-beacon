@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.11
+
+- 同步主扩展 0.9.3 的中英文“审批处理中”与审批请求提示，不改变 Codex 审批决定或 Hook 信任。
+- Align approval-request wording with the main extension. PermissionRequest alone does not prove a task is blocked or needs manual approval.
+
 ## 0.5.10
 
 - Add preserving PostToolUse lifecycle upgrades and match resolved approvals by opaque operation digest; store no arguments or tool results.

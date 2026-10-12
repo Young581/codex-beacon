@@ -97,12 +97,26 @@ test('sidebar groups named conversations and numbers rounds before state sorting
   assert.equal(view.getParent(updated), undefined);
   assert.equal(view.getTreeItem(view.groups[0].entries[0]).label, '第 1 轮');
 });
-test('active unconnected tasks are explicitly unconfirmed; hook approval overrides older telemetry', () => {
+test('a PermissionRequest starts approval processing without proving that the task is blocked', () => {
   const running = row('live', 10);
   assert.equal(taskRows([{...running, targetWindowId: undefined}])[0].taskState, 'unknown');
   const approval = {...row('approve', 20), read: false, event: {...event('approve', 'approval'), timestamp: running.event.timestamp + 1}};
   delete approval.event.task;
-  assert.equal(taskRows([running, approval])[0].taskState, 'waiting_approval');
+  assert.equal(taskRows([running, approval])[0].taskState, 'approval_requested');
+  const view = new HistoryView(mock, 'this-window');
+  view.update([running, approval]);
+  const projected = view.groups[0].entries[0];
+  assert.equal(view.getTreeItem(projected).description, '审批处理中');
+  assert.doesNotMatch(view.getTreeItem(projected).tooltip, /^阻塞/m);
+  assert.match(view.getTreeItem(projected).tooltip, /自动审核/);
+  const waiting = {...running, event: {...running.event, task: {...running.event.task, state: 'waiting_approval'}}};
+  assert.equal(taskRows([waiting])[0].taskState, 'waiting_approval', 'An explicit waiting state is independent of a hook request');
+  assert.equal(taskRows([waiting, approval])[0].taskState, 'waiting_approval');
+  const question = {...running, event: {...running.event, task: {...running.event.task, state: 'waiting_input'}}};
+  assert.equal(taskRows([question, approval])[0].taskState, 'waiting_input', 'An approval request cannot hide a verified input wait');
+  const {formatBatch} = require('../ui/lib/broker-core');
+  assert.match(formatBatch([{record: approval, options: {desktop: true, sound: false}}]).title, /有审批请求/);
+  assert.doesNotMatch(formatBatch([{record: approval, options: {desktop: true, sound: false}}]).title, /等待审批/);
 });
 
 test('async delivery remains nonblocking without telemetry; counters do not resolve approvals', () => {
@@ -113,9 +127,9 @@ test('async delivery remains nonblocking without telemetry; counters do not reso
   const approval = {...row('approve', 20), read: false, event: {...event('approve', 'approval'), timestamp: running.event.timestamp + 1}};
   delete approval.event.task;
   const counters = row('counters', 30); counters.event.timestamp = approval.event.timestamp + 1;
-  assert.equal(taskRows([running, approval, counters])[0].taskState, 'waiting_approval');
+  assert.equal(taskRows([running, approval, counters])[0].taskState, 'approval_requested');
   const delayed = {...counters, event: {...counters.event, task: {...counters.event.task, continuedAt: approval.event.timestamp - 1}}};
-  assert.equal(taskRows([running, approval, delayed])[0].taskState, 'waiting_approval');
+  assert.equal(taskRows([running, approval, delayed])[0].taskState, 'approval_requested');
   counters.event.task.continuedAt = approval.event.timestamp + 0.5;
   assert.equal(taskRows([running, approval, counters])[0].taskState, 'running');
 });
@@ -169,7 +183,7 @@ test('tool resolution clears its matching approval but preserves parallel and re
   store.add(source, resolution, {sound: true, desktop: true});
   assert.equal(store.history().unread, 1);
   const records = store.history().entries.map(record => ({...record, targetWindowId: 'fixture'}));
-  assert.equal(taskRows(records)[0].taskState, 'waiting_approval', 'The other parallel approval remains pending');
+  assert.equal(taskRows(records)[0].taskState, 'approval_requested', 'The other parallel approval remains pending');
   store.add(source, {...resolution, id: 'second-resolved', action_key: second.action_key}, {});
   assert.equal(taskRows(store.history().entries.map(record => ({...record, targetWindowId: 'fixture'})))[0].taskState, 'running');
   store.add(source, {...approval, id: 'repeated', timestamp: stamp + 2}, {});

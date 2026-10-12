@@ -6,7 +6,7 @@ Track Codex tasks by project in VS Code with colored status lights, token usage,
 
 为 VS Code 中的 Codex 提供按项目分组的任务列表、状态灯、token 与费用估算，以及完成提醒。[阅读完整中文说明 →](README.md)
 
-Based on the MIT-licensed [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier), with Windows PowerShell path fixes and installation helpers. The current code versions are **Codex Beacon 0.9.2** and **Collector 0.5.10**. Features include sound volume, sounds for different events, conversation grouping, numbered rounds and a dashboard with common management controls. Check the installed extension's details for its Marketplace version; the latest fixes are available from Releases.
+Based on the MIT-licensed [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier), with Windows PowerShell path fixes and installation helpers. The current code versions are **Codex Beacon 0.9.3** and **Collector 0.5.11**. Features include sound volume, sounds for different events, conversation grouping, numbered rounds and a dashboard with common management controls. Check the installed extension's details for its Marketplace version; the latest fixes are available from Releases.
 
 ## Features
 
@@ -138,7 +138,8 @@ For older notifications without a remote address, the extension tries VS Code's 
 | Running | Blue | Explicit task start or resume event |
 | Blocked · waiting for input | Yellow | Structured question; resumes after a reply |
 | Waiting for input · still running | Purple | Asynchronous question while work continues |
-| Blocked · waiting for approval | Orange | Configured approval reminder hook |
+| Approval processing | Purple | The hook reports a request before review; automatic approval is possible and a manual block is unverified |
+| Blocked · waiting for approval | Orange | Reserved for an explicit waiting state from the data source; never inferred from PermissionRequest alone |
 | Response complete | Green | End of the current response |
 | Failed | Red | Explicit task failure event |
 | Canceled | Gray | Explicit interruption event |

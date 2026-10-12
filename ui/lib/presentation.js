@@ -1,6 +1,6 @@
 'use strict';
 const {t} = require('./i18n');
-const LABELS = {done: '本轮已回复', approval: '等待批准', question: '等待回答', test: '通知测试'};
+const LABELS = {done: '本轮已回复', approval: '审批请求', question: '等待回答', test: '通知测试'};
 
 function clean(value, limit = 400) {
   return typeof value === 'string' ? value.replace(/[\u0000-\u001f\u007f]/g, ' ').slice(0, limit) : '';

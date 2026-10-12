@@ -9,6 +9,7 @@ const STATES = {
   waiting_input: ['阻塞 · 等待回答', 'question', 'charts.yellow'],
   waiting_async: ['等待回答 · 继续运行', 'comment-discussion', 'charts.purple'],
   waiting_approval: ['阻塞 · 等待审批', 'shield', 'charts.orange'],
+  approval_requested: ['审批处理中', 'shield', 'charts.purple'],
   completed: ['本轮完成', 'pass-filled', 'charts.green'],
   failed: ['失败', 'error', 'charts.red'],
   cancelled: ['已取消', 'circle-slash', 'descriptionForeground'],
@@ -52,7 +53,7 @@ function conversationGroups(rows) {
     const named = [...group.entries].sort((a, b) => b.receivedAt - a.receivedAt).find(row => row.event.session_title);
     group.title = clean(named?.event.session_title, 160) || t('未命名对话');
     group.unread = group.entries.some(row => !row.read);
-    group.active = group.entries.some(row => ['running', 'waiting_input', 'waiting_async', 'waiting_approval'].includes(row.taskState));
+    group.active = group.entries.some(row => ['running', 'waiting_input', 'waiting_async', 'waiting_approval', 'approval_requested'].includes(row.taskState));
     group.receivedAt = Math.max(...group.entries.map(row => row.receivedAt));
     return group;
   }).sort((a, b) => Number(b.active) - Number(a.active) || Number(b.unread) - Number(a.unread) || b.receivedAt - a.receivedAt);
@@ -70,12 +71,12 @@ function projectGroups(entries, windowId) {
     });
     projects.get(identity).entries.push(row);
   }
-  const priority = {waiting_approval: 0, waiting_input: 1, waiting_async: 2, running: 3, failed: 4, unknown: 5, completed: 6, cancelled: 7};
+  const priority = {waiting_approval: 0, waiting_input: 1, waiting_async: 2, approval_requested: 3, running: 4, failed: 5, unknown: 6, completed: 7, cancelled: 8};
   return [...projects.values()].map(group => {
     group.entries.sort((a, b) => (priority[a.taskState] ?? 7) - (priority[b.taskState] ?? 7) || b.receivedAt - a.receivedAt);
     group.unread = group.entries.some(row => !row.read);
     group.current = group.entries.some(row => row.targetWindowId === windowId);
-    group.active = group.entries.some(row => ['running', 'waiting_input', 'waiting_async', 'waiting_approval'].includes(row.taskState));
+    group.active = group.entries.some(row => ['running', 'waiting_input', 'waiting_async', 'waiting_approval', 'approval_requested'].includes(row.taskState));
     group.conversations = group.test ? [] : conversationGroups(group.entries);
     return group;
   }).sort((a, b) => Number(b.current) - Number(a.current) || Number(b.active) - Number(a.active) ||
@@ -130,6 +131,7 @@ function taskTooltip(row, options) {
   }, {input: 0, cachedInput: 0, cacheWrite: 0, output: 0, reasoningOutput: 0});
   const date = new Date(row.receivedAt).toLocaleString(getLanguage());
   return [t(STATES[row.taskState][0]), row.read ? t('已读') : t('未读'),
+    ...(row.taskState === 'approval_requested' ? [t('审批请求可能由 Codex 自动审核；此状态不代表已阻塞或必须手动批准。请打开 Codex 查看是否需要处理。')] : []),
     ...(row.event.session_title ? [`${t('聊天名称')}: ${clean(row.event.session_title, 160)}`] : []),
     `${t('项目目录')}: ${clean(row.event.cwd || row.source.cwd, 2048)}`,
     `${t('会话')}: ${clean(row.event.session_id)}`, `${t('任务')}: ${clean(row.event.turn_id) || t('未提供')}`,

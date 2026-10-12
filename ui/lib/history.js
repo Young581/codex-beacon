@@ -39,8 +39,8 @@ class HistoryView {
       const item = new vscode.TreeItem(`${entry.title} (${entry.entries.length})`,
         entry.current || entry.active || entry.unread ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed);
       item.id = entry.id;
-      const running = entry.entries.filter(row => row.taskState === 'running').length;
-      const waiting = entry.entries.filter(row => ['waiting_input', 'waiting_approval', 'waiting_async'].includes(row.taskState)).length;
+      const running = entry.entries.filter(row => ['running', 'approval_requested'].includes(row.taskState)).length;
+      const waiting = entry.entries.filter(row => ['waiting_input', 'waiting_approval', 'waiting_async', 'approval_requested'].includes(row.taskState)).length;
       const segments = entry.entries.flatMap(row => row.telemetry?.usage?.segments || []);
       const complete = entry.entries.every(row => row.telemetry?.usage?.complete && row.telemetry.usage.segments.length);
       item.description = [entry.current ? t('本窗口') : t('其他窗口'), clean(entry.source.label || entry.source.host, 80),
@@ -92,7 +92,7 @@ class HistoryView {
       const item = new vscode.TreeItem(entry.read ? label : {label, highlights: [[0, label.length]]}, vscode.TreeItemCollapsibleState.None);
       item.id = 'task-' + crypto.createHash('sha256').update(entry.taskId).digest('hex');
       item.description = t({completed: '完成', running: '运行', waiting_input: '等回答',
-        waiting_approval: '等审批', waiting_async: '异步等待', unknown: '未知'}[entry.taskState] || state);
+        waiting_approval: '等审批', approval_requested: '审批处理中', waiting_async: '异步等待', unknown: '未知'}[entry.taskState] || state);
       item.tooltip = taskTooltip(entry, this.options());
       item.iconPath = new vscode.ThemeIcon(icon, new vscode.ThemeColor(color));
       item.command = {command: 'codexBeacon.showEntry', title: t('打开对应会话并标为已读'), arguments: [entry.key]};

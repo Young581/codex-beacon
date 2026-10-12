@@ -103,8 +103,8 @@ function dashboardData(snapshot, {windowId, options = {}, paused = false, connec
       eventSounds: Object.fromEntries([['done', 'soundFileOnDone'], ['question', 'soundFileOnQuestion'], ['approval', 'soundFileOnApproval']]
         .map(([type, key]) => [type, clean(path.basename(preferences[key] || ''), 200)]))},
     totals: {...usageTotals(rows, options), projects: groups.length, tasks: rows.length,
-      running: rows.filter(row => ['running', 'waiting_async'].includes(row.taskState)).length,
-      blocked: rows.filter(row => ['waiting_input', 'waiting_approval', 'waiting_async'].includes(row.taskState)).length,
+      running: rows.filter(row => ['running', 'waiting_async', 'approval_requested'].includes(row.taskState)).length,
+      blocked: rows.filter(row => ['waiting_input', 'waiting_approval', 'waiting_async', 'approval_requested'].includes(row.taskState)).length,
       completed: rows.filter(row => row.taskState === 'completed').length, unread: rows.filter(row => !row.read).length},
     projects};
 }

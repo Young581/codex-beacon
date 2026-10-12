@@ -13,10 +13,10 @@ const {normalizePath} = require('./routing');
 const {clean} = require('./presentation');
 
 const TYPES = new Set(['done', 'approval', 'approval_resolved', 'question', 'test', 'task']);
-const TITLES = { done: 'Codex 本轮已回复', approval: 'Codex 等待审批', question: 'Codex 等待回答', test: 'Codex 通知测试' };
+const TITLES = { done: 'Codex 本轮已回复', approval: 'Codex 有审批请求', question: 'Codex 等待回答', test: 'Codex 通知测试' };
 const MAX_HISTORY = 200;
 const MAX_SEEN = 5000;
-const BROKER_PROTOCOL_VERSION = 13;
+const BROKER_PROTOCOL_VERSION = 14;
 
 // Display and deletion derive state from the complete round; an alert can
 // carry newer telemetry than the stable task event.
@@ -32,7 +32,7 @@ function taskIdentity(entry) {
 }
 function inferredState(event) {
   if (event.type === 'question' && event.question_mode === 'async') return 'waiting_async';
-  return {done: 'completed', question: 'waiting_input', approval: 'waiting_approval'}[event.type] || 'unknown';
+  return {done: 'completed', question: 'waiting_input', approval: 'approval_requested'}[event.type] || 'unknown';
 }
 function taskRows(entries, {requireConnected = true} = {}) {
   const tasks = new Map();
@@ -55,17 +55,20 @@ function taskRows(entries, {requireConnected = true} = {}) {
     // Hook approval can arrive after the most recent rollout snapshot.
     const pendingApproval = [...ordered].reverse().find(entry => entry.event.type === 'approval' &&
       entry.event.timestamp > (telemetry?.event.task.continuedAt || 0) && !resolved.has(entry.key));
-    if (pendingApproval && !['completed', 'cancelled', 'failed'].includes(state)) state = 'waiting_approval';
+    // PermissionRequest precedes automatic review and tool execution. It does
+    // not prove that a manual approval prompt is visible or the task is blocked.
+    if (pendingApproval && !['completed', 'cancelled', 'failed', 'waiting_input', 'waiting_approval'].includes(state)) state = 'approval_requested';
     else if (latest.event.type === 'approval' && resolved.has(latest.key)) state = telemetry?.event.task.state || 'running';
-    else if (latest.event.type !== 'task' && latest.event.timestamp > (telemetry?.event.timestamp || 0)) state = inferredState(latest.event);
+    else if (latest.event.type !== 'task' && latest.event.timestamp > (telemetry?.event.timestamp || 0) &&
+      !(latest.event.type === 'approval' && ['waiting_input', 'waiting_approval'].includes(state))) state = inferredState(latest.event);
     const target = latest.targetWindowId || representative.targetWindowId;
-    if (requireConnected && (!target || latest.taskConfirmed === false) && ['running', 'waiting_input', 'waiting_async', 'waiting_approval'].includes(state)) state = 'unknown';
+    if (requireConnected && (!target || latest.taskConfirmed === false) && ['running', 'waiting_input', 'waiting_async', 'waiting_approval', 'approval_requested'].includes(state)) state = 'unknown';
     return {...representative, taskId: row.id, records: ordered, relatedKeys: ordered.map(entry => entry.key),
       read: unread.length === 0, taskState: state, telemetry: telemetry?.event.task,
       receivedAt: Math.max(...ordered.map(entry => entry.receivedAt)), targetWindowId: target};
   }).map((row, index, rows) => {
     // A later explicit round start supersedes an unfinished historical round.
-    const active = ['running', 'waiting_input', 'waiting_async', 'waiting_approval'].includes(row.taskState);
+    const active = ['running', 'waiting_input', 'waiting_async', 'waiting_approval', 'approval_requested'].includes(row.taskState);
     const start = row.telemetry?.startedAt ?? Math.min(...row.records.map(record => record.event.timestamp));
     if (active && rows.some(other => other !== row && other.source.id === row.source.id &&
       other.event.session_id === row.event.session_id && pathIdentity(other.event.cwd || other.source.cwd) === pathIdentity(row.event.cwd || row.source.cwd) &&
@@ -468,7 +471,7 @@ class NotificationStore extends EventEmitter {
     for (const row of taskRows(entries, {requireConnected: !!annotate})) {
       // Preserve all evidence for active rounds and pending reminders,
       // including read questions and PostToolUse resolution records.
-      if (!row.read || ['running', 'waiting_input', 'waiting_async', 'waiting_approval'].includes(row.taskState)) {
+      if (!row.read || ['running', 'waiting_input', 'waiting_async', 'waiting_approval', 'approval_requested'].includes(row.taskState)) {
         for (const key of row.relatedKeys) protectedKeys.add(key);
       }
     }

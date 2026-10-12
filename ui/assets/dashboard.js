@@ -74,7 +74,7 @@
   }
   function matches(task, group) {
     if (conversation !== 'all' && task.conversationId !== conversation) return false;
-    const states = {running: ['running', 'waiting_async'], blocked: ['waiting_input', 'waiting_approval', 'waiting_async'],
+    const states = {running: ['running', 'waiting_async', 'approval_requested'], blocked: ['waiting_input', 'waiting_approval', 'waiting_async', 'approval_requested'],
       completed: ['completed'], failed: ['failed', 'cancelled']};
     if (filter === 'unread' && !task.unread) return false;
     if (states[filter] && !states[filter].includes(task.state)) return false;

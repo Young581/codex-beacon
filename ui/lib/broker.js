@@ -484,7 +484,7 @@ function startBroker({ storage, pipe, noNative = false, idleMs = 10000, nativeNo
   server.on('listening', () => {
     if (stopping) return;
     try {
-      const legacyFileName = ['broker-state-v12.json', 'broker-state-v11.json', 'broker-state-v10.json', 'broker-state-v9.json', 'broker-state-v8.json', 'broker-state-v7.json', 'broker-state-v6.json', 'broker-state-v5.json', 'broker-state-v4.json', 'broker-state-v3.json', 'broker-state-v2.json', 'broker-state.json']
+      const legacyFileName = ['broker-state-v13.json', 'broker-state-v12.json', 'broker-state-v11.json', 'broker-state-v10.json', 'broker-state-v9.json', 'broker-state-v8.json', 'broker-state-v7.json', 'broker-state-v6.json', 'broker-state-v5.json', 'broker-state-v4.json', 'broker-state-v3.json', 'broker-state-v2.json', 'broker-state.json']
         .find(file => fs.existsSync(path.join(storage, file)));
       store.reload({legacyFileName});
       if (store.needsMigration) { store.save(); store.needsMigration = false; }

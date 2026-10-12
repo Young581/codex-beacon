@@ -366,8 +366,8 @@ test('event sounds follow the destination window, live edits, inheritance and me
   } finally {a.dispose(); b.dispose(); broker.close();}
 });
 
-test('v13 migration prefers v12, falls back through older states, and never rewrites a live older broker state', async () => {
-  for (const legacyFileName of ['broker-state-v12.json', 'broker-state-v11.json', 'broker-state-v10.json', 'broker-state-v9.json', 'broker-state-v8.json', 'broker-state-v7.json', 'broker-state-v6.json', 'broker-state-v5.json', 'broker-state-v4.json', 'broker-state-v3.json', 'broker-state-v2.json', 'broker-state.json']) {
+test('v14 migration prefers v13, falls back through older states, and never rewrites a live older broker state', async () => {
+  for (const legacyFileName of ['broker-state-v13.json', 'broker-state-v12.json', 'broker-state-v11.json', 'broker-state-v10.json', 'broker-state-v9.json', 'broker-state-v8.json', 'broker-state-v7.json', 'broker-state-v6.json', 'broker-state-v5.json', 'broker-state-v4.json', 'broker-state-v3.json', 'broker-state-v2.json', 'broker-state.json']) {
     const directory = storage('migration');
     const legacy = new NotificationStore(directory, {fileName: legacyFileName});
     legacy.add(source, event('legacy'), {desktop: false, sound: false});

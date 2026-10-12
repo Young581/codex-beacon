@@ -100,6 +100,10 @@ test('clear-read removes completed and unconfirmed read rounds while preserving 
         ...(type === 'question' ? {question_mode: state === 'waiting_async' ? 'async' : 'blocking'} : {})});
     }
   }
+  await send(snapshot('live-request', 'request'));
+  const request = {...snapshot('request-alert', 'request', 'running', 20, 'approval')};
+  delete request.task;
+  await send(request);
   for (const turn of ['read-completion', 'unread-completion']) {
     await send(snapshot(turn + '-live', turn));
     await send(snapshot(turn + '-done', turn, 'completed', 20, 'done'));
@@ -114,6 +118,8 @@ test('clear-read removes completed and unconfirmed read rounds while preserving 
   const after = (await f.a.request('history')).entries;
   const tasks = taskRows(after);
   for (const state of activeStates) assert.equal(tasks.find(row => row.event.turn_id === state).taskState, state);
+  assert.equal(tasks.find(row => row.event.turn_id === 'request').taskState, 'approval_requested');
+  assert.equal(tasks.find(row => row.event.turn_id === 'request').records.length, 2, 'Clearing read retains the live approval request evidence');
   assert.equal(tasks.find(row => row.event.turn_id === 'unread-completion').records.length, 2);
   assert.equal(tasks.find(row => row.event.turn_id === 'stale-unread').records.length, 2);
   assert.equal(tasks.some(row => ['stale-read', 'read-completion'].includes(row.event.turn_id)), false);

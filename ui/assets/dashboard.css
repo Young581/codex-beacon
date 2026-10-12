@@ -90,6 +90,7 @@ button.metric:hover { background: var(--vscode-toolbar-hoverBackground); }
 .state-running { --state: var(--blue); }
 .state-waiting_input { --state: var(--vscode-charts-yellow, #e0c866); }
 .state-waiting_approval { --state: var(--orange); }
+.state-approval_requested { --state: var(--vscode-charts-purple, #b399e5); }
 .state-waiting_async { --state: var(--vscode-charts-purple, #b399e5); }
 .state-completed { --state: var(--accent); }
 .state-failed { --state: var(--vscode-charts-red, #e27777); }

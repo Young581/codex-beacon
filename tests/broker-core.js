@@ -203,7 +203,7 @@ test('0.7-second batching, four-second separation, priority and sound-only mode'
   scheduler.add(record('approval', 'approval'), { desktop: true, sound: false });
   await clock.advance(1);
   assert.equal(deliveries.length, 1);
-  assert.match(deliveries[0].batch.body.split('\n')[0], /等待审批/);
+  assert.match(deliveries[0].batch.body.split('\n')[0], /有审批请求/);
   assert.equal(deliveries[0].batch.sound, false);
   scheduler.add(record('sound'), { desktop: false, sound: true });
   scheduler.add(record('silent'), { desktop: false, sound: false });
@@ -220,7 +220,7 @@ test('0.7-second batching, four-second separation, priority and sound-only mode'
 test('batch lists at most four entries plus remainder and retains every event key', () => {
   const batch = formatBatch(Array.from({ length: 7 }, (_, index) => ({ record: record(String(index), index === 6 ? 'approval' : 'done'), options: { desktop: true, sound: false } })));
   assert.equal(batch.body.split('\n').length, 5);
-  assert.match(batch.body.split('\n')[0], /等待审批/);
+  assert.match(batch.body.split('\n')[0], /有审批请求/);
   assert.match(batch.body, /另有 3 条/);
   assert.equal(batch.keys.length, 7);
 });

@@ -6,7 +6,7 @@
 
 Track Codex tasks by project in VS Code with colored status lights, token usage, estimated API costs and completion alerts. [Read the full English guide →](README.en.md)
 
-基于 [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier) 的 MIT 开源项目，包含 Windows PowerShell 路径修复和安装辅助脚本。当前代码版本为主扩展 **0.9.2**、采集器 **0.5.10**，支持音量调节、分场景音效、对话分组与轮次显示，并将常用操作集中到仪表盘“管理与设置”。市场安装版本请以扩展详情为准，最新修复版可从 Releases 获取。
+基于 [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier) 的 MIT 开源项目，包含 Windows PowerShell 路径修复和安装辅助脚本。当前代码版本为主扩展 **0.9.3**、采集器 **0.5.11**，支持音量调节、分场景音效、对话分组与轮次显示，并将常用操作集中到仪表盘“管理与设置”。市场安装版本请以扩展详情为准，最新修复版可从 Releases 获取。
 
 ## 当前功能
 
@@ -138,7 +138,8 @@ python -B build.py --output dist
 | 进行中 | 蓝 | 明确的任务开始或恢复事件 |
 | 阻塞 · 等待回答 | 黄 | 结构化提问；回答返回后恢复 |
 | 等待回答 · 继续运行 | 紫 | 异步提问，可继续工作 |
-| 阻塞 · 等待审批 | 橙 | 已配置的审批提醒 Hook |
+| 审批处理中 | 紫 | Hook 报告审批请求；可能由 Codex 自动审核，不能据此判断已阻塞 |
+| 阻塞 · 等待审批 | 橙 | 仅用于数据源明确报告的等待审批，不由审批请求 Hook 推断 |
 | 本轮完成 | 绿 | 本轮回复结束 |
 | 失败 | 红 | 明确的任务失败事件 |
 | 已取消 | 灰 | 明确的中断事件 |

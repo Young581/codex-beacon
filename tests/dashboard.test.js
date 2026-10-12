@@ -41,6 +41,20 @@ test('asynchronous questions count as needing attention while work can continue'
   assert.equal(result.projects[0].tasks[0].state, 'waiting_async');
 });
 
+test('approval processing stays active without claiming a manual block, and retains request details', () => {
+  const running = entry('1');
+  const approval = {...running, key: 'approval', read: false, receivedAt: running.receivedAt + 1,
+    event: {...running.event, id: 'approval', type: 'approval', timestamp: running.event.timestamp + 1}};
+  delete approval.event.task;
+  const result = dashboardData({entries: [running, approval]}, {windowId: 'window'});
+  assert.equal(result.totals.running, 1);
+  assert.equal(result.totals.blocked, 1, 'The needs-attention filter must retain the unresolved request');
+  assert.equal(result.projects[0].tasks[0].state, 'approval_requested');
+  assert.equal(result.projects[0].tasks[0].stateLabel, '审批处理中');
+  assert.doesNotMatch(result.projects[0].tasks[0].details, /^阻塞/m);
+  assert.equal(result.totals.unread, 1, 'The request remains accessible for checking Codex');
+});
+
 test('custom prices use the sidebar calculator and separate projects with the same name', () => {
   const a = entry('1'), b = entry('2'); b.event.cwd = '/other/a';
   const result = dashboardData({entries: [a, b]}, {windowId: 'window', options: {

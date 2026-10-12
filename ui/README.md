@@ -65,6 +65,8 @@ SSH／容器项目需要在目标环境安装并启用 **Codex Beacon Collector*
 
 等待回答来自结构化提问，普通文字问题无法可靠识别。在受信任的工作区中，采集器正常启动后会自动添加审批请求和结果 Hook；到 **Codex 设置 → Hooks → PermissionRequest 和 PostToolUse** 核对 Beacon 的脚本并点击 **Trust** 即可。[Codex 官方 Hook 文档](https://developers.openai.com/codex/hooks/)要求用户审核和信任未托管的 Hook；未信任时不会执行，扩展不会代替你作出审批决定。自动添加保留已有 Hook 定义和其他工具的配置；隐私暂停时不会添加。
 
+PermissionRequest 在自动审核之前触发，单凭它不能确认任务是否等待用户手动批准。此类任务显示紫色“审批处理中”，计入进行中和等待处理筛选；匹配的工具结果、模型继续执行或本轮结束会解除请求。工具结果 Hook 尚未返回时也不会据此标为“阻塞”。
+
 打开仪表盘的 **管理与设置** 页，可直接调整语言、会话打开位置、选择或试听音效，查看审批 Hook 注册情况及信任步骤，并运行测试、查看连接、管理通知和清理隐私数据。通知菜单现在直接打开此页。手动移除 Hook 会同时关闭自动添加；重新配置按钮可用于修复配置。关闭自动添加开关会保留现有 Hook。
 
 ### 从旧版迁移
@@ -102,6 +104,8 @@ In **Management and settings → Alerts and display → Sound scenario**, select
 Colored states distinguish running, waiting for input/approval, response complete, failed, canceled and unknown. Finishing a response does not prove that background work has finished. Pausing alerts keeps recording history; marking read does not approve an action. Approval reminders require a separately configured and trusted hook.
 
 Asynchronous questions count under both Running and Needs attention while work continues; an acknowledgement is not a user answer. Structured replies clear matching pending questions. Approval request and result hooks are registered automatically after healthy collection starts in a trusted workspace. Review and trust the Beacon commands under **Codex settings → Hooks → PermissionRequest and PostToolUse**. The dashboard's **Management and settings** page contains sound, language, session location, hook guidance, tests, connections, history and privacy controls. Removing the hooks disables automatic setup. See the [official Codex hook documentation](https://developers.openai.com/codex/hooks/).
+
+PermissionRequest precedes automatic review, so it does not prove Codex is waiting for manual approval. Show purple Approval processing under Running and Needs attention. A matching tool result, verified model continuation or the end of the round clears the request. Missing tool-result hooks alone do not prove a task is blocked.
 
 ### Migration and privacy
 

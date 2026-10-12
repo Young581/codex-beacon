@@ -111,7 +111,7 @@ test('History rerenders owned labels and keeps keys, read states, paths and sour
 test('Native notifications follow target language for all event types and keep opaque metadata intact', () => {
   configureLanguage(() => 'en');
   assert.match(formatBatch([sample('zh-CN')]).title, /^Codex 本轮已回复/);
-  for (const [type, expected] of [['done', 'reply finished'], ['approval', 'awaiting approval'], ['question', 'awaiting an answer']]) {
+  for (const [type, expected] of [['done', 'reply finished'], ['approval', 'approval requested'], ['question', 'awaiting an answer']]) {
     const batch = formatBatch([sample('en', type)]);
     assert.equal(batch.title, `Codex ${expected} · 实验`);
     assert.ok(batch.body.includes('研究项目 {0} $&'));

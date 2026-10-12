@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.3
+
+- 修正审批事件含义：PermissionRequest 在自动审核前触发，单凭该事件显示紫色“审批处理中”，不再判定“阻塞 · 等待审批”。
+- 进行中和等待处理筛选、侧栏、任务详情及通知统一区分审批请求与明确等待；通知改为“Codex 有审批请求”。
+- 保留实际等待回答和明确等待审批状态；匹配的 PostToolUse、模型继续执行和轮次结束仍解除审批请求，Token 更新及无关并行结果不解除。
+- 通知进程升级为 v14 并迁移 v13 历史；采集器 0.5.11 同步中英文文案。
+- PermissionRequest starts before automatic approval review. Show approval processing rather than claiming a manual block, and preserve explicitly observed waiting states.
+- The hook alone cannot verify whether Codex is waiting for manual approval; the task details explain this distinction.
+
 ## 0.9.2
 
 - 修复“清空已读”只删除完成提醒、留下旧运行记录，导致任务变成“状态未确认”的问题；已读历史按完整轮次移除。
