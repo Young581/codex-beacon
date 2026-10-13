@@ -60,3 +60,8 @@ desktop with its DISPLAY/Wayland, user D-Bus and audio environment for native
 acceptance. An SSH session alone may not inherit these variables. Headless or
 automated macOS checks do not establish visible notifications or audible sound.
 See [platform support](../docs/platforms.md) for tested environments and dependencies.
+
+The activity-bar SVG and status-bar WOFF share one lighthouse silhouette. To
+regenerate these assets, install the development-only `fontTools` package and run
+`python -B packaging/beacon-icon.py`. The extension uses the bundled assets and
+does not require fontTools at runtime.

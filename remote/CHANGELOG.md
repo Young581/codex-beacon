@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.12
+
+- 同步主扩展 0.9.4 的状态栏品牌文案；采集和 Hook 逻辑不变。
+- Synchronize the branded status-bar translations; collection and approval hooks are unchanged.
+
 ## 0.5.11
 
 - 同步主扩展 0.9.3 的中英文“审批处理中”与审批请求提示，不改变 Codex 审批决定或 Hook 信任。

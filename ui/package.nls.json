@@ -68,5 +68,6 @@
   "view.tasks": "Tasks",
   "language.option.0": "Follow VS Code",
   "language.option.1": "Chinese",
-  "language.option.2": "English"
+  "language.option.2": "English",
+  "icon.codexBeacon.logo": "Codex Beacon lighthouse"
 }

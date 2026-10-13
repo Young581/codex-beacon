@@ -6,7 +6,7 @@
 
 Track Codex tasks by project in VS Code with colored status lights, token usage, estimated API costs and completion alerts. [Read the full English guide →](README.en.md)
 
-基于 [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier) 的 MIT 开源项目，包含 Windows PowerShell 路径修复和安装辅助脚本。当前代码版本为主扩展 **0.9.3**、采集器 **0.5.11**，支持音量调节、分场景音效、对话分组与轮次显示，并将常用操作集中到仪表盘“管理与设置”。市场安装版本请以扩展详情为准，最新修复版可从 Releases 获取。
+基于 [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier) 的 MIT 开源项目，包含 Windows PowerShell 路径修复和安装辅助脚本。当前代码版本为主扩展 **0.9.4**、采集器 **0.5.12**，支持音量调节、分场景音效、对话分组与轮次显示，并将常用操作集中到仪表盘“管理与设置”。市场安装版本请以扩展详情为准，最新修复版可从 Releases 获取。
 
 ## 当前功能
 

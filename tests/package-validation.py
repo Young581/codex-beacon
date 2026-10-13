@@ -63,7 +63,10 @@ class PackageTests(unittest.TestCase):
         for name in names:
             path = directory / name
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text("reviewed fixture\n", encoding="utf-8")
+            if name.endswith('assets/beacon.woff'):
+                path.write_bytes((ROOT / 'ui/assets/beacon.woff').read_bytes())
+            else:
+                path.write_text("reviewed fixture\n", encoding="utf-8")
 
     def rewrite_archive(self, path, transform):
         with zipfile.ZipFile(path) as archive:

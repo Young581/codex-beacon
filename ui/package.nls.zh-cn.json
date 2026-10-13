@@ -68,5 +68,6 @@
   "view.tasks": "任务",
   "language.option.0": "跟随 VS Code",
   "language.option.1": "中文",
-  "language.option.2": "英文"
+  "language.option.2": "英文",
+  "icon.codexBeacon.logo": "Codex Beacon 灯塔"
 }

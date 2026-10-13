@@ -644,6 +644,7 @@ exports.run = async function run() {
 
     await test('Status bar opens one dashboard tab, preserves unread and follows history and language live', async () => {
       const before = await snapshot();
+      assert.match(before.statusText, /^\$\(codex-beacon-logo\) Codex Beacon/);
       assert.equal(before.statusCommand, 'codexBeacon.dashboard');
       assert.match(before.statusTooltip, /点击打开管理面板/);
       assert.ok((await vscode.commands.executeCommand(before.statusCommand)).opened);
@@ -657,6 +658,7 @@ exports.run = async function run() {
       await command('dashboard'); assert.equal(tabs().length, 1);
       await command('pause');
       const paused = await snapshot();
+      assert.match(paused.statusText, /^\$\(codex-beacon-logo\) Codex Beacon \$\(debug-pause\)/);
       assert.equal(paused.statusCommand, 'codexBeacon.dashboard');
       await vscode.commands.executeCommand(paused.statusCommand); assert.equal(tabs().length, 1);
       await command('resume');

@@ -2,7 +2,7 @@
   "name": "codex-beacon",
   "displayName": "Codex Beacon",
   "description": "Track Codex tasks by project with a compact dashboard, colored states, token usage and completion alerts.",
-  "version": "0.9.3",
+  "version": "0.9.4",
   "publisher": "Young581",
   "license": "MIT",
   "engines": {
@@ -32,6 +32,15 @@
     }
   },
   "contributes": {
+    "icons": {
+      "codex-beacon-logo": {
+        "description": "%icon.codexBeacon.logo%",
+        "default": {
+          "fontPath": "assets/beacon.woff",
+          "fontCharacter": "\\E001"
+        }
+      }
+    },
     "commands": [
       {
         "command": "codexBeacon.dashboard",
@@ -309,7 +318,7 @@
         {
           "id": "codexBeacon",
           "title": "Codex Beacon",
-          "icon": "assets/bell.svg"
+          "icon": "assets/beacon.svg"
         }
       ]
     },

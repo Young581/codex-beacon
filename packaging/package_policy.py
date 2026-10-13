@@ -8,6 +8,7 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import stat
+import struct
 
 
 COMMON_FILES = frozenset({"package.json", "package.nls.json", "package.nls.zh-cn.json", "README.md", "LICENSE", "CHANGELOG.md", "PRIVACY.md"})
@@ -16,7 +17,7 @@ EXTENSION_FILES = {
         "extension.js", "lib/i18n.js", "lib/broker-core.js", "lib/broker.js", "lib/client.js",
         "lib/history.js", "lib/tasks.js", "lib/project-window.js", "lib/navigation.js", "lib/presentation.js", "lib/read-tracking.js", "lib/installation.js",
         "lib/routing.js", "lib/dashboard.js", "lib/sound.js", "lib/title-pulse.js", "lib/window-attention-native.js", "lib/local-pipe.js",
-        "lib/window-attention.js", "lib/window-title.js", "assets/bell.svg", "assets/beacon.png",
+        "lib/window-attention.js", "lib/window-title.js", "assets/beacon.svg", "assets/beacon.woff", "assets/beacon.png",
         "lib/ipc-security.js", "lib/secure-pipe.js", "lib/privacy-storage.js", "lib/privacy.js", "lib/posix-notifier.js",
         "assets/secure-pipe.ps1", "assets/secure-pipe.cs",
         "assets/show-notification.ps1", "assets/window-attention.cs", "assets/window-attention.ps1",
@@ -30,7 +31,7 @@ SOURCE_SUPPORT_FILES = frozenset({
     "install.ps1", "configure-notifications.py", "test-configuration.py",
     ".gitignore", "LICENSE", "CONTRIBUTING.md", "SECURITY.md",
     ".github/ISSUE_TEMPLATE/bug_report.yml", ".github/ISSUE_TEMPLATE/feature_request.yml", ".github/ISSUE_TEMPLATE/config.yml",
-    "build.py", "README.md", "README.en.md", "PRIVACY.md", "packaging/README.md", "packaging/package_policy.py",
+    "build.py", "README.md", "README.en.md", "PRIVACY.md", "packaging/README.md", "packaging/package_policy.py", "packaging/beacon-icon.py",
     "packaging/bundle-source.py", "packaging/release-audit.py", "packaging/prepare-host-test.py",
     "packaging/run-host-test.py", "packaging/sync-local-collector.py",
     "packaging/native-smoke.js", "packaging/reproduce-url-window-routing.js",
@@ -134,6 +135,13 @@ def check_content(name, data, *, source=False):
         raise ValueError("Publication input exceeds size limit: " + name)
     if PRIVATE_KEY.search(data) or KNOWN_TOKEN.search(data):
         raise ValueError("Credential/private-key pattern in publication input: " + name)
+    if name in {"assets/beacon.woff", "ui/assets/beacon.woff", "extension/assets/beacon.woff"}:
+        if len(data) < 44:
+            raise ValueError("Invalid Beacon icon font")
+        signature, flavor, length, tables, reserved, size, major, minor, *extra = struct.unpack('>4sIIHHIHHIIIII', data[:44])
+        if signature != b'wOFF' or flavor != 0x10000 or length != len(data) or not 1 <= tables <= 20 or reserved or any(extra):
+            raise ValueError("Invalid Beacon icon font or unexpected font metadata")
+        return
     if PurePosixPath(name).suffix.lower() in {".png", ".ico"}:
         return
     try:

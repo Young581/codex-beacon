@@ -24,11 +24,11 @@ DEFAULT_OUTPUT = ROOT / "dist"
 NS = "http://schemas.microsoft.com/developer/vsx-schema/2011"
 CONTENT_NS = "http://schemas.openxmlformats.org/package/2006/content-types"
 IDS = {"ui": "codex-beacon", "remote": "codex-beacon-collector"}
-VERSIONS = {"ui": "0.9.3", "remote": "0.5.11"}
+VERSIONS = {"ui": "0.9.4", "remote": "0.5.12"}
 MIMES = {".json": "application/json", ".js": "application/javascript", ".cjs": "application/javascript",
          ".ps1": "text/plain", ".py": "text/plain", ".md": "text/markdown", ".txt": "text/plain",
          ".html": "text/html", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png",
-         ".ico": "image/x-icon", ".vsixmanifest": "text/xml"}
+         ".ico": "image/x-icon", ".woff": "font/woff", ".vsixmanifest": "text/xml"}
 FIXED_DATE = (2026, 9, 7, 0, 0, 0)
 # vsce 3.9.2 normalizes these three documentation names as one reviewed set.
 # Source inputs and all other payload paths remain governed by EXTENSION_FILES.

@@ -6,7 +6,7 @@ Track Codex tasks by project in VS Code with colored status lights, token usage,
 
 为 VS Code 中的 Codex 提供按项目分组的任务列表、状态灯、token 与费用估算，以及完成提醒。[阅读完整中文说明 →](README.md)
 
-Based on the MIT-licensed [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier), with Windows PowerShell path fixes and installation helpers. The current code versions are **Codex Beacon 0.9.3** and **Collector 0.5.11**. Features include sound volume, sounds for different events, conversation grouping, numbered rounds and a dashboard with common management controls. Check the installed extension's details for its Marketplace version; the latest fixes are available from Releases.
+Based on the MIT-licensed [lengmo1996/codex-vscode-notifier](https://github.com/lengmo1996/codex-vscode-notifier), with Windows PowerShell path fixes and installation helpers. The current code versions are **Codex Beacon 0.9.4** and **Collector 0.5.12**. Features include sound volume, sounds for different events, conversation grouping, numbered rounds and a dashboard with common management controls. Check the installed extension's details for its Marketplace version; the latest fixes are available from Releases.
 
 ## Features
 

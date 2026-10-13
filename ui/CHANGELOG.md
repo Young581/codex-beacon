@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.4
+
+- 侧栏入口换成 Codex Beacon 灯塔；状态栏使用同造型图标和完整名称。
+- 待处理、暂停、采集异常和隐私暂停保留独立提示；点击状态栏仍打开管理面板。
+- Use matching lighthouse icons in the activity bar and status bar, with the full Codex Beacon name and existing state indicators.
+
 ## 0.9.3
 
 - 修正审批事件含义：PermissionRequest 在自动审核前触发，单凭该事件显示紫色“审批处理中”，不再判定“阻塞 · 等待审批”。

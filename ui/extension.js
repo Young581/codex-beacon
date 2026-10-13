@@ -31,6 +31,7 @@ async function activate(context) {
   const view = vscode.window.createTreeView('codexBeacon.history', {treeDataProvider: history, showCollapseAll: true});
   view.title = t('任务');
   const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 50);
+  statusBar.name = 'Codex Beacon';
   statusBar.command = 'codexBeacon.dashboard';
   let snapshot = {entries: [], unread: 0};
   let sourceStatus = null;
@@ -145,16 +146,16 @@ async function activate(context) {
     const localCount = pending.local.length;
     windowAttention.update(pending.local, {enabled: config().get('taskbarAttention', true), focused: vscode.window.state.focused,
       blink: config().get('blinkWindowTitle', true)});
-    const icon = collectorError ? 'warning' : paused ? 'bell-slash' : localCount ? 'bell-dot' : 'bell';
+    const indicator = collectorError ? ' $(warning)' : paused ? ' $(debug-pause)' : localCount ? ' $(circle-filled)' : '';
     const project = vscode.workspace.name || projectName(sourceStatus?.source?.cwd || '');
-    statusBar.text = `$(${icon}) Codex${localCount ? t` · ${clean(project, 24)} · ${localCount} 待处理` : snapshot.unread ? t` · 其他窗口 ${snapshot.unread}` : ''}`;
+    statusBar.text = `$(codex-beacon-logo) Codex Beacon${indicator}${localCount ? t` · ${clean(project, 24)} · ${localCount} 待处理` : snapshot.unread ? t` · 其他窗口 ${snapshot.unread}` : ''}`;
     statusBar.backgroundColor = collectorError || localCount ? new vscode.ThemeColor(
       pending.needsDecision ? 'statusBarItem.errorBackground' : 'statusBarItem.warningBackground') : undefined;
     statusBar.tooltip = t`${windowInfo().label}\n本窗口 ${localCount} 条待处理，所有窗口共 ${snapshot.unread} 条未读\n点击打开管理面板`;
     if (paused) statusBar.tooltip += t('\n声音和弹窗已暂停，仍记录历史');
     if (snapshot.privacyPaused) {
       statusBar.tooltip = t`${windowInfo().label}\n隐私清理后已暂停接收，不记录新通知。点击通知菜单 → 隐私与数据清理 → 恢复。` + '\n' + t('点击打开管理面板');
-      statusBar.text = t('$(shield) Codex · 接收已暂停');
+      statusBar.text = t('$(codex-beacon-logo) Codex Beacon $(shield) · 接收已暂停');
     }
     if (collectorError) statusBar.tooltip += t('\n当前远端采集异常；可从通知菜单查看状态');
     view.badge = localCount ? {value: localCount, tooltip: t`本窗口 ${localCount} 条待处理通知`} : undefined;
@@ -163,7 +164,7 @@ async function activate(context) {
     if (installationState?.state === 'missing' && !sourceStatus) {
       view.message = t('当前 SSH／容器尚未连接采集组件。打开通知菜单 → 检查／安装当前环境组件。');
       if (!localCount && !snapshot.privacyPaused) {
-        statusBar.text = t('$(extensions) Codex · 需安装远端组件');
+        statusBar.text = t('$(codex-beacon-logo) Codex Beacon $(extensions) · 需安装远端组件');
         statusBar.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
         statusBar.tooltip = t('当前 SSH／容器尚未连接采集组件。打开通知菜单 → 检查／安装当前环境组件。') + '\n' + t('点击打开管理面板');
       }

@@ -187,6 +187,8 @@ const MESSAGES = {
   "新提醒会出现在这里。单击将静默打开对应会话；跳转请求被接受后标为已读。": "New notifications appear here. Click to open the session silently; the notification is marked read after the navigation request is accepted.",
   "当前 SSH／容器尚未连接采集组件。打开通知菜单 → 检查／安装当前环境组件。": "The collector is not connected in this SSH/container environment. Open the notification menu → Check/install the current environment component.",
   "$(extensions) Codex · 需安装远端组件": "$(extensions) Codex · Remote component needed",
+  "$(codex-beacon-logo) Codex Beacon $(extensions) · 需安装远端组件": "$(codex-beacon-logo) Codex Beacon $(extensions) · Remote component needed",
+  "$(codex-beacon-logo) Codex Beacon $(shield) · 接收已暂停": "$(codex-beacon-logo) Codex Beacon $(shield) · Reception paused",
   "点击检查并安装当前 SSH／容器的采集组件。": "Click to check and install the collector in this SSH/container environment.",
   "查看日志": "View logs",
   "当前环境的远端采集组件不可用。请从通知菜单选择“检查／安装当前环境组件”。": "The remote collector is unavailable. Choose ‘Check/install the current environment component’ in the notification menu.",
